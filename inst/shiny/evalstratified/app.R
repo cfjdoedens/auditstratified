@@ -10,10 +10,17 @@ library(htmlwidgets)
 risk_choices <- c("Hoog (H)" = "H", "Midden (M)" = "M", "Laag (L)" = "L")
 risk_vec <- c("H", "M", "L")
 
-# Helper functie: Zet "0,95" om naar 0.95 voor berekeningen
+# Helper functie: Parseer getallen STRICT volgens NL notatie
+# - input "0,01" -> getal 0.01
+# - input "1.000" -> getal 1000
 parse_dutch_num <- function(x) {
-  if (is.null(x) || x == "") return(NA)
-  as.numeric(gsub(",", ".", x))
+  if (is.numeric(x)) return(x)
+
+  # Zet om naar text voor veiligheid
+  x_char <- as.character(x)
+
+  # STRICTE NL conversie: komma is decimaal, punt is duizendtal.
+  parse_number(x_char, locale = locale(decimal_mark = ",", grouping_mark = "."))
 }
 
 ui <- navbarPage("EvalStratified",
@@ -28,6 +35,10 @@ ui <- navbarPage("EvalStratified",
       }
       .handsontable td.current {
         background-color: #e6f2ff !important;
+      }
+      /* Right align text columns that act as numbers */
+      .handsontable .htRight {
+        text-align: right;
       }
     "))
                  ),
@@ -168,15 +179,16 @@ server <- function(input, output, session) {
   # 2. Render the Editable Table
   output$hot_input <- renderRHandsontable({
 
+    # Initiele data als TEXT (strings) om de editor te dwingen strings te tonen
     df <- data.frame(
       naam = rep(NA_character_, 8),
-      w = rep(NA_real_, 8),
-      n = rep(NA_integer_, 8),
-      k = rep(NA_integer_, 8),
+      w = rep(NA_character_, 8),
+      n = rep(NA_character_, 8),
+      k = rep(NA_character_, 8),
       ihr = rep("H", 8),
       ibr = rep("H", 8),
       car = rep("H", 8),
-      materialiteit = rep(0.01, 8),
+      materialiteit = rep("0,01", 8), # Default als NL string
       stringsAsFactors = FALSE
     )
 
@@ -184,8 +196,14 @@ server <- function(input, output, session) {
     renderer_nl_money <- JS("
       function(instance, td, row, col, prop, value, cellProperties) {
         Handsontable.renderers.TextRenderer.apply(this, arguments);
-        if (value !== null && value !== void 0 && value !== '' && !isNaN(value)) {
-           var numVal = parseFloat(value);
+
+        var numVal = NaN;
+        if (value !== null && value !== void 0 && value !== '') {
+           var str = value.toString().replace(/\\./g, '').replace(',', '.');
+           numVal = parseFloat(str);
+        }
+
+        if (!isNaN(numVal)) {
            td.innerHTML = numVal.toLocaleString('nl-NL', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
@@ -201,8 +219,14 @@ server <- function(input, output, session) {
     renderer_nl_percent <- JS("
       function(instance, td, row, col, prop, value, cellProperties) {
         Handsontable.renderers.TextRenderer.apply(this, arguments);
-        if (value !== null && value !== void 0 && value !== '' && !isNaN(value)) {
-           var numVal = parseFloat(value);
+
+        var numVal = NaN;
+        if (value !== null && value !== void 0 && value !== '') {
+           var str = value.toString().replace(/\\./g, '').replace(',', '.');
+           numVal = parseFloat(str);
+        }
+
+        if (!isNaN(numVal)) {
            td.innerHTML = numVal.toLocaleString('nl-NL', {
               style: 'percent',
               minimumFractionDigits: 2
@@ -214,15 +238,38 @@ server <- function(input, output, session) {
       }
     ")
 
+    # --- RENDERER 3: GEWOON GETAL (1.000 of 30) ---
+    renderer_nl_general <- JS("
+      function(instance, td, row, col, prop, value, cellProperties) {
+        Handsontable.renderers.TextRenderer.apply(this, arguments);
+
+        var numVal = NaN;
+        if (value !== null && value !== void 0 && value !== '') {
+           var str = value.toString().replace(/\\./g, '').replace(',', '.');
+           numVal = parseFloat(str);
+        }
+
+        if (!isNaN(numVal)) {
+           td.innerHTML = numVal.toLocaleString('nl-NL');
+        }
+        td.style.background = 'white';
+        td.style.color = 'black';
+        td.style.textAlign = 'right';
+      }
+    ")
+
     rhandsontable(df, stretchH = "all") %>%
       hot_col("naam", type = "text") %>%
-      hot_col("w", type = "numeric", renderer = renderer_nl_money) %>%
-      hot_col("n", type = "numeric") %>%
-      hot_col("k", type = "numeric") %>%
-      hot_col("ihr", type = "dropdown", source = risk_vec) %>%
-      hot_col("ibr", type = "dropdown", source = risk_vec) %>%
-      hot_col("car", type = "dropdown", source = risk_vec) %>%
-      hot_col("materialiteit", type = "numeric", renderer = renderer_nl_percent)
+
+      hot_col("w", type = "text", renderer = renderer_nl_money) %>%
+      hot_col("n", type = "text", renderer = renderer_nl_general) %>%
+      hot_col("k", type = "text", renderer = renderer_nl_general) %>%
+
+      hot_col("ihr", type = "dropdown", source = as.list(risk_vec)) %>%
+      hot_col("ibr", type = "dropdown", source = as.list(risk_vec)) %>%
+      hot_col("car", type = "dropdown", source = as.list(risk_vec)) %>%
+
+      hot_col("materialiteit", type = "text", renderer = renderer_nl_percent)
   })
 
   # 3. Reactive Calculation
@@ -246,14 +293,15 @@ server <- function(input, output, session) {
       req(input$hot_input)
       raw_df <- hot_to_r(input$hot_input)
 
+      # FIX: Parseer de Strings naar Getallen voor de berekening
       final_df <- raw_df %>%
         as_tibble() %>%
         filter(!is.na(naam) & naam != "") %>%
         mutate(
-          w = as.numeric(w),
-          n = as.numeric(n),
-          k = as.numeric(k),
-          materialiteit = as.numeric(materialiteit)
+          w = parse_dutch_num(w),
+          n = parse_dutch_num(n),
+          k = parse_dutch_num(k),
+          materialiteit = parse_dutch_num(materialiteit)
         )
 
       if (nrow(final_df) == 0) {
@@ -307,7 +355,7 @@ server <- function(input, output, session) {
     )
   })
 
-  # FIX VOOR TAB "GEBRUIKTE DATA"
+  # FIX VOOR TAB "SAMENGENOMEN STEEKPROEVEN"
   output$table_strat_input <- renderTable({
     res <- strat_results()
     req(res)
@@ -325,11 +373,15 @@ server <- function(input, output, session) {
       df_disp$materialiteit <- format(df_disp$materialiteit, big.mark = ".", decimal.mark = ",", scientific = FALSE)
     }
 
-    # 3. Format Integers
-    if("n" %in% names(df_disp)) df_disp$n <- format(df_disp$n, scientific = FALSE)
-    if("k" %in% names(df_disp)) df_disp$k <- format(df_disp$k, scientific = FALSE)
+    # 3. Format Integers (AANGEPAST: nu met NL formattering)
+    if("n" %in% names(df_disp)) {
+      df_disp$n <- format(df_disp$n, big.mark = ".", decimal.mark = ",", scientific = FALSE)
+    }
+    if("k" %in% names(df_disp)) {
+      df_disp$k <- format(df_disp$k, big.mark = ".", decimal.mark = ",", scientific = FALSE)
+    }
 
-    # 4. AANGEPAST: Extra Foutloze Posten (0 decimalen)
+    # 4. Extra Foutloze Posten (0 decimalen)
     if("extra_foutloze_posten" %in% names(df_disp)) {
       df_disp$extra_foutloze_posten <- format(round(df_disp$extra_foutloze_posten, 0),
                                               big.mark = ".", decimal.mark = ",", scientific = FALSE)
