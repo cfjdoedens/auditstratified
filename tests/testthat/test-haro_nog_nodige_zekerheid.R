@@ -127,7 +127,7 @@ test_that("MML == - (0.39)", {
     digits = 2
   ), 0.39)
 })
-test_that("LLH == - (0.26)", {
+test_that("LLM == - (0.26)", {
   expect_equal(round(
     haro_nog_nodige_zekerheid(ihr = "L", ibr = "L", car = "M"),
     digits = 2
