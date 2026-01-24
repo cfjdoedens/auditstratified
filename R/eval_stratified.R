@@ -361,9 +361,8 @@ eval_stratified <-
       # Voeg de kanskrommen samen tot 1 kanskromme: "convolutie" geheten.
       # "convolutie" wordt gerepresenteerd als hierboven,
       # dus als een 1-dimensionale vector.
-      w <- t_uit$w
       convolutie <-
-        krommen %*% w / totaalgeld # Gewogen samengevoegde kanskrommen.
+        krommen %*% t_uit$w / totaalgeld # Gewogen samengevoegde kanskrommen.
       stopifnot(ncol(convolutie) == 1) # 1 kanskromme dus.
 
       # We bepalen de maximale fout door het kwantiel van de samengevoegde
@@ -401,11 +400,10 @@ eval_stratified <-
       {
         # Evaluaties van de afzonderlijke steekproeven.
         for (i in 1:n_steekproeven) {
-          w <- t_uit$w[[i]]
           n <- t_uit$n[[i]] + t_uit$extra_foutloze_posten[[i]]
           k <- t_uit$k[[i]]
 
-          # De gemiddelde fout.
+          # De modale fout, ook wel genoemd de meest waarschijnlijke fout.
           # Deze wordt frequentistisch en Bayesiaans op dezelfde wijze berekend.
           t_uit$mw_fout[[i]] <- k / n
 
@@ -413,9 +411,9 @@ eval_stratified <-
           t_uit$max_fout[[i]] <- qbeta(zekerheid, k + 1, n - k + 1)
         }
 
-        # Voeg gemiddelde fouten, respectievelijk maximale fouten, bij elkaar.
-        mw_fout_los <- sum(t_uit$mw_fout * w) / totaalgeld
-        max_fout_los <- sum(t_uit$max_fout * w) / totaalgeld
+        # Voeg modale fouten, respectievelijk maximale fouten, bij elkaar.
+        mw_fout_los <- sum(t_uit$mw_fout * t_uit$w) / totaalgeld
+        max_fout_los <- sum(t_uit$max_fout * t_uit$w) / totaalgeld
       }
 
       # ALS1
@@ -423,7 +421,7 @@ eval_stratified <-
       # 1 steekproef is op 1 massa.
       n <- sum(t_uit$n) + sum(t_uit$extra_foutloze_posten)
       k <- sum(t_uit$k)
-      mw_fout_als1 <- k / n # De gemiddelde fout.
+      mw_fout_als1 <- k / n # De modale fout, ook wel genoemd de meest waarschijnlijke fout.
       max_fout_als1 <- qbeta(zekerheid, k + 1, n - k + 1)
     }
 

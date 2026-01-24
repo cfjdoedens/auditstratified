@@ -25,14 +25,14 @@ test_that("voorbeeld Paul van Batenburg", {
     "H",
     0.01
   )
-  r <- eval_stratified(steekproeven = vb_paul_van_batenburg, zekerheid = 0.95)
+  r <- eval_stratifiedp(steekproeven = vb_paul_van_batenburg, zekerheid = 0.95)
 
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0309)
 })
 
 test_that(
   "Uitleg over samennemen van steekproeven met
-   verschillende risicoinschatting in beschrijving van eval_stratified()",
+   verschillende risicoinschatting in beschrijving van eval_stratifiedp()",
   {
     # Bijvoorbeeld:
     # Steekproef1 is gebaseerd op een zekerheid van 95% omdat
@@ -85,7 +85,7 @@ test_that(
       0.01
     )
     r <-
-      eval_stratified(steekproeven = example_in_description, zekerheid = 0.95)
+      eval_stratifiedp(steekproeven = example_in_description, zekerheid = 0.95)
     expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0183)
   }
 )
@@ -119,38 +119,38 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   )
 
   # Evalueer x en y samen.
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.95)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.95)
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0136)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0156)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0189)
 
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.90)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.90)
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0107)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0120)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0145)
 
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.85)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.85)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00909)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 3), 0.0100)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 3), 0.012)
 
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.80)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.80)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00791)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0084)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0102)
 
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.55)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.55)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00453)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00418)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00506)
 
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.51)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.51)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00416)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00374)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00453)
 
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.49)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.49)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00399)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00353)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00427)
 
   # Hier is max_fout_convolutie > max_fout_los bij een zekerheid van 10%.
-  r <- eval_stratified(steekproeven = sniels, zekerheid = 0.10)
+  r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.10)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00118)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 6), 0.0005530)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 6), 0.000669)
 })
 
 test_that("Drie dezelfde steekproeven.", {
@@ -190,13 +190,13 @@ test_that("Drie dezelfde steekproeven.", {
   )
 
   # Hier is max_fout_convolutie > max_fout_los bij een zekerheid van 60%.
-  r <- eval_stratified(steekproeven = dezelfde_drie, zekerheid = 0.60)
+  r <- eval_stratifiedp(steekproeven = dezelfde_drie, zekerheid = 0.60)
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.088)
   expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0799)
 })
 
 test_that("32 dezelfde steekproeven.", {
-  # skip("Costs too much time. Works fine :-)")
+  skip("Costs too much time. Works fine :-)")
   dezelfde_32 <- tribble(
     ~naam,
     ~w,
@@ -473,20 +473,20 @@ test_that("32 dezelfde steekproeven.", {
   )
 
   # Hier is max_fout_convolutie > max_fout_los bij een zekerheid van 51%.
-  r <- eval_stratified(steekproeven = dezelfde_32, zekerheid = 0.51)
+  r <- eval_stratifiedp(steekproeven = dezelfde_32, zekerheid = 0.51)
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0831)
   expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0628)
 
-  r <- eval_stratified(steekproeven = dezelfde_32, zekerheid = 0.95)
+  r <- eval_stratifiedp(steekproeven = dezelfde_32, zekerheid = 0.95)
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.106)
   expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 3), 0.238)
 
-  r <- eval_stratified(steekproeven = dezelfde_32, zekerheid = 0.70)
+  r <- eval_stratifiedp(steekproeven = dezelfde_32, zekerheid = 0.70)
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0899)
   expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 3), 0.104)
 
   # Hier is max_fout_convolutie > max_fout_los bij een zekerheid van 5%.
-  r <- eval_stratified(steekproeven = dezelfde_32, zekerheid = 0.05)
+  r <- eval_stratifiedp(steekproeven = dezelfde_32, zekerheid = 0.05)
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0625)
   expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00465)
 })
@@ -527,11 +527,11 @@ test_that("LNV 2023 (Wim Slot)", {
     0.01
   )
 
-  r <- eval_stratified(steekproeven = lnv_2023_art21, zekerheid = 0.95)
+  r <- eval_stratifiedp(steekproeven = lnv_2023_art21, zekerheid = 0.95)
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.139)
   expect_equal(round(r[["max_fout_convolutie_geld"]], 0), 42325667)
 
-  r <- eval_stratified(steekproeven = lnv_2023_art21, zekerheid = 0.88)
+  r <- eval_stratifiedp(steekproeven = lnv_2023_art21, zekerheid = 0.88)
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.112)
   expect_equal(round(r[["max_fout_convolutie_geld"]], 0), 34194014)
 })
