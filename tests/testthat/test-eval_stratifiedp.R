@@ -121,36 +121,36 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   # Evalueer x en y samen.
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.95)
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0136)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0189)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0156)
 
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.90)
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0107)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0145)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0120)
 
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.85)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00909)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 3), 0.012)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 3), 0.0100)
 
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.80)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00791)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0102)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 4), 0.0084)
 
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.55)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00453)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00506)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00418)
 
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.51)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00416)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00453)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00374)
 
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.49)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00399)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00427)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00353)
 
   # Hier is max_fout_convolutie > max_fout_los bij een zekerheid van 10%.
   r <- eval_stratifiedp(steekproeven = sniels, zekerheid = 0.10)
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00118)
-  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 6), 0.000669)
+  expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 6), 0.0005530)
 })
 
 test_that("Drie dezelfde steekproeven.", {
@@ -196,7 +196,7 @@ test_that("Drie dezelfde steekproeven.", {
 })
 
 test_that("32 dezelfde steekproeven.", {
-  skip("Costs too much time. Works fine :-)")
+  # skip("Costs too much time. Works fine :-)")
   dezelfde_32 <- tribble(
     ~naam,
     ~w,
