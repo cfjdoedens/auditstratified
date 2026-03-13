@@ -33,7 +33,7 @@ jobs:
             any::ggplot2
             any::cpp11
             any::progress
-            local::.
+            cfjdoedens/evalstratified
 
       - name: Deploy to shinyapps.io
         run: |
