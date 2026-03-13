@@ -24,6 +24,15 @@ jobs:
         with:
           extra-packages: |
             any::rsconnect
+            any::shiny
+            any::tibble
+            any::dplyr
+            any::readr
+            any::rhandsontable
+            any::htmlwidgets
+            any::ggplot2
+            any::cpp11
+            any::progress
             local::.
 
       - name: Deploy to shinyapps.io
