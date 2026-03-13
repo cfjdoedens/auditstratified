@@ -46,6 +46,9 @@ jobs:
       - name: Deploy to shinyapps.io
         run: |
           Rscript -e "
+            # Truc: Reset de download-bron naar de standaard R website vóórdat we de app versturen
+            options(repos = c(CRAN = 'https://cloud.r-project.org'))
+
             rsconnect::setAccountInfo(
               name = '${{ secrets.SHINYAPPS_NAME }}',
               token = '${{ secrets.SHINYAPPS_TOKEN }}',
