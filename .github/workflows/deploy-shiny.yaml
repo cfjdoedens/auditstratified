@@ -4,15 +4,10 @@ on:
   push:
     branches: [main, master]
 
-# Lost de Node.js waarschuwing op
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # Nodig om downloadlimieten tijdens het installeren te voorkomen
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -24,25 +19,12 @@ jobs:
           r-version: '4.4'
           use-public-rspm: true
 
-      - name: Install dependencies
+      - name: Install dependencies and package
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
             any::rsconnect
-            any::remotes
-            any::shiny
-            any::tibble
-            any::dplyr
-            any::readr
-            any::rhandsontable
-            any::htmlwidgets
-            any::ggplot2
-
-      - name: Install package locally
-        run: |
-          # Installeer de app rechtstreeks uit de zojuist binnengehaalde bestanden
-          # Dit voorkomt de "Unknown package" en GitHub API fouten!
-          Rscript -e 'remotes::install_local(".", force = TRUE, upgrade = "never")'
+            local::.
 
       - name: Deploy to shinyapps.io
         run: |
