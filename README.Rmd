@@ -2,8 +2,6 @@
 output: github_document
 ---
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 ```{r setup, include=FALSE}
 # README.Rmd is processed by the developer of the package
 # to create a README.md or README.html for the user of the package.
@@ -24,6 +22,9 @@ if (requireNamespace("devtools", quietly = TRUE) &&
   stop("README evalstratified: no evalstratified.Rproj in current directory.")
 }
 
+# Laad de library expliciet in voor de inline code verderop in het document
+library(evalstratified)
+
 # Set global knitr options for all subsequent chunks
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -41,15 +42,25 @@ knitr::opts_chunk$set(
 
 # evalstratified
 
-<!-- badges: start -->
-[![R-CMD-check](https://github.com/cfjdoedens/evalstratified/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/R-CMD-check.yaml)
-[![Deploy Shiny App](https://github.com/cfjdoedens/evalstratified/actions/workflows/deploy-shiny.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/deploy-shiny.yaml)
-<!-- badges: end -->
+< !--badges:start- ->
+[![R - CMD - check](https://github.com/cfjdoedens/evalstratified/actions/workflows/
+R - CMD - check.yaml/badge.svg
+)](
+https://github.com/cfjdoedens/evalstratified/actions/workflows/
+R - CMD - check.yaml
+)
+[![Deploy Shiny App](
+https://github.com/cfjdoedens/evalstratified/actions/workflows/
+deploy - shiny.yaml/badge.svg
+)](
+https://github.com/cfjdoedens/evalstratified/actions/workflows/
+deploy - shiny.yaml
+)
+< !--badges:end- ->
 
-The goal of evalstratified is to make an estimate of the 
+The goal of evalstratified is to make an estimate of the
 error fraction of a set of monetary files.
-This based on a global level of certainty, a level of certainty per file,
-and on error fractions
+This based on a global level of certainty, a level of certainty per file, and on error fractions
 found in sampled items of each of these
 files.
 
@@ -58,9 +69,9 @@ files.
 You can install the development version of evalstratified from
 [GitHub](https://github.com/) with:
 
-```{r install, eval = FALSE, echo=TRUE}
+```{r install, eval = FALSE, echo = TRUE}
 if (!requireNamespace("devtools", quietly = TRUE)) {
-  install.packages("devtools")
+install.packages("devtools")
 }
 devtools::install_github("cfjdoedens/evalstratified")
 ```
@@ -69,58 +80,76 @@ devtools::install_github("cfjdoedens/evalstratified")
 
 Steekproef1 is gebaseerd op een zekerheid van 95% omdat
 ihr, ibr en car alledrie op hoog (H) staan. We kunnen dit ook narekenen met `haro_nog_nodige_zekerheid(ihr = "H", ibr = "H", car = "H")`. Dit levert inderdaad `r haro_nog_nodige_zekerheid(ihr = "H", ibr = "H", car = "H")` op. De materialiteit is 2%.
-Het betreft 100 miljoen euro. 
+Het betreft 100 miljoen euro.
 Om te bepalen hoeveel posten we moeten trekken voor
-steekproef1 gebruiken we `drawsneeded::drawsneeded(0, 0.02, cert = 0.95)`. Resultaat: `r drawsneeded::drawsneeded(0, 0.02, cert = 0.95)`.
+steekproef1 gebruiken we `drawsneeded::drawsneeded(0, 0.02, cert = 0.95)`. Resultaat:`r drawsneeded::drawsneeded(0, 0.02, cert = 0.95)`.
 Na trekken en evalueren blijkt er 1 post fout te zijn.
 
 Bij steekproef2 staan ihr en ibr allebei op laag en alleen car staat op hoog. We berekenen de benodigde zekerheid met `haro_nog_nodige_zekerheid(ihr = "L", ibr = "L", car = "H")`. Dit levert `r haro_nog_nodige_zekerheid(ihr = "L", ibr = "L", car = "H")` op. Het betreft ook 100 miljoen euro en een materialiteit van ook 2%.
-Voor steekproef2 bepalen we vervolgens het aantal te trekken posten met `drawsneeded::drawsneeded(0, 0.02, cert = 0.64)`. Resultaat: `r drawsneeded::drawsneeded(0, 0.02, cert = 0.64)`. Na trekken en evalueren blijkt geen enkele post hiervan fout te zijn. 
+Voor steekproef2 bepalen we vervolgens het aantal te trekken posten met `drawsneeded::drawsneeded(0, 0.02, cert = 0.64)`. Resultaat:`r drawsneeded::drawsneeded(0, 0.02, cert = 0.64)`. Na trekken en evalueren blijkt geen enkele post hiervan fout te zijn.
 
 ```{r example}
 library(evalstratified)
 
 example <- tribble(
-  ~naam,
-  ~w,
-  ~n,
-  ~k,
-  ~ihr,
-  ~ibr,
-  ~car,
-  ~materialiteit,
-  "populatie1",
-  100000000,
-  148,
-  1,
-  "H",
-  "H",
-  "H",
-  0.02,
-  "populatie2",
-  100000000,
-  50,
-  0,
-  "L",
-  "L",
-  "H",
-  0.02
+~ naam,
+~ waarde_laag,
+~ n_laag,
+~ k_laag,
+~ ihr,
+~ ibr,
+~ car,
+~ materialiteit,
+~ fout_hoog,
+~ goed_hoog,
+~ n_hoog,
+~ n_totaal,
+~ waarde_hoog,
+~ waarde_populatie,
+"populatie1",
+100000000,
+148,
+1,
+"H",
+"H",
+"H",
+0.02,
+0,
+0,
+0,
+148,
+0,
+100000000,
+"populatie2",
+100000000,
+50,
+0,
+"L",
+"L",
+"H",
+0.02,
+0,
+0,
+0,
+50,
+0,
+100000000
 )
+
 r <- eval_stratified(steekproeven = example, zekerheid = 0.95)
 r
 ```
 ## Live version
 
-On https://cfjdoedens.shinyapps.io/evalstratified/ one can find a live version of this package.
+On https://cfjdoedens.shinyapps.io/evalstratified/one can find a live version of this package.
 
 ## Ideas for further development
 
-1. Add to live version the option to choose between 
+1. Add to live version the option to choose between
 
-    - Dutch text + European number notation, or
-    - English text + European number notation, or
-    - English text + English number notation
-   
-1. Add informative texts to the various numbers that can be filled in,
-   or are produced. This info appears by pressing little
-   icons ("i" or so) near the subject matter. 
+- Dutch text + European number notation, or
+- English text + European number notation, or
+- English text + English number notation
+
+1. Add informative texts to the various numbers that can be filled in, or are produced. This info appears by pressing little
+icons ("i" or so) near the subject matter.

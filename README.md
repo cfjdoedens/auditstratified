@@ -1,14 +1,11 @@
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 # evalstratified
 
-<!-- badges: start -->
-
-[![R-CMD-check](https://github.com/cfjdoedens/evalstratified/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/R-CMD-check.yaml)
+\< !–badges:start- -\> [![R - CMD -
+check](https://github.com/cfjdoedens/evalstratified/actions/workflows/%20R%20-%20CMD%20-%20check.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/%20R%20-%20CMD%20-%20check.yaml)
 [![Deploy Shiny
-App](https://github.com/cfjdoedens/evalstratified/actions/workflows/deploy-shiny.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/deploy-shiny.yaml)
-<!-- badges: end -->
+App](https://github.com/cfjdoedens/evalstratified/actions/workflows/%20deploy%20-%20shiny.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/%20deploy%20-%20shiny.yaml)
+\< !–badges:end- -\>
 
 The goal of evalstratified is to make an estimate of the error fraction
 of a set of monetary files. This based on a global level of certainty, a
@@ -22,7 +19,7 @@ You can install the development version of evalstratified from
 
 ``` r
 if (!requireNamespace("devtools", quietly = TRUE)) {
-  install.packages("devtools")
+install.packages("devtools")
 }
 devtools::install_github("cfjdoedens/evalstratified")
 ```
@@ -35,48 +32,85 @@ alledrie op hoog (H) staan. We kunnen dit ook narekenen met
 inderdaad 0.95 op. De materialiteit is 2%. Het betreft 100 miljoen euro.
 Om te bepalen hoeveel posten we moeten trekken voor steekproef1
 gebruiken we `drawsneeded::drawsneeded(0, 0.02, cert = 0.95)`.
-Resultaat: 148. Na trekken en evalueren blijkt er 1 post fout te zijn.
+Resultaat:148. Na trekken en evalueren blijkt er 1 post fout te zijn.
 
 Bij steekproef2 staan ihr en ibr allebei op laag en alleen car staat op
 hoog. We berekenen de benodigde zekerheid met
 `haro_nog_nodige_zekerheid(ihr = "L", ibr = "L", car = "H")`. Dit levert
 0.6323529 op. Het betreft ook 100 miljoen euro en een materialiteit van
 ook 2%. Voor steekproef2 bepalen we vervolgens het aantal te trekken
-posten met `drawsneeded::drawsneeded(0, 0.02, cert = 0.64)`. Resultaat:
-50. Na trekken en evalueren blijkt geen enkele post hiervan fout te
-zijn.
+posten met `drawsneeded::drawsneeded(0, 0.02, cert = 0.64)`.
+Resultaat:50. Na trekken en evalueren blijkt geen enkele post hiervan
+fout te zijn.
 
 ``` r
 library(evalstratified)
 
 example <- tribble(
-  ~naam,
-  ~w,
-  ~n,
-  ~k,
-  ~ihr,
-  ~ibr,
-  ~car,
-  ~materialiteit,
-  "populatie1",
-  100000000,
-  148,
-  1,
-  "H",
-  "H",
-  "H",
-  0.02,
-  "populatie2",
-  100000000,
-  50,
-  0,
-  "L",
-  "L",
-  "H",
-  0.02
+~ naam,
+~ waarde_laag,
+~ n_laag,
+~ k_laag,
+~ ihr,
+~ ibr,
+~ car,
+~ materialiteit,
+~ fout_hoog,
+~ goed_hoog,
+~ n_hoog,
+~ n_totaal,
+~ waarde_hoog,
+~ waarde_populatie,
+"populatie1",
+100000000,
+148,
+1,
+"H",
+"H",
+"H",
+0.02,
+0,
+0,
+0,
+148,
+0,
+100000000,
+"populatie2",
+100000000,
+50,
+0,
+"L",
+"L",
+"H",
+0.02,
+0,
+0,
+0,
+50,
+0,
+100000000
 )
+
 r <- eval_stratified(steekproeven = example, zekerheid = 0.95)
 r
+#> $kanskromme
+#> 
+#> Call:
+#>  density.default(x = convolutie)
+#> 
+#> Data: convolutie (10000000 obs.);    Bandwidth 'bw' = 0.0001944
+#> 
+#>        x                    y            
+#>  Min.   :-0.0005699   Min.   : 0.000000  
+#>  1st Qu.: 0.0174854   1st Qu.: 0.002934  
+#>  Median : 0.0355408   Median : 0.299636  
+#>  Mean   : 0.0355408   Mean   :13.819181  
+#>  3rd Qu.: 0.0535962   3rd Qu.:14.842791  
+#>  Max.   : 0.0716515   Max.   :81.144287  
+#> 
+#> $populatie_totaal
+#> [1] 2e+08
+#> 
 #> $modus_fout_convolutie
 #> [1] 0.00663809
 #> 
@@ -134,20 +168,24 @@ r
 #> 
 #> 
 #> $steekproeven
-#> # A tibble: 2 × 12
-#>   naam       w     n     k ihr   ibr   car   materialiteit extra_foutloze_posten
-#>   <chr>  <dbl> <dbl> <dbl> <chr> <chr> <chr>         <dbl>                 <dbl>
-#> 1 popul…   1e8   148     1 H     H     H              0.02                     0
-#> 2 popul…   1e8    50     0 L     L     H              0.02                    99
-#> # ℹ 3 more variables: toch_fouten <lgl>, mw_fout <dbl>, max_fout <dbl>
+#> # A tibble: 2 × 18
+#>   naam       waarde_laag n_laag k_laag ihr   ibr   car   materialiteit fout_hoog
+#>   <chr>            <dbl>  <dbl>  <dbl> <chr> <chr> <chr>         <dbl>     <dbl>
+#> 1 populatie1   100000000    148      1 H     H     H              0.02         0
+#> 2 populatie2   100000000     50      0 L     L     H              0.02         0
+#> # ℹ 9 more variables: goed_hoog <dbl>, n_hoog <dbl>, n_totaal <dbl>,
+#> #   waarde_hoog <dbl>, waarde_populatie <dbl>, extra_foutloze_posten <dbl>,
+#> #   toch_fouten <lgl>, mw_fout <dbl>, max_fout <dbl>
 #> 
 #> $invoer
 #> $invoer$steekproeven
-#> # A tibble: 2 × 8
-#>   naam               w     n     k ihr   ibr   car   materialiteit
-#>   <chr>          <dbl> <dbl> <dbl> <chr> <chr> <chr>         <dbl>
-#> 1 populatie1 100000000   148     1 H     H     H              0.02
-#> 2 populatie2 100000000    50     0 L     L     H              0.02
+#> # A tibble: 2 × 14
+#>   naam       waarde_laag n_laag k_laag ihr   ibr   car   materialiteit fout_hoog
+#>   <chr>            <dbl>  <dbl>  <dbl> <chr> <chr> <chr>         <dbl>     <dbl>
+#> 1 populatie1   100000000    148      1 H     H     H              0.02         0
+#> 2 populatie2   100000000     50      0 L     L     H              0.02         0
+#> # ℹ 5 more variables: goed_hoog <dbl>, n_hoog <dbl>, n_totaal <dbl>,
+#> #   waarde_hoog <dbl>, waarde_populatie <dbl>
 #> 
 #> $invoer$zekerheid
 #> [1] 0.95
@@ -164,17 +202,17 @@ r
 
 ## Live version
 
-On <https://cfjdoedens.shinyapps.io/evalstratified/> one can find a live
+On <https://cfjdoedens.shinyapps.io/evalstratified/one> can find a live
 version of this package.
 
 ## Ideas for further development
 
 1.  Add to live version the option to choose between
 
-    - Dutch text + European number notation, or
-    - English text + European number notation, or
-    - English text + English number notation
+- Dutch text + European number notation, or
+- English text + European number notation, or
+- English text + English number notation
 
-2.  Add informative texts to the various numbers that can be filled in,
+1.  Add informative texts to the various numbers that can be filled in,
     or are produced. This info appears by pressing little icons (“i” or
     so) near the subject matter.

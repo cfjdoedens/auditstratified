@@ -16,16 +16,21 @@ eval_stratified(
 \item{steekproeven}{Een tibble.
 Elke regel van de tibble beschrijft 1 steekproef, dus 1 van de genomen
 steekproeven.
-De tibble heeft als kolommen: naam w n k car cir dir.
-Dit zijn repectievelijk
+De tibble eist de volgende expliciete kolommen voor redundantie en veiligheid:
 \code{naam}, een aanduiding van de steekproef,
-\code{w}, de omvang in geld van de massa waaruit getrokken is,
-\code{n}, het aantal getrokken posten,
-\code{k}, de som van de foutfracties van de posten,
+\code{waarde_laag}, de omvang in geld van de massa waaruit de steekproef (laagstratum) is getrokken,
+\code{n_laag}, het aantal getrokken posten in het laagstratum,
+\code{k_laag}, de som van de foutfracties van de posten in het laagstratum,
 \code{ihr}, inherent risico, te weten H, M of L,
 \code{ibr}, intern beheersingsrisico, te weten H, M of L,
 \code{car}, cijferanalyserisico, te weten H, M of L, en
-\code{materialiteit}, als fractie van de totale massa}
+\code{materialiteit}, als fractie van de totale massa.
+\code{fout_hoog}, Het gevonden foutbedrag in het 100\%-getoetste topstratum.
+\code{goed_hoog}, Het goedgekeurde bedrag in het 100\%-getoetste topstratum.
+\code{n_hoog}, Het aantal posten in het hoogstratum.
+\code{n_totaal}, Het totale aantal posten in deze audit (n_laag + n_hoog).
+\code{waarde_hoog}, De totale boekwaarde van het hoogstratum (fout_hoog + goed_hoog).
+\code{waarde_populatie}, De totale boekwaarde van de hele populatie (waarde_laag + waarde_hoog).}
 
 \item{zekerheid}{Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
 
@@ -38,41 +43,17 @@ Monte Carlo berekeningen baseren zich op toevalsgetallen.}
 en de resultaten daarvan toegevoegd aan de uitkomst van de functie.}
 }
 \value{
-Een lijst, bestaande uit
-\itemize{
-\item \code{mw_fout_convolutie}, de meest waarschijnlijke fout als fractie van
-de totale massa in geld
-\item \code{max_fout_convolutie}, de maximale fout als fractie van de totale
-massa in geld
-\item en zo ook voor modus, mediaan en gemiddelde
-\item als vergelijk == TRUE een lijst
-\code{vergelijk_met}, met daarin vergelijkende cijfers voor "los" en voor
-"als1".
-Hierbij staat "los" voor de samengenomen, gewogen, cijfers der
-afzonderlijke steekproeven,
-en "als1" voor als alle steken en de resultaten daarvan worden beschouwd
-als voor 1 steekproef getrokken uit 1 massa.
-\item \code{steekproeven}, de invoer tibble, verrijkt per steekproef: met
-\itemize{
-\item \code{extra_foutloze_posten},
-het aantal foutloze posten dat equivalent is aan ihr+ibr+car volgens
-het ARM model en de interpretatie daarvan door de ADR,
-\item \code{toch_fouten}, TRUE of FALSE,
-geeft aan of tenminste 1 van ihr, ibr of car niet op hoog staat
-en er wel fouten zijn gevonden
-\item \code{mw_fout}, als vergelijk TRUE,
-de meest waarschijnlijke fout voor die steekproef als
-fractie van de massa in geld van de steekproef,
-\item \code{max_fout}, als vergelijk TRUE,
-de maximale fout als fractie van de massa in geld van de steekproef,
-}
-\item \code{invoer}, een lijst bestaande uit de invoerparameters
-}
+Een lijst, bestaande uit de convolutie-uitkomsten (fracties en geld),
+eventuele vergelijkingen, en de verrijkte invoergegevens.
 }
 \description{
 Het samennemen van de resultaten gebeurt door convolutie van
 de foutkanskrommes van de afzonderlijke steekproeven tot
 1 foutkanskromme.
+
+Waar van toepassing worden 100\%-getoetste posten (het hoogstratum of
+topstratum) als deterministische factoren opgeteld bij de resulterende
+statistische verdeling.
 
 We berekenen de meest waarschijnlijke en de maximale fout als fractie
 en in geld.
@@ -83,12 +64,10 @@ is de fout bij een cumulatieve kans gelijk aan deze zekerheid.
 }
 \details{
 We gaan uit van de som van de foutfracties, de k-waarde, dus we kijken niet
-naar
-de foutfracties per post.
+naar de foutfracties per post.
 
 De maximale fout wordt bepaald aan de hand van de resulterende kanskromme,
-op basis
-van de gewenste zekerheid. Visueel is de maximale fout, pm, te bepalen in een
+op basis van de gewenste zekerheid. Visueel is de maximale fout, pm, te bepalen in een
 tweedimensionaal, haaks, assenstelsel.
 De horizontale as, de p-as, loopt van 0 tot 1.
 De waarden langs die as geven de mogeljke foutfracties weer,
@@ -137,7 +116,7 @@ Daarna berekenen we totale maximale fout op basis van
 een zekerheid van 95\%,
 en steekproef1, 148 posten waarvan 1 fout,
 en steekproef2, met 50 + 98 posten, waarvan 0 fout.
-De maximale fout is dan 1,83\% ofwel ongeveer3.660.000.
+De maximale fout is dan 1,83\% ofwel ongeveer 3.660.000.
 De meest waarschijnlijke fout 0,52\% ofwel ongeveer 1.160.000 euro.
 
 Het is de verantwoordelijkheid van de auditor hoe om te gaan
@@ -153,59 +132,4 @@ evaluatie:
 getrokken op 1 massa,
 en als 1 steekproef.
 }
-}
-\examples{
-# Creeer lege invoertibbe.
-steekproeven <-
-  tibble::tribble(~naam, ~w, ~n, ~k, ~ihr, ~ibr, ~car, ~materialiteit)
-naam <- "Steekproef1" # De naam van de 1e steekproef.
-w <- 35060542 # Het gewicht van de steekproef, als geldomvang van de massa
-# waarover wordt gestoken.
-n <- 31 # Het aantal getrokken en geevalueerde posten.
-k <- 0 # De som van de foutfracties.
-ihr <- "H"
-ibr <- "H"
-car <- "H"
-materialiteit <- 0.01
-steekproeven <-
-  tibble::add_row(steekproeven,
-    naam = naam,
-    w = w,
-    n = n,
-    k = k,
-    ihr = ihr,
-    ibr = ibr,
-    car = car,
-    materialiteit = materialiteit
-  )
-
-naam <- "Steekproef2" # De naam van de 2e steekproef.
-w <- 3044699 # Het gewicht van de steekproef, als geldomvang van de
-# massa waarover wordt gestoken.
-n <- 8 # Het aantal getrokken en geevalueerde posten.
-k <- 0 # De som van de foutfracties.
-ihr <- "H"
-ibr <- "H"
-car <- "H"
-materialiteit <- 0.1
-tibble::add_row(steekproeven,
-  naam = naam,
-  w = w,
-  n = n,
-  k = k,
-  ihr = ihr,
-  ibr = ibr,
-  car = car,
-  materialiteit = materialiteit
-)
-
-# Kortheidshalve hadden we steekproeven ook kunnen invoeren als:
-steekproeven <- tibble::tribble(
-  ~naam, ~w, ~n, ~k, ~ihr, ~ibr, ~car, ~materialiteit,
-  "Steekproef1", 35060542, 31, 0, "H", "H", "H", 0.01,
-  "Steekproef2", 3044699, 8, 0, "H", "H", "H", 0.01
-)
-
-# Evalueer steekproef1 en steekproef2 samen.
-eval_stratified(steekproeven = steekproeven)
 }

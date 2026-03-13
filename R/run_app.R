@@ -4,7 +4,7 @@
 #' @importFrom readr read_csv
 #' @importFrom dplyr mutate filter
 #' @importFrom tibble tibble as_tibble
-#' @importFrom htmlwidgets JSinstall()
+#' @importFrom htmlwidgets JS
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_col renderRHandsontable rHandsontableOutput hot_table
 #' @export
 run_app <- function() {
