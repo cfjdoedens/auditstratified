@@ -8,7 +8,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # Zorgt ervoor dat we geen GitHub downloadlimieten raken
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -36,14 +35,18 @@ jobs:
             any::cpp11
             any::progress
 
-      - name: Install package via remotes (Creates correct GitHub metadata for Shinyapps)
+      - name: Install package via remotes
         run: |
           Rscript -e "remotes::install_github('cfjdoedens/evalstratified', force = TRUE)"
 
       - name: Deploy to shinyapps.io
         run: |
           Rscript -e "
-            # Truc: Reset de download-bron naar de standaard R website vóórdat we de app versturen
+            # DE OPLOSSING: Sloop de verborgen RSPM variabelen eruit die GitHub forceert
+            Sys.unsetenv('RENV_CONFIG_REPOS_OVERRIDE')
+            Sys.unsetenv('RSPM')
+
+            # Stel de schone, standaard CRAN website in
             options(repos = c(CRAN = 'https://cloud.r-project.org'))
 
             rsconnect::setAccountInfo(
