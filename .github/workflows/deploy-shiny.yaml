@@ -8,6 +8,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
+      # Zorgt ervoor dat we geen GitHub downloadlimieten raken
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +20,12 @@ jobs:
           r-version: '4.4'
           use-public-rspm: true
 
-      - name: Install dependencies and package
+      - name: Install CRAN dependencies
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
             any::rsconnect
+            any::remotes
             any::shiny
             any::tibble
             any::dplyr
@@ -33,7 +35,10 @@ jobs:
             any::ggplot2
             any::cpp11
             any::progress
-            cfjdoedens/evalstratified
+
+      - name: Install package via remotes (Creates correct GitHub metadata for Shinyapps)
+        run: |
+          Rscript -e "remotes::install_github('cfjdoedens/evalstratified', force = TRUE)"
 
       - name: Deploy to shinyapps.io
         run: |
