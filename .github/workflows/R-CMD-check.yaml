@@ -5,7 +5,7 @@ on:
     branches: [main, master]
   pull_request:
 
-name: R-CMD-check.yaml
+name: R-CMD-check
 
 permissions: read-all
 
@@ -46,7 +46,7 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
         env:
-          GITHUB_PAT: ${{ secrets.MY_PAT }}
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }} # <-- Hier is de fix!
 
       # 2. Stable fallback for Windows (uses remotes)
       - name: Install dependencies (Windows)
@@ -57,7 +57,7 @@ jobs:
           remotes::install_cran("rcmdcheck")
         shell: Rscript {0}
         env:
-          GITHUB_PAT: ${{ secrets.MY_PAT }}
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }} # <-- En hier ook de fix!
 
       - uses: r-lib/actions/check-r-package@v2
         with:
