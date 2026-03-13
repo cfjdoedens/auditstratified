@@ -4,15 +4,13 @@ on:
   push:
     branches: [main, master]
 
-# Lost de Node.js waarschuwing op
+# Dit lost de Node.js 20 waarschuwing op
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,38 +19,38 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: '4.4'
-          use-public-rspm: true
+          # We hebben 'use-public-rspm' verwijderd om het afzender-probleem te voorkomen
 
-      - name: Install dependencies
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: |
-            any::rsconnect
-            any::remotes
-            any::shiny
-            any::tibble
-            any::dplyr
-            any::readr
-            any::rhandsontable
-            any::htmlwidgets
-            any::ggplot2
-          # De 'needs: website' is hier verwijderd!
+      - name: Setup Fast CRAN Mirror (Binaries)
+        run: |
+          # We dwingen de server om de snelle Linux-versies te gebruiken, maar plakken de naam 'CRAN' erop
+          echo 'options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))' >> ~/.Rprofile
+          echo 'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version$platform, R.version$arch, R.version$os)))' >> ~/.Rprofile
+        shell: bash
+
+      - name: Install dependencies manually
+        run: |
+          # We installeren alles razendsnel zelf, zonder verwarrende afzender-stickers
+          install.packages(c("rsconnect", "remotes", "shiny", "tibble", "dplyr", "readr", "rhandsontable", "htmlwidgets", "ggplot2"))
+        shell: Rscript {0}
 
       - name: Install package
         run: |
           # Install from GitHub to get the metadata
-          Rscript -e 'remotes::install_github("cfjdoedens/evalstratified", force = TRUE, upgrade = "never")'
+          remotes::install_github("cfjdoedens/evalstratified", force = TRUE, upgrade = "never")
+        shell: Rscript {0}
 
       - name: Deploy to shinyapps.io
+        env:
+          SHINYAPPS_NAME: ${{ secrets.SHINYAPPS_NAME }}
+          SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
+          SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         run: |
           Rscript -e "
-            # Truc: Reset de download-bron naar de standaard R website vóórdat we de app versturen
-            options(repos = c(CRAN = 'https://cloud.r-project.org'))
-
             rsconnect::setAccountInfo(
-              name = '${{ secrets.SHINYAPPS_NAME }}',
-              token = '${{ secrets.SHINYAPPS_TOKEN }}',
-              secret = '${{ secrets.SHINYAPPS_SECRET }}'
+              name = Sys.getenv('SHINYAPPS_NAME'),
+              token = Sys.getenv('SHINYAPPS_TOKEN'),
+              secret = Sys.getenv('SHINYAPPS_SECRET')
             )
 
             rsconnect::deployApp(
