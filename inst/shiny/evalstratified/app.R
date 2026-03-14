@@ -32,6 +32,7 @@ info_label <- function(tekst, tooltip_tekst) {
 }
 
 ui <- navbarPage("evalstratified",
+                 theme = bs_theme(version = 5),
 
                  # --- head: css only (js removed) ---
                  header = tags$head(
