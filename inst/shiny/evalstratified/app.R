@@ -6,6 +6,8 @@ library(readr)
 library(rhandsontable)
 library(htmlwidgets)
 library(ggplot2)
+library(bslib)    # NIEUW: Voor de tooltips
+library(bsicons)  # NIEUW: Voor de (i) icoontjes
 
 # define risk options used in multiple tabs
 risk_choices <- c("hoog (H)" = "H", "midden (M)" = "M", "laag (L)" = "L")
@@ -16,6 +18,17 @@ parse_dutch_num <- function(x) {
   if (is.numeric(x)) return(x)
   x_char <- as.character(x)
   parse_number(x_char, locale = locale(decimal_mark = ",", grouping_mark = "."))
+}
+
+# NIEUW helper functie: maakt netjes een label met een (i) tooltip voor de UI
+info_label <- function(tekst, tooltip_tekst) {
+  tags$span(
+    tekst,
+    tooltip(
+      bs_icon("info-circle", class = "ms-1", style = "font-size: 0.9em; color: #007bff;"),
+      tooltip_tekst
+    )
+  )
 }
 
 ui <- navbarPage("evalstratified",
@@ -46,9 +59,9 @@ ui <- navbarPage("evalstratified",
                             sidebarPanel(
                               h4("risico-inschatting"),
                               helpText("Bereken de nog benodigde zekerheid volgens HARo paragraaf B7.3.4."),
-                              selectInput("haro_ihr", "inherent risico (ihr):", choices = risk_choices),
-                              selectInput("haro_ibr", "interne beheersing (ibr):", choices = risk_choices),
-                              selectInput("haro_car", "cijferanalyse (car):", choices = risk_choices)
+                              selectInput("haro_ihr", label = info_label("inherent risico (ihr):", "De inschatting van de kans op een materiële fout voordat interne beheersing is meegewogen."), choices = risk_choices),
+                              selectInput("haro_ibr", label = info_label("interne beheersing (ibr):", "De verwachte effectiviteit van de interne beheersingsmaatregelen."), choices = risk_choices),
+                              selectInput("haro_car", label = info_label("cijferanalyse (car):", "De mate van zekerheid die al is verkregen uit cijferbeoordelingen en analytische procedures."), choices = risk_choices)
                             ),
                             mainPanel(
                               h3("resultaat"),
@@ -66,10 +79,10 @@ ui <- navbarPage("evalstratified",
                             sidebarPanel(
                               h4("risico & materialiteit"),
                               helpText("Bereken hoeveel foutloze posten uw risico-inschatting waard is."),
-                              selectInput("fpe_ihr", "inherent risico (ihr):", choices = risk_choices),
-                              selectInput("fpe_ibr", "interne beheersing (ibr):", choices = risk_choices),
-                              selectInput("fpe_car", "cijferanalyse (car):", choices = risk_choices),
-                              textInput("fpe_mat", "materialiteit (fractie):", value = "0,01")
+                              selectInput("fpe_ihr", label = info_label("inherent risico (ihr):", "De inschatting van de kans op een materiële fout voordat interne beheersing is meegewogen."), choices = risk_choices),
+                              selectInput("fpe_ibr", label = info_label("interne beheersing (ibr):", "De verwachte effectiviteit van de interne beheersingsmaatregelen."), choices = risk_choices),
+                              selectInput("fpe_car", label = info_label("cijferanalyse (car):", "De mate van zekerheid die al is verkregen uit cijferbeoordelingen en analytische procedures."), choices = risk_choices),
+                              textInput("fpe_mat", label = info_label("materialiteit (fractie):", "De grens waarboven een afwijking als materieel wordt beschouwd (bijv. 0,01 voor 1%)."), value = "0,01")
                             ),
                             mainPanel(
                               h3("resultaat"),
@@ -94,21 +107,21 @@ ui <- navbarPage("evalstratified",
                               conditionalPanel(
                                 condition = "input.input_method == 'upload'",
                                 fileInput("file_strat", "upload csv-bestand:", accept = ".csv"),
-                                downloadButton("download_template", "download csv-template")
+                                downloadButton("download_template", "download csv voorbeeldbestand")
                               ),
 
                               conditionalPanel(
                                 condition = "input.input_method == 'manual'",
-                                helpText("Vul de tabel rechts in. Alle totalen en afhankelijke velden worden automatisch berekend.")
+                                helpText("Vul de tabel rechts in.")
                               ),
 
                               hr(),
                               h4("2. instellingen"),
-                              textInput("strat_conf", "zekerheid (0,95 = 95%):", value = "0,95"),
+                              textInput("strat_conf", label = info_label("zekerheid (0,95 = 95%):", "Het gewenste betrouwbaarheidsniveau voor de uiteindelijke evaluatie."), value = "0,95"),
 
-                              numericInput("strat_mc", "Monte Carlo iteraties:", value = 100000, min = 1000, step = 10000),
-                              numericInput("strat_seed", "seed (startwaarde):", value = 1),
-                              checkboxInput("strat_comp", "vergelijk met andere methoden", value = TRUE),
+                              numericInput("strat_mc", label = info_label("Monte Carlo iteraties:", "Aantal simulaties. Een hoger getal is nauwkeuriger, maar het rekenen duurt iets langer."), value = 100000, min = 1000, step = 10000),
+                              numericInput("strat_seed", label = info_label("seed (startwaarde):", "Een vast startpunt voor de simulatie. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."), value = 1),
+                              checkboxInput("strat_comp", label = info_label("vergelijk met andere methoden", "Berekent ter vergelijking ook de uitkomst volgens de traditionele (gewogen gemiddelde en gepoolde) methoden."), value = TRUE),
                               hr(),
                               actionButton("run_strat", "bereken evaluatie", class = "btn-success", width = "100%")
                             ),
@@ -116,7 +129,7 @@ ui <- navbarPage("evalstratified",
                             mainPanel(
                               conditionalPanel(
                                 condition = "input.input_method == 'manual'",
-                                h4("invoertabel (laagstratum & hoogstratum)"),
+                                h4("handmatige invoer"),
                                 rHandsontableOutput("hot_input"),
                                 hr()
                               ),
@@ -130,7 +143,7 @@ ui <- navbarPage("evalstratified",
                                          h3("vergelijking"),
                                          tableOutput("table_strat_comp")
                                 ),
-                                tabPanel("samengenomen steekproeven",
+                                tabPanel("evaluatieresultaten individuele steekproeven",
                                          h4("data en resultaten per steekproef zoals verwerkt door het model"),
                                          div(style = 'overflow-x: scroll', tableOutput("table_strat_input"))
                                 )
@@ -159,7 +172,6 @@ server <- function(input, output, session) {
   })
 
   # --- logic tab 3 ---
-
   output$download_template <- downloadHandler(
     filename = function() { "steekproeven_template.csv" },
     content = function(file) {
@@ -168,12 +180,14 @@ server <- function(input, output, session) {
         waarde_laag = c(1000000, 500000),
         n_laag = c(30, 20),
         k_laag = c(0, 1),
-        ihr = c("H", "L"), ibr = c("H", "L"), car = c("H", "H"),
-        materialiteit = c(0.01, 0.01),
         fout_hoog = c(0, 5000),
-        goed_hoog = c(0, 45000)
+        goed_hoog = c(0, 45000),
+        ihr = c("H", "L"),
+        ibr = c("H", "L"),
+        car = c("H", "H"),
+        materialiteit = c(0.01, 0.01)
       )
-      write_csv(df, file)
+      write_csv2(df, file)
     }
   )
 
@@ -243,7 +257,22 @@ server <- function(input, output, session) {
       }
     ")
 
-    rhandsontable(df, stretchH = "all") %>%
+    # NIEUW: HTML tooltips toegevoegd aan de kolomkoppen
+    koppen <- c(
+      "naam <span title='Naam of beschrijving van het stratum/steekproef'>&#9432;</span>",
+      "waarde_laag <span title='Totale boekwaarde van de populatie waar deze steekproef uit getrokken is'>&#9432;</span>",
+      "n_laag <span title='Aantal gecontroleerde posten in de steekproef'>&#9432;</span>",
+      "k_laag <span title='Aantal gevonden foute posten'>&#9432;</span>",
+      "fout_hoog <span title='Bekende foute waarde in de 100% gecontroleerde topmassa'>&#9432;</span>",
+      "goed_hoog <span title='Bekende correcte waarde in de 100% gecontroleerde topmassa'>&#9432;</span>",
+      "ihr <span title='Inherent risico voor dit specifieke stratum'>&#9432;</span>",
+      "ibr <span title='Interne beheersing voor dit specifieke stratum'>&#9432;</span>",
+      "car <span title='Zekerheid uit cijferanalyse voor dit specifieke stratum'>&#9432;</span>",
+      "materialiteit <span title='Toegestane afwijking (fractie) voor dit stratum'>&#9432;</span>"
+    )
+
+    # NIEUW: colHeaders parameter toegevoegd aan rhandsontable
+    rhandsontable(df, stretchH = "all", colHeaders = koppen) %>%
       hot_col("naam", type = "text") %>%
       hot_col("waarde_laag", type = "text", renderer = renderer_nl_money) %>%
       hot_col("n_laag", type = "text", renderer = renderer_nl_general) %>%
@@ -267,13 +296,23 @@ server <- function(input, output, session) {
     if (input$input_method == "upload") {
       req(input$file_strat)
       tryCatch({
-        final_df <- read_csv(input$file_strat$datapath, show_col_types = FALSE)
+        final_df <- read_csv2(input$file_strat$datapath, show_col_types = FALSE)
 
         if(!"fout_hoog" %in% names(final_df)) final_df$fout_hoog <- 0
         if(!"goed_hoog" %in% names(final_df)) final_df$goed_hoog <- 0
 
+        final_df <- final_df %>%
+          mutate(
+            waarde_laag = parse_dutch_num(waarde_laag),
+            n_laag = parse_dutch_num(n_laag),
+            k_laag = parse_dutch_num(k_laag),
+            fout_hoog = parse_dutch_num(fout_hoog),
+            goed_hoog = parse_dutch_num(goed_hoog),
+            materialiteit = parse_dutch_num(materialiteit)
+          )
+
       }, error = function(e) {
-        showNotification("Kan het csv-bestand niet lezen.", type = "error")
+        showNotification("Kan het csv-bestand niet lezen. Zorg ervoor dat het is opgeslagen als CSV gescheiden door lijstscheidingsteken (vaak puntkomma).", type = "error")
         return(NULL)
       })
 

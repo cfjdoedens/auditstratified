@@ -17,13 +17,13 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: '4.4'
-          use-public-rspm: true # We kunnen de snelle server weer aanzetten!
+          use-public-rspm: true
 
       - name: Install packages the classic way (Bypassing GitHub's default tool)
         run: |
           Rscript -e "
-            # Installeer alles via de ingebouwde, betrouwbare R-methode
-            install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress'))
+            # Hier staan bslib en bsicons nu netjes op de lijst!
+            install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress', 'bslib', 'bsicons'))
 
             # Installeer jouw eigen package
             remotes::install_github('cfjdoedens/evalstratified', force = TRUE)
