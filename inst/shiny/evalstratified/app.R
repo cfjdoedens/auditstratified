@@ -272,7 +272,9 @@ server <- function(input, output, session) {
     )
 
     # NIEUW: colHeaders parameter toegevoegd aan rhandsontable
-    rhandsontable(df, stretchH = "all", colHeaders = koppen) %>%
+    # OPLOSSING 1: We halen colHeaders weg uit de eerste regel,
+    # en plakken ze pas met hot_cols() op het allerlaatst toe!
+    rhandsontable(df, stretchH = "all") %>%
       hot_col("naam", type = "text") %>%
       hot_col("waarde_laag", type = "text", renderer = renderer_nl_money) %>%
       hot_col("n_laag", type = "text", renderer = renderer_nl_general) %>%
@@ -282,7 +284,8 @@ server <- function(input, output, session) {
       hot_col("ihr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
       hot_col("ibr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
       hot_col("car", type = "dropdown", source = as.list(risk_vec_ui)) %>%
-      hot_col("materialiteit", type = "text", renderer = renderer_nl_percent)
+      hot_col("materialiteit", type = "text", renderer = renderer_nl_percent) %>%
+      hot_cols(colHeaders = koppen) # <-- Hier voegen we de tooltips pas toe
   })
 
   # 3. reactive calculation
@@ -319,6 +322,10 @@ server <- function(input, output, session) {
     } else {
       req(input$hot_input)
       raw_df <- hot_to_r(input$hot_input)
+
+      # OPLOSSING 2: Forceer de schone kolomnamen terug over de dataframe heen.
+      # Hiermee voorkomen we dat R de HTML-code aanziet voor kolomnamen.
+      names(raw_df) <- c("naam", "waarde_laag", "n_laag", "k_laag", "fout_hoog", "goed_hoog", "ihr", "ibr", "car", "materialiteit")
 
       final_df <- raw_df %>%
         as_tibble() %>%
