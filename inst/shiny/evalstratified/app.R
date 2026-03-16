@@ -6,8 +6,8 @@ library(readr)
 library(rhandsontable)
 library(htmlwidgets)
 library(ggplot2)
-library(bslib)    # NIEUW: Voor de tooltips
-library(bsicons)  # NIEUW: Voor de (i) icoontjes
+library(bslib)
+library(bsicons)
 
 # define risk options used in multiple tabs
 risk_choices <- c("hoog (H)" = "H", "midden (M)" = "M", "laag (L)" = "L")
@@ -20,7 +20,7 @@ parse_dutch_num <- function(x) {
   parse_number(x_char, locale = locale(decimal_mark = ",", grouping_mark = "."))
 }
 
-# NIEUW helper functie: maakt netjes een label met een (i) tooltip voor de UI
+# helper functie: maakt netjes een label met een (i) tooltip voor de UI
 info_label <- function(tekst, tooltip_tekst) {
   tags$span(
     tekst,
@@ -38,17 +38,10 @@ ui <- navbarPage("evalstratified",
                  header = tags$head(
                    tags$style(HTML("
       /* force all handsontable cells to be white with black text */
-      .handsontable td {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-      }
-      .handsontable td.current {
-        background-color: #e6f2ff !important;
-      }
+      .handsontable td { background-color: #ffffff !important; color: #000000 !important; }
+      .handsontable td.current { background-color: #e6f2ff !important; }
       /* right align text columns that act as numbers */
-      .handsontable .htRight {
-        text-align: right;
-      }
+      .handsontable .htRight { text-align: right; }
     "))
                  ),
 
@@ -101,9 +94,7 @@ ui <- navbarPage("evalstratified",
                             sidebarPanel(
                               h4("1. data invoer"),
 
-                              radioButtons("input_method", "methode:",
-                                           choices = c("handmatige invoer" = "manual",
-                                                       "csv-upload" = "upload")),
+                              radioButtons("input_method", "methode:", choices = c("handmatige invoer" = "manual", "csv-upload" = "upload")),
 
                               conditionalPanel(
                                 condition = "input.input_method == 'upload'",
@@ -128,26 +119,30 @@ ui <- navbarPage("evalstratified",
                             ),
 
                             mainPanel(
-                              conditionalPanel(
-                                condition = "input.input_method == 'manual'",
-                                h4("handmatige invoer"),
-                                rHandsontableOutput("hot_input"),
-                                hr()
-                              ),
-
-                              tabsetPanel(
-                                tabPanel("resultaten",
-                                         h3("convolutieresultaten"),
-                                         plotOutput("plot_strat_main", height = "400px"),
-                                         br(),
-                                         tableOutput("table_strat_main"),
-                                         h3("vergelijking"),
-                                         tableOutput("table_strat_comp")
-                                ),
-                                tabPanel("evaluatieresultaten individuele steekproeven",
-                                         h4("data en resultaten per steekproef zoals verwerkt door het model"),
-                                         div(style = 'overflow-x: scroll', tableOutput("table_strat_input"))
-                                )
+                              tabsetPanel(id = "hoofd_tabs",
+                                          tabPanel("1. invoertabel",
+                                                   br(),
+                                                   conditionalPanel(
+                                                     condition = "input.input_method == 'manual'",
+                                                     helpText("Vul hieronder uw data in en klik links op 'bereken evaluatie'."),
+                                                     rHandsontableOutput("hot_input")
+                                                   )
+                                          ),
+                                          tabPanel("2. grafiek & hoofdresultaten", value = "tab_grafiek",
+                                                   br(),
+                                                   h3("convolutieresultaten"),
+                                                   plotOutput("plot_strat_main", height = "400px"),
+                                                   br(),
+                                                   tableOutput("table_strat_main")
+                                          ),
+                                          tabPanel("3. details & vergelijking",
+                                                   br(),
+                                                   h3("vergelijking"),
+                                                   tableOutput("table_strat_comp"),
+                                                   hr(),
+                                                   h4("data en resultaten per steekproef zoals verwerkt door het model"),
+                                                   div(style = 'overflow-x: scroll', tableOutput("table_strat_input"))
+                                          )
                               )
                             )
                           )
@@ -156,20 +151,22 @@ ui <- navbarPage("evalstratified",
 
 server <- function(input, output, session) {
 
+  # Zorg dat het scherm automatisch naar de grafiek springt bij het klikken op berekenen
+  observeEvent(input$run_strat, {
+    updateTabsetPanel(session, "hoofd_tabs", selected = "tab_grafiek")
+  })
+
   # --- logic tab 1 & 2 ---
   output$res_haro <- renderText({
     val <- haro_nog_nodige_zekerheid(input$haro_ihr, input$haro_ibr, input$haro_car)
-    formatted_val <- format(round(val, 4), decimal.mark = ",", nsmall = 4)
-    paste("nog nodige zekerheid:", formatted_val)
+    paste("nog nodige zekerheid:", format(round(val, 4), decimal.mark = ",", nsmall = 4))
   })
 
   output$res_fpe <- renderText({
     mat_val <- parse_dutch_num(input$fpe_mat)
     validate(need(!is.na(mat_val), "Vul een geldig getal in voor materialiteit."))
-
     val <- foutloze_posten_equivalent(input$fpe_ihr, input$fpe_ibr, input$fpe_car, mat_val)
-    formatted_val <- format(round(val, 0), big.mark = ".", decimal.mark = ",")
-    paste("foutlozepostenequivalent:", formatted_val)
+    paste("foutlozepostenequivalent:", format(round(val, 0), big.mark = ".", decimal.mark = ","))
   })
 
   # --- logic tab 3 ---
@@ -177,88 +174,27 @@ server <- function(input, output, session) {
     filename = function() { "steekproeven_template.csv" },
     content = function(file) {
       df <- tibble(
-        naam = c("steekproef 1", "steekproef 2"),
-        waarde_laag = c(1000000, 500000),
-        n_laag = c(30, 20),
-        k_laag = c(0, 1),
-        fout_hoog = c(0, 5000),
-        goed_hoog = c(0, 45000),
-        ihr = c("H", "L"),
-        ibr = c("H", "L"),
-        car = c("H", "H"),
-        materialiteit = c(0.01, 0.01)
+        naam = c("steekproef 1", "steekproef 2"), waarde_laag = c(1000000, 500000), n_laag = c(30, 20),
+        k_laag = c(0, 1), fout_hoog = c(0, 5000), goed_hoog = c(0, 45000), ihr = c("H", "L"),
+        ibr = c("H", "L"), car = c("H", "H"), materialiteit = c(0.01, 0.01)
       )
       write_csv2(df, file)
     }
   )
 
-  # 2. render the editable table
+  # render the editable table
   output$hot_input <- renderRHandsontable({
-
     df <- data.frame(
-      naam = rep(NA_character_, 8),
-      waarde_laag = rep(NA_character_, 8),
-      n_laag = rep(NA_character_, 8),
-      k_laag = rep(NA_character_, 8),
-      fout_hoog = rep("0", 8),
-      goed_hoog = rep("0", 8),
-      ihr = rep("H", 8),
-      ibr = rep("H", 8),
-      car = rep("H", 8),
-      materialiteit = rep("0,01", 8),
+      naam = rep(NA_character_, 8), waarde_laag = rep(NA_character_, 8), n_laag = rep(NA_character_, 8),
+      k_laag = rep(NA_character_, 8), fout_hoog = rep("0", 8), goed_hoog = rep("0", 8),
+      ihr = rep("H", 8), ibr = rep("H", 8), car = rep("H", 8), materialiteit = rep("0,01", 8),
       stringsAsFactors = FALSE
     )
 
-    renderer_nl_money <- JS("
-      function(instance, td, row, col, prop, value, cellProperties) {
-        Handsontable.renderers.TextRenderer.apply(this, arguments);
-        var numVal = NaN;
-        if (value !== null && value !== void 0 && value !== '') {
-           var str = value.toString().replace(/\\./g, '').replace(',', '.');
-           numVal = parseFloat(str);
-        }
-        if (!isNaN(numVal)) {
-           td.innerHTML = numVal.toLocaleString('nl-NL', {
-              minimumFractionDigits: 2, maximumFractionDigits: 2
-           });
-        }
-        td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right';
-      }
-    ")
+    renderer_nl_money <- JS("function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }")
+    renderer_nl_percent <- JS("function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL', { style: 'percent', minimumFractionDigits: 2 }); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }")
+    renderer_nl_general <- JS("function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL'); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }")
 
-    renderer_nl_percent <- JS("
-      function(instance, td, row, col, prop, value, cellProperties) {
-        Handsontable.renderers.TextRenderer.apply(this, arguments);
-        var numVal = NaN;
-        if (value !== null && value !== void 0 && value !== '') {
-           var str = value.toString().replace(/\\./g, '').replace(',', '.');
-           numVal = parseFloat(str);
-        }
-        if (!isNaN(numVal)) {
-           td.innerHTML = numVal.toLocaleString('nl-NL', {
-              style: 'percent', minimumFractionDigits: 2
-           });
-        }
-        td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right';
-      }
-    ")
-
-    renderer_nl_general <- JS("
-      function(instance, td, row, col, prop, value, cellProperties) {
-        Handsontable.renderers.TextRenderer.apply(this, arguments);
-        var numVal = NaN;
-        if (value !== null && value !== void 0 && value !== '') {
-           var str = value.toString().replace(/\\./g, '').replace(',', '.');
-           numVal = parseFloat(str);
-        }
-        if (!isNaN(numVal)) {
-           td.innerHTML = numVal.toLocaleString('nl-NL');
-        }
-        td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right';
-      }
-    ")
-
-    # NIEUW: HTML tooltips toegevoegd aan de kolomkoppen
     koppen <- c(
       "naam <span title='Naam of beschrijving van het stratum/steekproef'>&#9432;</span>",
       "waarde_laag <span title='Totale boekwaarde van de populatie waar deze steekproef uit getrokken is'>&#9432;</span>",
@@ -272,9 +208,6 @@ server <- function(input, output, session) {
       "materialiteit <span title='Toegestane afwijking (fractie) voor dit stratum'>&#9432;</span>"
     )
 
-    # NIEUW: colHeaders parameter toegevoegd aan rhandsontable
-    # OPLOSSING 1: We halen colHeaders weg uit de eerste regel,
-    # en plakken ze pas met hot_cols() op het allerlaatst toe!
     rhandsontable(df, stretchH = "all") %>%
       hot_col("naam", type = "text") %>%
       hot_col("waarde_laag", type = "text", renderer = renderer_nl_money) %>%
@@ -286,12 +219,11 @@ server <- function(input, output, session) {
       hot_col("ibr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
       hot_col("car", type = "dropdown", source = as.list(risk_vec_ui)) %>%
       hot_col("materialiteit", type = "text", renderer = renderer_nl_percent) %>%
-      hot_cols(colHeaders = koppen) # <-- Hier voegen we de tooltips pas toe
+      hot_cols(colHeaders = koppen)
   })
 
-  # 3. reactive calculation
+  # reactive calculation
   strat_results <- eventReactive(input$run_strat, {
-
     conf_val <- parse_dutch_num(input$strat_conf)
     validate(need(!is.na(conf_val), "Vul een geldig getal in voor zekerheid."))
 
@@ -301,20 +233,14 @@ server <- function(input, output, session) {
       req(input$file_strat)
       tryCatch({
         final_df <- read_csv2(input$file_strat$datapath, show_col_types = FALSE)
-
         if(!"fout_hoog" %in% names(final_df)) final_df$fout_hoog <- 0
         if(!"goed_hoog" %in% names(final_df)) final_df$goed_hoog <- 0
-
         final_df <- final_df %>%
           mutate(
-            waarde_laag = parse_dutch_num(waarde_laag),
-            n_laag = parse_dutch_num(n_laag),
-            k_laag = parse_dutch_num(k_laag),
-            fout_hoog = parse_dutch_num(fout_hoog),
-            goed_hoog = parse_dutch_num(goed_hoog),
-            materialiteit = parse_dutch_num(materialiteit)
+            waarde_laag = parse_dutch_num(waarde_laag), n_laag = parse_dutch_num(n_laag),
+            k_laag = parse_dutch_num(k_laag), fout_hoog = parse_dutch_num(fout_hoog),
+            goed_hoog = parse_dutch_num(goed_hoog), materialiteit = parse_dutch_num(materialiteit)
           )
-
       }, error = function(e) {
         showNotification("Kan het csv-bestand niet lezen. Zorg ervoor dat het is opgeslagen als CSV gescheiden door lijstscheidingsteken (vaak puntkomma).", type = "error")
         return(NULL)
@@ -323,21 +249,15 @@ server <- function(input, output, session) {
     } else {
       req(input$hot_input)
       raw_df <- hot_to_r(input$hot_input)
-
-      # OPLOSSING 2: Forceer de schone kolomnamen terug over de dataframe heen.
-      # Hiermee voorkomen we dat R de HTML-code aanziet voor kolomnamen.
       names(raw_df) <- c("naam", "waarde_laag", "n_laag", "k_laag", "fout_hoog", "goed_hoog", "ihr", "ibr", "car", "materialiteit")
 
       final_df <- raw_df %>%
         as_tibble() %>%
         filter(!is.na(naam) & naam != "") %>%
         mutate(
-          waarde_laag = parse_dutch_num(waarde_laag),
-          n_laag = parse_dutch_num(n_laag),
-          k_laag = parse_dutch_num(k_laag),
-          fout_hoog = parse_dutch_num(fout_hoog),
-          goed_hoog = parse_dutch_num(goed_hoog),
-          materialiteit = parse_dutch_num(materialiteit)
+          waarde_laag = parse_dutch_num(waarde_laag), n_laag = parse_dutch_num(n_laag),
+          k_laag = parse_dutch_num(k_laag), fout_hoog = parse_dutch_num(fout_hoog),
+          goed_hoog = parse_dutch_num(goed_hoog), materialiteit = parse_dutch_num(materialiteit)
         )
 
       if (nrow(final_df) == 0) {
@@ -352,18 +272,13 @@ server <- function(input, output, session) {
         n_hoog = ifelse(waarde_hoog > 0, 1, 0),
         n_totaal = n_laag + n_hoog,
         waarde_populatie = waarde_laag + waarde_hoog,
-        ihr = toupper(ihr),
-        ibr = toupper(ibr),
-        car = toupper(car)
+        ihr = toupper(ihr), ibr = toupper(ibr), car = toupper(car)
       )
 
     tryCatch({
       res <- eval_stratified(
-        steekproeven = final_df,
-        zekerheid = conf_val,
-        MC = as.integer(input$strat_mc),
-        start = input$strat_seed,
-        vergelijk = input$strat_comp
+        steekproeven = final_df, zekerheid = conf_val, MC = as.integer(input$strat_mc),
+        start = input$strat_seed, vergelijk = input$strat_comp
       )
       return(res)
     }, error = function(e) {
@@ -372,7 +287,7 @@ server <- function(input, output, session) {
     })
   })
 
-  # 4. output plot (de kanskromme)
+  # output plot (de kanskromme)
   output$plot_strat_main <- renderPlot({
     res <- strat_results()
     req(res)
@@ -380,29 +295,17 @@ server <- function(input, output, session) {
 
     d <- res$kanskromme
     totaal_geld <- res$populatie_totaal
-
-    # Bepaal de wiskundige absolute ondergrens (al het bekende fout_hoog bij elkaar)
     min_geld <- sum(res$steekproeven$fout_hoog)
 
-    df_plot <- data.frame(
-      x_geld = d$x * totaal_geld,
-      y_dichtheid = d$y
-    )
-
-    # VORMGEVING TRUC:
-    # 1. Knip de onmogelijke 'staart' (gecreëerd door de density smoothing smoothing) links van de ondergrens eraf
+    df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y)
     df_plot <- df_plot %>% filter(x_geld >= min_geld)
 
-    # 2. Voeg een 0-punt toe exact op de grens. Hierdoor trekt ggplot een loodrechte
-    # lijn omhoog naar de piek (een muur/klif), in plaats van een flauwe helling te tekenen.
     if(nrow(df_plot) > 0) {
       df_plot <- bind_rows(
-        data.frame(x_geld = min_geld, y_dichtheid = 0),
-        df_plot
+        data.frame(x_geld = min_geld, y_dichtheid = 0), df_plot
       ) %>% arrange(x_geld, y_dichtheid)
     }
 
-    # Klem ook de referentielijnen visueel vast zodat deze door smoothing niet 'links' van de startmuur zweven
     mode_val <- max(res$mw_fout_convolutie_geld, min_geld)
     max_val <- max(res$max_fout_convolutie_geld, min_geld)
     zekerheid_pct <- res$invoer$zekerheid * 100
@@ -416,15 +319,12 @@ server <- function(input, output, session) {
       labs(
         title = "kanskromme van de geprojecteerde fout",
         subtitle = paste0("blauwe lijn = meest waarschijnlijke fout | rode lijn = maximale fout (", zekerheid_pct, "% zekerheid)"),
-        x = "fout in euro's",
-        y = "relatieve kansdichtheid"
+        x = "fout in euro's", y = "relatieve kansdichtheid"
       ) +
       theme_minimal() +
       theme(
-        text = element_text(size = 14),
-        plot.title = element_text(face = "bold"),
-        axis.text.y = element_blank(),
-        panel.grid.minor = element_blank()
+        text = element_text(size = 14), plot.title = element_text(face = "bold"),
+        axis.text.y = element_blank(), panel.grid.minor = element_blank()
       )
   })
 
@@ -432,7 +332,6 @@ server <- function(input, output, session) {
     res <- strat_results()
     req(res)
 
-    # Bepaal grenzen voor visuele klem (tegen KDE afrondingsfouten bij k=0)
     min_geld <- sum(res$steekproeven$fout_hoog)
     min_fractie <- min_geld / res$populatie_totaal
 
@@ -480,8 +379,6 @@ server <- function(input, output, session) {
       }
     }
 
-    # n_hoog laten we veiligheidshalve nog even achterwege in de weergave
-    # om de gebruiker niet te verwarren
     num_cols <- c("n_laag", "k_laag", "n_totaal", "extra_foutloze_posten")
     for (col in num_cols) {
       if(col %in% names(df_disp)) {
@@ -496,7 +393,6 @@ server <- function(input, output, session) {
       }
     }
 
-    # We filteren n_hoog eruit mocht de backend deze meesturen
     df_disp %>% select(-any_of("n_hoog"))
   })
 }
