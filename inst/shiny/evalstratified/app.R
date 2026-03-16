@@ -115,7 +115,9 @@ ui <- navbarPage("evalstratified",
                               numericInput("strat_seed", label = info_label("seed (startwaarde):", "Een vast startpunt voor de simulatie. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."), value = 1),
                               checkboxInput("strat_comp", label = info_label("vergelijk met andere methoden", "Berekent ter vergelijking ook de uitkomst volgens de traditionele (gewogen gemiddelde en gepoolde) methoden."), value = TRUE),
                               hr(),
-                              actionButton("run_strat", "bereken evaluatie", class = "btn-success", width = "100%")
+                              actionButton("run_strat", "bereken evaluatie", class = "btn-success", width = "100%"),
+                              br(), br(),
+                              downloadButton("download_report", "download PDF rapport", class = "btn-primary", style = "width: 100%;")
                             ),
 
                             mainPanel(
@@ -395,6 +397,34 @@ server <- function(input, output, session) {
 
     df_disp %>% select(-any_of("n_hoog"))
   })
+
+  # --- PDF Rapportage ---
+  output$download_report <- downloadHandler(
+    filename = function() {
+      paste0("evaluatie_rapport_", Sys.Date(), ".pdf")
+    },
+    content = function(file) {
+      # Zorg dat er eerst berekend is
+      res <- strat_results()
+      req(res)
+
+      showNotification("PDF wordt gegenereerd, een moment geduld...", type = "message", duration = 5)
+
+      # Kopieer de template naar een tijdelijke map (noodzakelijk voor shinyapps.io)
+      tempReport <- file.path(tempdir(), "report.Rmd")
+      file.copy("report.Rmd", tempReport, overwrite = TRUE)
+
+      # Maak de parameters klaar om in de PDF te injecteren
+      conf_val <- parse_dutch_num(input$strat_conf)
+      params <- list(res = res, zekerheid = conf_val)
+
+      # Genereer de PDF!
+      rmarkdown::render(tempReport, output_file = file,
+                        params = params,
+                        envir = new.env(parent = globalenv())
+      )
+    }
+  )
 }
 
 shinyApp(ui, server)

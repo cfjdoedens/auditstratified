@@ -1,0 +1,95 @@
+---
+title: "Rapport: Evaluatie Gestratificeerd"
+date: "`r format(Sys.Date(), '%d-%m-%Y')`"
+output: pdf_document
+params:
+  res: NA
+  zekerheid: NA
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+
+# Haal de resultaten uit de doorgegeven parameters
+res <- params$res
+```
+## Invoertabel (Steekproeven)
+
+Hieronder volgt de data zoals deze is verwerkt in het model:
+
+```{r}
+df_disp <- res$steekproeven
+geld_cols <- c("waarde_laag", "fout_hoog", "goed_hoog", "waarde_hoog", "waarde_populatie")
+for (col in geld_cols) {
+  if(col %in% names(df_disp)) df_disp[[col]] <- format(round(df_disp[[col]], 2), big.mark = ".", decimal.mark = ",", nsmall = 2)
+}
+num_cols <- c("n_laag", "k_laag", "n_totaal", "extra_foutloze_posten")
+for (col in num_cols) {
+  if(col %in% names(df_disp)) df_disp[[col]] <- format(round(df_disp[[col]], 0), big.mark = ".", decimal.mark = ",")
+}
+frac_cols <- c("materialiteit", "mw_fout", "max_fout")
+for (col in frac_cols) {
+  if(col %in% names(df_disp)) df_disp[[col]] <- format(round(df_disp[[col]], 5), big.mark = ".", decimal.mark = ",")
+}
+
+kable(df_disp %>% select(naam, waarde_laag, n_laag, k_laag, fout_hoog, goed_hoog, ihr, ibr, car, materialiteit), align = "lrrrrrrrrr")
+```
+## Kanskromme van de geprojecteerde fout
+
+```{r}
+d <- res$kanskromme
+totaal_geld <- res$populatie_totaal
+min_geld <- sum(res$steekproeven$fout_hoog)
+
+df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y) %>% filter(x_geld >= min_geld)
+
+if(nrow(df_plot) > 0) {
+  df_plot <- bind_rows(data.frame(x_geld = min_geld, y_dichtheid = 0), df_plot) %>% arrange(x_geld, y_dichtheid)
+}
+
+mode_val <- max(res$mw_fout_convolutie_geld, min_geld)
+max_val <- max(res$max_fout_convolutie_geld, min_geld)
+zekerheid_pct <- params$zekerheid * 100
+
+ggplot(df_plot, aes(x = x_geld, y = y_dichtheid)) +
+  geom_area(data = subset(df_plot, x_geld <= max_val), fill = "#e0e0e0", alpha = 0.7) +
+  geom_line(color = "#2c3e50", linewidth = 1) +
+  geom_vline(xintercept = mode_val, color = "blue", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = max_val, color = "red", linetype = "dashed", linewidth = 1) +
+  scale_x_continuous(labels = function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, prefix = "€ ")) +
+  labs(
+    subtitle = paste0("blauwe lijn = meest waarschijnlijke fout | rode lijn = maximale fout (", zekerheid_pct, "% zekerheid)"),
+    x = "fout in euro's", y = "relatieve kansdichtheid"
+  ) +
+  theme_minimal() +
+  theme(text = element_text(size = 12), axis.text.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Hoofdresultaten
+
+```{r}
+min_geld <- sum(res$steekproeven$fout_hoog)
+min_fractie <- min_geld / res$populatie_totaal
+mw_frac <- max(res$mw_fout_convolutie, min_fractie)
+mw_geld <- max(res$mw_fout_convolutie_geld, min_geld)
+max_frac <- max(res$max_fout_convolutie, min_fractie)
+max_geld <- max(res$max_fout_convolutie_geld, min_geld)
+
+res_tab <- data.frame(
+  metriek = c("meest waarschijnlijke fout (fractie)", "meest waarschijnlijke fout (geld)",
+              "maximale fout (fractie)", "maximale fout (geld)"),
+  waarde = c(
+    format(round(mw_frac, 5), decimal.mark = ",", nsmall = 5),
+    format(round(mw_geld, 2), big.mark = ".", decimal.mark = ",", nsmall = 2),
+    format(round(max_frac, 5), decimal.mark = ",", nsmall = 5),
+    format(round(max_geld, 2), big.mark = ".", decimal.mark = ",", nsmall = 2)
+  )
+)
+kable(res_tab, align = "lr")
+```
+
+
+
