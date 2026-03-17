@@ -34,7 +34,7 @@ info_label <- function(tekst, tooltip_tekst) {
 ui <- navbarPage("evalstratified",
                  theme = bs_theme(version = 5),
 
-                 # --- head: css only (js removed) ---
+                 # --- head: css en force-resize script ---
                  header = tags$head(
                    tags$style(HTML("
       /* force all handsontable cells to be white with black text */
@@ -42,7 +42,13 @@ ui <- navbarPage("evalstratified",
       .handsontable td.current { background-color: #e6f2ff !important; }
       /* right align text columns that act as numbers */
       .handsontable .htRight { text-align: right; }
-    "))
+    ")),
+                   tags$script(HTML('
+      // Forceer een hertekening van de tabel als je wisselt van tabblad
+      $(document).on("shiny:tabshown", function() {
+        window.dispatchEvent(new Event("resize"));
+      });
+    '))
                  ),
 
                  # -------------------------------------------------------------------------
