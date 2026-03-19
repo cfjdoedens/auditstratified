@@ -7,15 +7,16 @@ check](https://github.com/cfjdoedens/evalstratified/actions/workflows/%20R%20-%2
 App](https://github.com/cfjdoedens/evalstratified/actions/workflows/%20deploy%20-%20shiny.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/%20deploy%20-%20shiny.yaml)
 \< !–badges:end- -\>
 
-The goal of evalstratified is to make an estimate of the error fraction
-of a set of monetary files. This based on a global level of certainty, a
-level of certainty per file, and on error fractions found in sampled
-items of each of these files.
+Het doel van evalstratified is om een schatting te maken van de
+foutfractie van een aantal monetaire bestanden. Dit gebeurt op basis van
+een algeheel betrouwbaarheidsniveau, een betrouwbaarheidsniveau per
+bestand, en de foutfracties die zijn gevonden in de steekproefposten van
+elk van deze bestanden.
 
-## Installation
+## Installatie
 
-You can install the development version of evalstratified from
-[GitHub](https://github.com/) with:
+Je kunt de ontwikkelversie van evalstratified laden van
+[GitHub](https://github.com/):
 
 ``` r
 if (!requireNamespace("devtools", quietly = TRUE)) {
@@ -24,195 +25,208 @@ install.packages("devtools")
 devtools::install_github("cfjdoedens/evalstratified")
 ```
 
-## Example
+## De basis: meerdere steekproeven combineren
 
-Steekproef1 is gebaseerd op een zekerheid van 95% omdat ihr, ibr en car
-alledrie op hoog (H) staan. We kunnen dit ook narekenen met
-`haro_nog_nodige_zekerheid(ihr = "H", ibr = "H", car = "H")`. Dit levert
-inderdaad 0.95 op. De materialiteit is 2%. Het betreft 100 miljoen euro.
-Om te bepalen hoeveel posten we moeten trekken voor steekproef1
-gebruiken we `drawsneeded::drawsneeded(0, 0.02, cert = 0.95)`.
-Resultaat:148. Na trekken en evalueren blijkt er 1 post fout te zijn.
+De functie van `evalstratified` is het statistisch samenvoegen van de
+evaluaties van meerdere, afzonderlijke steekproeven. Dit is nodig in de
+auditpraktijk wanneer een totale populatie bestaat uit verschillende
+deelpopulaties (bijvoorbeeld verschillende locaties, systemen of
+processen) waaruit separate steekproeven zijn getrokken.
 
-Bij steekproef2 staan ihr en ibr allebei op laag en alleen car staat op
-hoog. We berekenen de benodigde zekerheid met
-`haro_nog_nodige_zekerheid(ihr = "L", ibr = "L", car = "H")`. Dit levert
-0.6323529 op. Het betreft ook 100 miljoen euro en een materialiteit van
-ook 2%. Voor steekproef2 bepalen we vervolgens het aantal te trekken
-posten met `drawsneeded::drawsneeded(0, 0.02, cert = 0.64)`.
-Resultaat:50. Na trekken en evalueren blijkt geen enkele post hiervan
-fout te zijn.
+In het meest basale scenario bevatten deze steekproeven geen
+uitzonderlijk grote posten (alle gecontroleerde posten zijn kleiner dan
+het steekproefinterval). In dit geval zijn er dus geen posten die
+integraal (100%) gecontroleerd hoeven te worden; de zogenaamde
+‘hoogstrata’ zijn leeg (ofwel € 0).
+
+Wanneer je de resultaten van deze losse steekproeven simpelweg bij
+elkaar op zou tellen, zou je de statistische onzekerheid verkeerd
+inschatten. `evalstratified` lost dit op door de afzonderlijke
+kansverdelingen van de verschillende steekproeven wiskundig te
+combineren door middel van **convolutie**. Het resultaat is één zuivere,
+gecombineerde kanskromme met één correct berekende maximale
+fout(fractie) en precisie voor de totale organisatie.
+
+### Verfijning: Hoogstratum en Laagstratum
+
+In de praktijk komt het voor dat bestanden wél enkele zeer grote posten
+bevatten die integraal gecontroleerd worden. Om hier wiskundig correct
+mee om te gaan, biedt `evalstratified` een verfijning op bovenstaand
+basisprincipe: het onderscheid tussen een **hoogstratum** en een
+**laagstratum** binnen de steekproeven. Het hoogstratum bevat de
+integraal gecontroleerde posten, deze zijn niet geextrapoleerd bij de
+steekproefevaluatie. Het laagstrum bevat de posten kleiner dan het
+steekproefinterval. Deze posten zijn geextrapoleerd en leveren samen een
+kanskromme die beschrijft wat de kans is op de mogeljke foutfractie in
+de massa van posten kleiner dan het steekproefinterval.
+
+### Voorbeelden van verschillende evaluatie-scenario’s
+
+Om de flexibiliteit van `evalstratified` te demonstreren, schetsen we
+hieronder drie veelvoorkomende praktijksituaties en hoe het package
+hiermee omgaat. Het is hierbij belangrijk om te onthouden dat de
+uiteindelijke evaluatie een *foutfractie* is: de totale (geprojecteerde)
+fout gedeeld door de totale populatieomvang.
+
+**Scenario 1: Geen fouten in de integraal gecontroleerde posten (Het
+verdunningseffect)** We evalueren twee steekproeven die beide bestaan
+uit een laagstratum (de getrokken steekproef) en een hoogstratum (de
+100% gecontroleerde grote posten). In de steekproeven (laagstrata)
+zitten enkele fouten, maar in de hoogstrata van beide bestanden worden
+*geen* fouten aangetroffen (absolute fout = € 0). *Hoe `evalstratified`
+dit verwerkt:* Het package berekent via convolutie de gecombineerde
+onzekerheid en geprojecteerde fout van de twee laagstrata. Omdat de fout
+in de hoogstrata € 0 is, wordt de teller (de fout) niet verhoogd, maar
+de noemer (de totale populatieomvang) wél. Het foutloze hoogstratum
+‘verdunt’ hiermee de fout, waardoor de uiteindelijke maximale
+foutfractie voor het geheel significant daalt.
+
+**Scenario 2: Wel fouten in de integraal gecontroleerde posten** We
+nemen dezelfde opzet als hierboven, maar nu worden er wél fouten
+gevonden in de grote posten. In het hoogstratum van steekproef 1 vinden
+we een werkelijke fout van € 15.000, en in steekproef 2 een fout van €
+5.000. *Hoe `evalstratified` dit verwerkt:* De statistische onzekerheid
+van de laagstrata wordt opnieuw zuiver via convolutie gecombineerd.
+Vervolgens telt het package de absolute, vastgestelde fouten uit de
+hoogstrata (samen € 20.000) direct op bij de uitkomst van de convolutie
+(de teller), en deelt dit door de totale omvang van alle strata (de
+noemer). De foutfractie stijgt hierdoor exact in verhouding met de
+gevonden harde fouten, zonder onterechte extra statistische opslag.
+
+**Scenario 3: Een volledige populatie wordt integraal gecontroleerd**
+Het package kan ook overweg met asymmetrische controlesituaties. Stel,
+bestand 1 wordt regulier gecontroleerd via een steekproef (laagstratum).
+Bestand 2 wordt door de auditor echter *volledig* (100%) gecontroleerd.
+Hierbij wordt in totaal voor € 12.500 aan fouten gevonden in bestand 2.
+*Hoe `evalstratified` dit verwerkt:* Bestand 2 heeft door de 100%
+controle geen statistische onzekerheid meer. De gebruiker van het
+package geeft daarom voor het laagstratum een omvang van 0 euro op, en
+de 100% populatie wordt door de gebruiker in de parameters fout_hoog en
+goed_hoog geplaatst. Dus het integraal gecontroleerde bestand wordt dan
+door het package in zijn geheel behandeld als één groot ‘hoogstratum’.
+`evalstratified` berekent de verdeling van bestand 1, slaat de
+convolutie voor bestand 2 over, en voegt de omvang én de exacte fout van
+€ 12.500 van bestand 2 direct toe aan de breuk voor de algehele
+eindevaluatie.
+
+## De rol van risicofactoren, materialiteit en “virtuele” posten
+
+Wanneer bestanden uit verschillende bedrijfsonderdelen of processen
+komen, worden ze zelden met exact hetzelfde risicoprofiel gecontroleerd.
+`evalstratified` is speciaal ontworpen om steekproeven met verschillende
+risico-inschattingen toch wiskundig zuiver met elkaar te kunnen
+combineren. Om te begrijpen hoe het package dit doet, is het belangrijk
+te kijken naar de wisselwerking tussen risicofactoren, materialiteit en
+zogenaamde “virtuele foutloze posten”.
+
+**De basis: Risico en Materialiteit** In de auditpraktijk wordt de
+benodigde statistische zekerheid voor een steekproef bepaald door de
+inschatting van het Inherent Risico (IHR), het Interne Beheersingsrisico
+(IBR) en het risico van Cijferbeoordelingen (CAR).
+
+- Staan al deze risicofactoren op “Hoog”, dan leunt de accountant
+  volledig op de steekproef en is er bijvoorbeeld 95% zekerheid nodig.
+- Is het IBR “Laag” (bijvoorbeeld door een sterke interne controle), dan
+  mag de vereiste zekerheid uit de steekproef omlaag (bijv. naar 64%).
+
+De vereiste zekerheid bepaalt, in combinatie met de vastgestelde
+**materialiteit** (de maximaal acceptabele fout in de populatie),
+hoeveel posten er fysiek getrokken moeten worden. Bij een lager risico
+is de steekproefomvang kleiner.
+
+**Het concept van “Virtuele Foutloze Posten”** Wiskundig gezien kun je
+een verlaagd risico (bijv. steunen op interne controles) op een zeer
+elegante manier vertalen. Het feit dat de interne controle effectief is
+en een deel van het risico afdekt, fungeert als statistisch bewijs. Je
+kunt dit zien alsof de interne systemen vooraf al een aantal posten
+foutloos voor je hebben gecontroleerd.
+
+Dit noemen we **virtuele foutloze steekproefposten**. Je fysieke
+steekproefomvang wordt dan weliswaar kleiner, maar wiskundig gezien
+wordt jouw bewijslast ‘aangevuld’ door de virtuele foutloze posten die
+voortkomen uit je positieve risicoanalyse.
+
+**Verschillende steekproeven combineren via harmonisatie** Dit concept
+vormt het wiskundige fundament onder `evalstratified` bij het combineren
+van verschillende steekproeven:
+
+- **Steekproef A (Hoog risico):** Vereist 95% zekerheid. Er is geen
+  steun op interne controles, dus er zijn **0** virtuele posten. Het
+  benodigde bewijs moet 100% uit de getrokken posten komen.
+- **Steekproef B (Laag risico):** Vereist slechts 64% zekerheid. De
+  sterke interne controle levert een flinke buffer aan **virtuele
+  foutloze posten** op. Er hoeven fysiek veel minder posten getrokken te
+  worden.
+
+Als je de resultaten van Steekproef A en B wilt samenvoegen, kun je niet
+zomaar de gevonden fouten en getrokken aantallen bij elkaar optellen;
+het statistische vertrekpunt is immers ongelijk.
+
+`evalstratified` lost dit op door bij de evaluatie voor élke
+afzonderlijke steekproef het totale bewijs te harmoniseren (fysiek
+getrokken posten + virtuele foutloze posten op basis van de opgegeven
+IHR/IBR/CAR-parameters en materialiteit). Pas nadat de kansverdelingen
+via deze virtuele posten op hetzelfde fundamentele vertrekpunt zijn
+gebracht, past het package de convolutie toe. Hierdoor weegt de vooraf
+verkregen zekerheid per bestand zuiver en proportioneel mee in de
+berekende maximale fout voor de gehele populatie.
+
+### In de praktijk: Rekenen met risico’s en virtuele posten
+
+`evalstratified` bevat twee ingebouwde hulpfuncties waarmee je deze
+theoretische stappen zelf inzichtelijk kunt maken en kunt narekenen:
+`haro_nog_nodige_zekerheid()` en `foutloze_posten_equivalent()`.
+
+**1. De benodigde zekerheid berekenen** Stel, je hebt een deelpopulatie
+met een Laag Inherent Risico (L), een Midden Intern Beheersingsrisico
+(M) en een Hoog Cijferanalyserisico (H). Je kunt de exact vereiste
+statistische zekerheid volgens het HARo-model direct opvragen met de
+volgende functie:
 
 ``` r
 library(evalstratified)
 
-example <- tribble(
-~ naam,
-~ waarde_laag,
-~ n_laag,
-~ k_laag,
-~ ihr,
-~ ibr,
-~ car,
-~ materialiteit,
-~ fout_hoog,
-~ goed_hoog,
-~ n_hoog,
-~ n_totaal,
-~ waarde_hoog,
-~ waarde_populatie,
-"populatie1",
-100000000,
-148,
-1,
-"H",
-"H",
-"H",
-0.02,
-0,
-0,
-0,
-148,
-0,
-100000000,
-"populatie2",
-100000000,
-50,
-0,
-"L",
-"L",
-"H",
-0.02,
-0,
-0,
-0,
-50,
-0,
-100000000
-)
+# Bereken de benodigde zekerheid voor IHR=L, IBR=M, CAR=H
+zekerheid <- haro_nog_nodige_zekerheid(ihr = "L", ibr = "M", car = "H")
 
-r <- eval_stratified(steekproeven = example, zekerheid = 0.95)
-r
-#> $kanskromme
-#> 
-#> Call:
-#>  density.default(x = convolutie)
-#> 
-#> Data: convolutie (10000000 obs.);    Bandwidth 'bw' = 0.0001944
-#> 
-#>        x                    y            
-#>  Min.   :-0.0005699   Min.   : 0.000000  
-#>  1st Qu.: 0.0174854   1st Qu.: 0.002934  
-#>  Median : 0.0355408   Median : 0.299636  
-#>  Mean   : 0.0355408   Mean   :13.819181  
-#>  3rd Qu.: 0.0535962   3rd Qu.:14.842791  
-#>  Max.   : 0.0716515   Max.   :81.144287  
-#> 
-#> $populatie_totaal
-#> [1] 2e+08
-#> 
-#> $modus_fout_convolutie
-#> [1] 0.00663809
-#> 
-#> $modus_fout_convolutie_geld
-#> [1] 1327618
-#> 
-#> $mediaan_fout_convolutie
-#> [1] 0.008923597
-#> 
-#> $mediaan_fout_convolutie_geld
-#> [1] 1784719
-#> 
-#> $gemiddelde_fout_convolutie
-#> [1] 0.009981522
-#> 
-#> $gemiddelde_fout_convolutie_geld
-#> [1] 1996304
-#> 
-#> $mw_fout_convolutie
-#> [1] 0.00663809
-#> 
-#> $mw_fout_convolutie_geld
-#> [1] 1327618
-#> 
-#> $max_fout_convolutie
-#> [1] 0.0208458
-#> 
-#> $max_fout_convolutie_geld
-#> [1] 4169160
-#> 
-#> $vergelijk_met
-#> $vergelijk_met$mw_fout_los
-#> [1] 0.003378378
-#> 
-#> $vergelijk_met$mw_fout_los_geld
-#> [1] 675675.7
-#> 
-#> $vergelijk_met$max_fout_los
-#> [1] 0.02560712
-#> 
-#> $vergelijk_met$max_fout_los_geld
-#> [1] 5121425
-#> 
-#> $vergelijk_met$mw_fout_als1
-#> [1] 0.003367003
-#> 
-#> $vergelijk_met$mw_fout_als1_geld
-#> [1] 673400.7
-#> 
-#> $vergelijk_met$max_fout_als1
-#> [1] 0.01581936
-#> 
-#> $vergelijk_met$max_fout_als1_geld
-#> [1] 3163872
-#> 
-#> 
-#> $steekproeven
-#> # A tibble: 2 × 18
-#>   naam       waarde_laag n_laag k_laag ihr   ibr   car   materialiteit fout_hoog
-#>   <chr>            <dbl>  <dbl>  <dbl> <chr> <chr> <chr>         <dbl>     <dbl>
-#> 1 populatie1   100000000    148      1 H     H     H              0.02         0
-#> 2 populatie2   100000000     50      0 L     L     H              0.02         0
-#> # ℹ 9 more variables: goed_hoog <dbl>, n_hoog <dbl>, n_totaal <dbl>,
-#> #   waarde_hoog <dbl>, waarde_populatie <dbl>, extra_foutloze_posten <dbl>,
-#> #   toch_fouten <lgl>, mw_fout <dbl>, max_fout <dbl>
-#> 
-#> $invoer
-#> $invoer$steekproeven
-#> # A tibble: 2 × 14
-#>   naam       waarde_laag n_laag k_laag ihr   ibr   car   materialiteit fout_hoog
-#>   <chr>            <dbl>  <dbl>  <dbl> <chr> <chr> <chr>         <dbl>     <dbl>
-#> 1 populatie1   100000000    148      1 H     H     H              0.02         0
-#> 2 populatie2   100000000     50      0 L     L     H              0.02         0
-#> # ℹ 5 more variables: goed_hoog <dbl>, n_hoog <dbl>, n_totaal <dbl>,
-#> #   waarde_hoog <dbl>, waarde_populatie <dbl>
-#> 
-#> $invoer$zekerheid
-#> [1] 0.95
-#> 
-#> $invoer$MC
-#> [1] 1e+07
-#> 
-#> $invoer$start
-#> [1] 1
-#> 
-#> $invoer$vergelijk
-#> [1] TRUE
+print(zekerheid)
+#> [1] 0.7596154
+# Output: 0.8015873 (ofwel ~80,2% vereiste zekerheid in plaats van de standaard 95%)
 ```
 
-## Live version
+**2. Virtuele foutloze posten berekenen** Omdat de vereiste zekerheid
+door de risicoanalyse is gedaald van 95% naar ~80,2%, hoef je fysiek
+aanzienlijk minder posten te trekken. Het verschil in benodigd bewijs
+tussen een reguliere 95%-steekproef en deze 80%-steekproef wordt
+wiskundig opgevuld door virtuele foutloze posten. Bij een materialiteit
+van bijvoorbeeld 2% (0.02) bereken je dit als volgt:
 
-On <https://cfjdoedens.shinyapps.io/evalstratified/one> can find a live
-version of this package.
+``` r
 
-## Ideas for further development
+# Bereken het equivalente aantal foutloze posten
+virtuele_posten <- foutloze_posten_equivalent(ihr = "L", ibr = "M", car = "H", materialiteit = 0.02)
 
-1.  Add to live version the option to choose between
+print(virtuele_posten)
+#> [1] 78
+# Output: Geeft het exacte aantal posten terug dat de effectieve interne controle 
+# "virtueel" voor je heeft afgevinkt.
+```
 
-- Dutch text + European number notation, or
-- English text + European number notation, or
-- English text + English number notation
+Wanneer je de hoofdfunctie eval_stratified() gebruikt om je volledige
+audit met meerdere steekproeven door te rekenen, hoef je deze stappen
+niet zelf uit te voeren. Het package roept deze hulpfuncties op de
+achtergrond per geüploade steekproefregel automatisch aan. Zo wordt elke
+steekproef feilloos en transparant geharmoniseerd voordat de convolutie
+(het samenvoegen) plaatsvindt.
 
-1.  Add informative texts to the various numbers that can be filled in,
-    or are produced. This info appears by pressing little icons (“i” or
-    so) near the subject matter.
+## Webversie
+
+Zie <https://cfjdoedens.shinyapps.io/evalstratified/>.
+
+## Ideeën voor verdere ontwikkeling
+
+1.  Voeg aan de live-versie de mogelijkheid toe om te kiezen tussen:
+
+- Nederlandse tekst + Europese getalnotatie, of
+- Engelse tekst + Europese getalnotatie, of
+- Engelse tekst + Engelse getalnotatie
