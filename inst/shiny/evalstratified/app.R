@@ -203,19 +203,21 @@ server <- function(input, output, session) {
     renderer_nl_percent <- JS("function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL', { style: 'percent', minimumFractionDigits: 2 }); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }")
     renderer_nl_general <- JS("function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL'); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }")
 
+    # 1. Alleen het icoontje toevoegen (zonder de 'title' in de span)
     koppen <- c(
-      "naam <span title='Naam of beschrijving van het stratum/steekproef'>&#9432;</span>",
-      "waarde_laag <span title='Totale boekwaarde van de populatie waar deze steekproef uit getrokken is'>&#9432;</span>",
-      "n_laag <span title='Aantal gecontroleerde posten in de steekproef'>&#9432;</span>",
-      "k_laag <span title='Aantal gevonden foute posten'>&#9432;</span>",
-      "fout_hoog <span title='Bekende foute waarde in de 100% gecontroleerde topmassa'>&#9432;</span>",
-      "goed_hoog <span title='Bekende correcte waarde in de 100% gecontroleerde topmassa'>&#9432;</span>",
-      "ihr <span title='Inherent risico voor dit specifieke stratum'>&#9432;</span>",
-      "ibr <span title='Interne beheersing voor dit specifieke stratum'>&#9432;</span>",
-      "car <span title='Zekerheid uit cijferanalyse voor dit specifieke stratum'>&#9432;</span>",
-      "materialiteit <span title='Toegestane afwijking (fractie) voor dit stratum'>&#9432;</span>"
+      "naam <span>&#9432;</span>",
+      "waarde_laag <span>&#9432;</span>",
+      "n_laag <span>&#9432;</span>",
+      "k_laag <span>&#9432;</span>",
+      "fout_hoog <span>&#9432;</span>",
+      "goed_hoog <span>&#9432;</span>",
+      "ihr <span>&#9432;</span>",
+      "ibr <span>&#9432;</span>",
+      "car <span>&#9432;</span>",
+      "materialiteit <span>&#9432;</span>"
     )
 
+    # 2. De rhandsontable bouwen en de tooltips via JavaScript injecteren
     rhandsontable(df, stretchH = "all") %>%
       hot_col("naam", type = "text") %>%
       hot_col("waarde_laag", type = "text", renderer = renderer_nl_money) %>%
@@ -227,7 +229,36 @@ server <- function(input, output, session) {
       hot_col("ibr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
       hot_col("car", type = "dropdown", source = as.list(risk_vec_ui)) %>%
       hot_col("materialiteit", type = "text", renderer = renderer_nl_percent) %>%
-      hot_cols(colHeaders = koppen)
+      hot_cols(colHeaders = koppen) %>%
+      onRender("
+        function(el, x) {
+          var hot = this.hot;
+          hot.updateSettings({
+            afterGetColHeader: function(col, TH) {
+              // Array met tooltips in exact dezelfde volgorde als de kolommen
+              var tooltips = [
+                'Naam van de steekproef',
+                'Totale boekwaarde van het lage stratum, dus van de posten kleiner dan het interval',
+                'Aantal gecontroleerde posten kleiner dan het interval van de steekproef',
+                'De som van de foutfracties van de getrokken posten kleiner dan het interval',
+                'Foute waarde in geld van de 100% gecontroleerde massa',
+                'Goede waarde in geld van de 100% gecontroleerde massa',
+                'Inherent risico voor deze steekproef',
+                'Interne beheersingsrisico voor deze steekproef',
+                'Cijferanalyserisico voor deze steekproef',
+                'Toegestane afwijking, als fractie (0-1), voor deze steekproef'
+              ];
+
+              if (col >= 0 && col < tooltips.length) {
+                // Zet de tooltip direct op de fysieke tabelcel
+                TH.setAttribute('title', tooltips[col]);
+                // Verander de muiscursor in een 'help' icoontje als je eroverheen zweeft
+                TH.style.cursor = 'help';
+              }
+            }
+          });
+        }
+      ")
   })
 
   # reactive calculation
@@ -306,11 +337,16 @@ server <- function(input, output, session) {
     min_geld <- sum(res$steekproeven$fout_hoog)
 
     df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y)
-    df_plot <- df_plot %>% filter(x_geld >= min_geld)
+
+    # Filter nu aan BEIDE kanten afkappen (min_geld aan de linkerkant, totaal_geld aan de rechterkant)
+    df_plot <- df_plot %>% filter(x_geld >= min_geld & x_geld <= totaal_geld)
 
     if(nrow(df_plot) > 0) {
+      # Zorg dat de lijn aan de uiterste grenzen netjes naar 0 zakt (optisch strakker)
       df_plot <- bind_rows(
-        data.frame(x_geld = min_geld, y_dichtheid = 0), df_plot
+        data.frame(x_geld = min_geld, y_dichtheid = 0),
+        df_plot,
+        data.frame(x_geld = totaal_geld, y_dichtheid = 0)
       ) %>% arrange(x_geld, y_dichtheid)
     }
 
@@ -318,6 +354,21 @@ server <- function(input, output, session) {
     max_val <- max(res$max_fout_convolutie_geld, min_geld)
     zekerheid_pct <- res$invoer$zekerheid * 100
 
+    # Check of er wel statistische spreiding is
+    # We checken dit puur door te kijken of er überhaupt een steekproefmassa (laagstratum) is.
+    totaal_laag_geld <- sum(res$steekproeven$waarde_laag)
+
+    if (totaal_laag_geld < 0.01) {
+      p <- ggplot() +
+        annotate("text", x = 0.5, y = 0.5,
+                 label = paste0("100% Integraal Gecontroleerd\n\nEr is geen statistische onzekerheid.\nDe fout is exact vastgesteld op € ",
+                                format(min_geld, big.mark = ".", decimal.mark = ",")),
+                 size = 6, color = "#2c3e50", fontface = "bold", hjust = 0.5) +
+        theme_void()
+      return(p) # Voor report.Rmd: gebruik `print(p)` in plaats van `return(p)`
+    }
+
+    # Als er WÉL spreiding is, teken de normale kanskromme
     ggplot(df_plot, aes(x = x_geld, y = y_dichtheid)) +
       geom_area(data = subset(df_plot, x_geld <= max_val), fill = "#e0e0e0", alpha = 0.7) +
       geom_line(color = "#2c3e50", linewidth = 1) +

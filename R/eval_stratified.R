@@ -198,8 +198,8 @@ eval_stratified <-
       stopifnot(is.numeric(waarde_hoog))
       stopifnot(is.numeric(waarde_populatie))
 
-      stopifnot(0 < waarde_laag)
-      stopifnot(0 < n_laag)
+      stopifnot(0 <= waarde_laag)
+      stopifnot(0 <= n_laag)
       stopifnot(0 <= k_laag)
       stopifnot(k_laag <= n_laag)
       stopifnot(0 < materialiteit)
