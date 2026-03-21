@@ -17,6 +17,11 @@
 #' De maximale fout is afhankelijk van de gevraagde zekerheid, en
 #' is de fout bij een cumulatieve kans gelijk aan deze zekerheid.
 #'
+#' De statistische interpretatie van de risico waarden
+#' hoog, midden en laag voor IHR, IBR en CAR, die deze module hanteert is volgens
+#' het HARO, het Handboek Auditing Rijksoverheid.
+#' Het HARo wordt beheerd door Auditdienst Rijk, de ADR.
+#'
 #' @details
 #' We gaan uit van de som van de foutfracties, de k-waarde, dus we kijken niet
 #' naar de foutfracties per post.
@@ -213,25 +218,30 @@ eval_stratified <-
       stopifnot(is.finite(n_laag))
       stopifnot(is.finite(k_laag))
 
-      # --- REDUNDANTIE & VEILIGHEIDSCONTROLES ---
+      # Invoercontrole aan de hand van redundantie in parameters.
       # We gebruiken abs(x - y) < 0.01 om onzichtbare afrondingsfouten in kommagetallen te negeren.
+      {
+        # 1. Check of posten-aantallen kloppen (n_totaal == n_laag + n_hoog)
+        if (any(n_totaal != (n_laag + n_hoog))) {
+          stop(
+            "Inconsistentie gevonden: 'n_totaal' is niet gelijk aan de som van 'n_laag' en 'n_hoog'."
+          )
+        }
 
-      # 1. Check of posten-aantallen kloppen (n_totaal == n_laag + n_hoog)
-      if (any(n_totaal != (n_laag + n_hoog))) {
-        stop("Inconsistentie gevonden: 'n_totaal' is niet gelijk aan de som van 'n_laag' en 'n_hoog'.")
+        # 2. Check of het hoogstratum klopt (waarde_hoog == fout_hoog + goed_hoog)
+        if (any(abs(waarde_hoog - (fout_hoog + goed_hoog)) > 0.01)) {
+          stop(
+            "Inconsistentie gevonden: 'waarde_hoog' is niet exact gelijk aan de som van 'fout_hoog' en 'goed_hoog'."
+          )
+        }
+
+        # 3. Check of de totale populatie klopt (waarde_populatie == waarde_laag + waarde_hoog)
+        if (any(abs(waarde_populatie - (waarde_laag + waarde_hoog)) > 0.01)) {
+          stop(
+            "Inconsistentie gevonden: 'waarde_populatie' is niet gelijk aan de som van het laagstratum ('waarde_laag') en het hoogstratum ('waarde_hoog')."
+          )
+        }
       }
-
-      # 2. Check of het hoogstratum klopt (waarde_hoog == fout_hoog + goed_hoog)
-      if (any(abs(waarde_hoog - (fout_hoog + goed_hoog)) > 0.01)) {
-        stop("Inconsistentie gevonden: 'waarde_hoog' is niet exact gelijk aan de som van 'fout_hoog' en 'goed_hoog'.")
-      }
-
-      # 3. Check of de totale populatie klopt (waarde_populatie == waarde_laag + waarde_hoog)
-      if (any(abs(waarde_populatie - (waarde_laag + waarde_hoog)) > 0.01)) {
-        stop("Inconsistentie gevonden: 'waarde_populatie' is niet gelijk aan de som van het laagstratum ('waarde_laag') en het hoogstratum ('waarde_hoog').")
-      }
-
-      # --- EINDE CONTROLES ---
 
       stopifnot(length(zekerheid) == 1)
       stopifnot(is.numeric(zekerheid))
@@ -331,7 +341,9 @@ eval_stratified <-
       for (i in 1:n_steekproeven) {
         n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
         k_calc <- t_uit$k_laag[[i]]
-        krommen[, i] <- rbeta(MC, shape1 = 1 + k_calc, shape2 = 1 + n_calc - k_calc)
+        krommen[, i] <- rbeta(MC,
+                              shape1 = 1 + k_calc,
+                              shape2 = 1 + n_calc - k_calc)
       }
 
       # We zetten de geprojecteerde foutfracties van het laagstratum om naar bedragen,

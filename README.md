@@ -125,6 +125,11 @@ inschatting van het Inherent Risico (IHR), het Interne Beheersingsrisico
 - Is het IBR “Laag” (bijvoorbeeld door een sterke interne controle), dan
   mag de vereiste zekerheid uit de steekproef omlaag (bijv. naar 64%).
 
+**HARo** De statistische interpretatie van de risico waarden hoog,
+midden en laag voor IHR, IBR en CAR, die deze module hanteert is volgens
+het HARO, het Handboek Auditing Rijksoverheid. Het HARo wordt beheerd
+door Auditdienst Rijk, de ADR.
+
 De vereiste zekerheid bepaalt, in combinatie met de vastgestelde
 **materialiteit** (de maximaal acceptabele fout in de populatie),
 hoeveel posten er fysiek getrokken moeten worden. Bij een lager risico

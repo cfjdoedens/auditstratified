@@ -15,9 +15,8 @@ risk_vec_ui <- c("H", "M", "L")
 
 # helper functie: parseer getallen strict volgens nl notatie
 parse_dutch_num <- function(x) {
-  if (is.numeric(x)) return(x)
-  x_char <- as.character(x)
-  parse_number(x_char, locale = locale(decimal_mark = ",", grouping_mark = "."))
+  stopifnot(is.character(x))
+  parse_number(x, locale = locale(decimal_mark = ",", grouping_mark = "."))
 }
 
 # helper functie: maakt netjes een label met een (i) tooltip voor de UI
@@ -59,9 +58,9 @@ ui <- navbarPage("evalstratified",
                             sidebarPanel(
                               h4("risico-inschatting"),
                               helpText("Bereken de nog benodigde zekerheid volgens HARo paragraaf B7.3.4."),
-                              selectInput("haro_ihr", label = info_label("inherent risico (ihr):", "De inschatting van de kans op een materiële fout voordat interne beheersing is meegewogen."), choices = risk_choices),
-                              selectInput("haro_ibr", label = info_label("interne beheersing (ibr):", "De verwachte effectiviteit van de interne beheersingsmaatregelen."), choices = risk_choices),
-                              selectInput("haro_car", label = info_label("cijferanalyse (car):", "De mate van zekerheid die al is verkregen uit cijferbeoordelingen en analytische procedures."), choices = risk_choices)
+                              selectInput("haro_ihr", label = info_label("inherent risico (ihr):", "De inschatting van de kans op een materiële fout zonder gebruik van interne beheersing en cijferanalyse."), choices = risk_choices),
+                              selectInput("haro_ibr", label = info_label("interne beheersingsrisico (ibr):", "Het risico dat de interne beheersing niet goed werkt."), choices = risk_choices),
+                              selectInput("haro_car", label = info_label("cijferanalyserisico (car):", "Het risico dat cijferbeoordelingen en analytische procedures fouten niet vinden."), choices = risk_choices)
                             ),
                             mainPanel(
                               h3("resultaat"),
@@ -79,9 +78,9 @@ ui <- navbarPage("evalstratified",
                             sidebarPanel(
                               h4("risico & materialiteit"),
                               helpText("Bereken hoeveel foutloze posten uw risico-inschatting waard is."),
-                              selectInput("fpe_ihr", label = info_label("inherent risico (ihr):", "De inschatting van de kans op een materiële fout voordat interne beheersing is meegewogen."), choices = risk_choices),
-                              selectInput("fpe_ibr", label = info_label("interne beheersing (ibr):", "De verwachte effectiviteit van de interne beheersingsmaatregelen."), choices = risk_choices),
-                              selectInput("fpe_car", label = info_label("cijferanalyse (car):", "De mate van zekerheid die al is verkregen uit cijferbeoordelingen en analytische procedures."), choices = risk_choices),
+                              selectInput("haro_ihr", label = info_label("inherent risico (ihr):", "De inschatting van de kans op een materiële fout zonder gebruik van interne beheersing en cijferanalyse."), choices = risk_choices),
+                              selectInput("haro_ibr", label = info_label("interne beheersingsrisico (ibr):", "Het risico dat de interne beheersing niet goed werkt."), choices = risk_choices),
+                              selectInput("haro_car", label = info_label("cijferanalyse (car):", "Het risico dat cijferbeoordelingen en analytische procedures fouten niet vinden."), choices = risk_choices),
                               textInput("fpe_mat", label = info_label("materialiteit (fractie):", "De grens waarboven een afwijking als materieel wordt beschouwd (bijv. 0,01 voor 1%)."), value = "0,01")
                             ),
                             mainPanel(
@@ -117,9 +116,9 @@ ui <- navbarPage("evalstratified",
                               h4("2. instellingen"),
                               textInput("strat_conf", label = info_label("zekerheid (0,95 = 95%):", "Het gewenste betrouwbaarheidsniveau voor de uiteindelijke evaluatie."), value = "0,95"),
 
-                              numericInput("strat_mc", label = info_label("Monte Carlo iteraties:", "Aantal simulaties. Een hoger getal is nauwkeuriger, maar het rekenen duurt iets langer."), value = 100000, min = 1000, step = 10000),
+                              numericInput("strat_mc", label = info_label("Monte Carlo iteraties:", "Aantal simulaties. Een hoger getal is nauwkeuriger, maar het rekenen duurt langer."), value = 100000, min = 1000, step = 10000),
                               numericInput("strat_seed", label = info_label("seed (startwaarde):", "Een vast startpunt voor de simulatie. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."), value = 1),
-                              checkboxInput("strat_comp", label = info_label("vergelijk met andere methoden", "Berekent ter vergelijking ook de uitkomst volgens de traditionele (gewogen gemiddelde en gepoolde) methoden."), value = TRUE),
+                              checkboxInput("strat_comp", label = info_label("vergelijk met andere methoden", "Berekent ter vergelijking ook de uitkomst volgens gewogen gemiddelde en als gepoold."), value = TRUE),
                               hr(),
                               actionButton("run_strat", "bereken evaluatie", class = "btn-success", width = "100%"),
                               br(), br(),
@@ -271,9 +270,28 @@ server <- function(input, output, session) {
     if (input$input_method == "upload") {
       req(input$file_strat)
       tryCatch({
+        # Lees in als Nederlandse CSV (puntkomma gescheiden)
         final_df <- read_csv2(input$file_strat$datapath, show_col_types = FALSE)
+
+        # Check of de cruciale kolommen wel succesvol zijn gescheiden
+        vereiste_kolommen <- c("naam", "waarde_laag", "n_laag", "k_laag", "ihr", "ibr", "car", "materialiteit")
+        ontbrekend <- setdiff(vereiste_kolommen, names(final_df))
+
+        if (length(ontbrekend) > 0) {
+          showNotification(
+            paste("Fout bij inlezen. Ontbrekende kolommen:", paste(ontbrekend, collapse = ", "),
+                  "--- Tip: Controleer of uw CSV-bestand is opgeslagen met puntkomma's (;) als scheidingsteken."),
+            type = "error",
+            duration = 10
+          )
+          return(NULL) # Breek af voordat de app crasht
+        }
+
+        # Vul eventueel ontbrekende hoogstratum-kolommen aan met 0 (gebruiksvriendelijkheid)
         if(!"fout_hoog" %in% names(final_df)) final_df$fout_hoog <- 0
         if(!"goed_hoog" %in% names(final_df)) final_df$goed_hoog <- 0
+
+        # Zet alles om naar harde, wiskundige getallen
         final_df <- final_df %>%
           mutate(
             waarde_laag = parse_dutch_num(waarde_laag), n_laag = parse_dutch_num(n_laag),
@@ -281,10 +299,9 @@ server <- function(input, output, session) {
             goed_hoog = parse_dutch_num(goed_hoog), materialiteit = parse_dutch_num(materialiteit)
           )
       }, error = function(e) {
-        showNotification("Kan het csv-bestand niet lezen. Zorg ervoor dat het is opgeslagen als CSV gescheiden door lijstscheidingsteken (vaak puntkomma).", type = "error")
+        showNotification("Kan het csv-bestand niet verwerken. Controleer de opmaak.", type = "error")
         return(NULL)
       })
-
     } else {
       req(input$hot_input)
       raw_df <- hot_to_r(input$hot_input)
@@ -329,62 +346,10 @@ server <- function(input, output, session) {
   # output plot (de kanskromme)
   output$plot_strat_main <- renderPlot({
     res <- strat_results()
-    req(res)
-    req(res$kanskromme)
+    req(res, res$kanskromme)
 
-    d <- res$kanskromme
-    totaal_geld <- res$populatie_totaal
-    min_geld <- sum(res$steekproeven$fout_hoog)
-
-    df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y)
-
-    # Filter nu aan BEIDE kanten afkappen (min_geld aan de linkerkant, totaal_geld aan de rechterkant)
-    df_plot <- df_plot %>% filter(x_geld >= min_geld & x_geld <= totaal_geld)
-
-    if(nrow(df_plot) > 0) {
-      # Zorg dat de lijn aan de uiterste grenzen netjes naar 0 zakt (optisch strakker)
-      df_plot <- bind_rows(
-        data.frame(x_geld = min_geld, y_dichtheid = 0),
-        df_plot,
-        data.frame(x_geld = totaal_geld, y_dichtheid = 0)
-      ) %>% arrange(x_geld, y_dichtheid)
-    }
-
-    mode_val <- max(res$mw_fout_convolutie_geld, min_geld)
-    max_val <- max(res$max_fout_convolutie_geld, min_geld)
-    zekerheid_pct <- res$invoer$zekerheid * 100
-
-    # Check of er wel statistische spreiding is
-    # We checken dit puur door te kijken of er überhaupt een steekproefmassa (laagstratum) is.
-    totaal_laag_geld <- sum(res$steekproeven$waarde_laag)
-
-    if (totaal_laag_geld < 0.01) {
-      p <- ggplot() +
-        annotate("text", x = 0.5, y = 0.5,
-                 label = paste0("100% Integraal Gecontroleerd\n\nEr is geen statistische onzekerheid.\nDe fout is exact vastgesteld op € ",
-                                format(min_geld, big.mark = ".", decimal.mark = ",")),
-                 size = 6, color = "#2c3e50", fontface = "bold", hjust = 0.5) +
-        theme_void()
-      return(p) # Voor report.Rmd: gebruik `print(p)` in plaats van `return(p)`
-    }
-
-    # Als er WÉL spreiding is, teken de normale kanskromme
-    ggplot(df_plot, aes(x = x_geld, y = y_dichtheid)) +
-      geom_area(data = subset(df_plot, x_geld <= max_val), fill = "#e0e0e0", alpha = 0.7) +
-      geom_line(color = "#2c3e50", linewidth = 1) +
-      geom_vline(xintercept = mode_val, color = "blue", linetype = "dashed", linewidth = 1) +
-      geom_vline(xintercept = max_val, color = "red", linetype = "dashed", linewidth = 1) +
-      scale_x_continuous(labels = function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, prefix = "€ ")) +
-      labs(
-        title = "kanskromme van de geprojecteerde fout",
-        subtitle = paste0("blauwe lijn = meest waarschijnlijke fout | rode lijn = maximale fout (", zekerheid_pct, "% zekerheid)"),
-        x = "fout in euro's", y = "relatieve kansdichtheid"
-      ) +
-      theme_minimal() +
-      theme(
-        text = element_text(size = 14), plot.title = element_text(face = "bold"),
-        axis.text.y = element_blank(), panel.grid.minor = element_blank()
-      )
+    # Roep de nieuwe package functie aan
+    plot_kanskromme(res)
   })
 
   output$table_strat_main <- renderTable({
@@ -461,17 +426,17 @@ server <- function(input, output, session) {
       paste0("evaluatie_rapport_", Sys.Date(), ".pdf")
     },
     content = function(file) {
-      # Zorg dat er eerst berekend is
+      # Zorg dat er eerst berekend is.
       res <- strat_results()
       req(res)
 
       showNotification("PDF wordt gegenereerd, een moment geduld...", type = "message", duration = 5)
 
-      # Kopieer de template naar een tijdelijke map (noodzakelijk voor shinyapps.io)
+      # Kopieer de template naar een tijdelijke map (noodzakelijk voor shinyapps.io).
       tempReport <- file.path(tempdir(), "report.Rmd")
       file.copy("report.Rmd", tempReport, overwrite = TRUE)
 
-      # Maak de parameters klaar om in de PDF te injecteren
+      # Maak de parameters klaar om in de PDF te injecteren.
       conf_val <- parse_dutch_num(input$strat_conf)
       params <- list(res = res, zekerheid = conf_val)
 
