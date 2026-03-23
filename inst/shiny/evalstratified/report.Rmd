@@ -16,6 +16,15 @@ library(knitr)
 # Haal de resultaten uit de doorgegeven parameters
 res <- params$res
 ```
+## Gehanteerde instellingen
+
+Voor deze evaluatie zijn de volgende parameters en instellingen gebruikt:
+
+* **Statistisch model:** `r tools::toTitleCase(res$invoer$model)`
+* **Gewenste zekerheid:** `r params$zekerheid * 100`%
+* **Monte Carlo iteraties:** `r format(res$invoer$MC, big.mark = ".", scientific = FALSE)`
+* **Startwaarde toevalsgenerator:** `r res$invoer$start`
+
 ## Invoertabel (Steekproeven)
 
 Hieronder volgt de data zoals deze is verwerkt in het model:

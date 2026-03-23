@@ -6,6 +6,7 @@
 \usage{
 eval_stratified(
   steekproeven,
+  model = "binomiaal",
   zekerheid = 0.95,
   MC = 1e+07,
   start = 1,
@@ -32,7 +33,10 @@ De tibble eist de volgende expliciete kolommen voor redundantie en veiligheid:
 \code{waarde_hoog}, De totale boekwaarde van het hoogstratum (fout_hoog + goed_hoog).
 \code{waarde_populatie}, De totale boekwaarde van de hele populatie (waarde_laag + waarde_hoog).}
 
-\item{zekerheid}{Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
+\item{model}{Het statistische model dat gebruikt wordt voor de extrapolatie.
+Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
+#' @param zekerheid
+Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
 
 \item{MC}{Het aantal Monte Carlo iteraties dat gebruikt wordt.
 Monte Carlo berekeningen baseren zich op toevalsgetallen.}
@@ -61,6 +65,11 @@ en in geld.
 De meest waarschijnlijke fout is de modus van de kanskromme.
 De maximale fout is afhankelijk van de gevraagde zekerheid, en
 is de fout bij een cumulatieve kans gelijk aan deze zekerheid.
+
+De statistische interpretatie van de risico waarden
+hoog, midden en laag voor IHR, IBR en CAR, die deze module hanteert is volgens
+het HARO, het Handboek Auditing Rijksoverheid.
+Het HARo wordt beheerd door Auditdienst Rijk, de ADR.
 }
 \details{
 We gaan uit van de som van de foutfracties, de k-waarde, dus we kijken niet

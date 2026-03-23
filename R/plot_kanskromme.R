@@ -30,7 +30,7 @@ plot_kanskromme <- function(res) {
   if (totaal_laag_geld < 0.01) {
     p <- ggplot() +
       annotate("text", x = 0.5, y = 0.5,
-               label = paste0("100% Integraal Gecontroleerd\n\nEr is geen statistische onzekerheid.\nDe fout is exact vastgesteld op € ",
+               label = paste0("100% Integraal Gecontroleerd\n\nEr is geen statistische onzekerheid.\nDe fout is exact vastgesteld op \u20ac ",
                               format(min_geld, big.mark = ".", decimal.mark = ",")),
                size = 5, color = "#2c3e50", fontface = "bold", hjust = 0.5) +
       theme_void()
@@ -43,7 +43,7 @@ plot_kanskromme <- function(res) {
     geom_line(color = "#2c3e50", linewidth = 1) +
     geom_vline(xintercept = mode_val, color = "blue", linetype = "dashed", linewidth = 1) +
     geom_vline(xintercept = max_val, color = "red", linetype = "dashed", linewidth = 1) +
-    scale_x_continuous(labels = function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, prefix = "€ ")) +
+    scale_x_continuous(labels = function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, prefix = "\u20ac ")) +
     labs(
       title = "kanskromme van de geprojecteerde fout",
       subtitle = paste0("blauwe lijn = meest waarschijnlijke fout | rode lijn = maximale fout (", zekerheid_pct, "% zekerheid)"),

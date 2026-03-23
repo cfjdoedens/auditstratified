@@ -110,7 +110,10 @@
 #' \code{n_totaal}, Het totale aantal posten in deze audit (n_laag + n_hoog).
 #' \code{waarde_hoog}, De totale boekwaarde van het hoogstratum (fout_hoog + goed_hoog).
 #' \code{waarde_populatie}, De totale boekwaarde van de hele populatie (waarde_laag + waarde_hoog).
-#' @param zekerheid
+#' @param model
+#' Het statistische model dat gebruikt wordt voor de extrapolatie.
+#' Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
+#' #' @param zekerheid
 #' Het zekerheidsniveau waarop we de maximale foutfractie berekenen.
 #' @param MC
 #' Het aantal Monte Carlo iteraties dat gebruikt wordt.
@@ -126,10 +129,11 @@
 #'
 #' @export
 #' @importFrom dplyr pull mutate
-#' @importFrom stats density quantile rbeta qbeta
+#' @importFrom stats density quantile rbeta qbeta rgamma qgamma
 #' @importFrom tibble add_row is_tibble tribble
 eval_stratified <-
   function(steekproeven,
+           model = "binomiaal",
            zekerheid = 0.95,
            MC = 1e7,
            start = 1,
@@ -243,6 +247,9 @@ eval_stratified <-
         }
       }
 
+      stopifnot(length(model) == 1)
+      stopifnot(model %in% c("binomiaal", "poisson"))
+
       stopifnot(length(zekerheid) == 1)
       stopifnot(is.numeric(zekerheid))
       stopifnot(0 <= zekerheid)
@@ -341,9 +348,14 @@ eval_stratified <-
       for (i in 1:n_steekproeven) {
         n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
         k_calc <- t_uit$k_laag[[i]]
-        krommen[, i] <- rbeta(MC,
-                              shape1 = 1 + k_calc,
-                              shape2 = 1 + n_calc - k_calc)
+
+        if (model == "binomiaal") {
+          krommen[, i] <- rbeta(MC,
+                                shape1 = 1 + k_calc,
+                                shape2 = 1 + n_calc - k_calc)
+        } else if (model == "poisson") {
+          krommen[, i] <- rgamma(MC, shape = 1 + k_calc, rate = n_calc)
+        }
       }
 
       # We zetten de geprojecteerde foutfracties van het laagstratum om naar bedragen,
@@ -375,7 +387,11 @@ eval_stratified <-
 
           # Dit blijft de fractie van puur de steekproef (laagstratum) in de tibble output
           t_uit$mw_fout[[i]] <- k_calc / n_calc
-          t_uit$max_fout[[i]] <- qbeta(zekerheid, k_calc + 1, n_calc - k_calc + 1)
+          if (model == "binomiaal") {
+            t_uit$max_fout[[i]] <- qbeta(zekerheid, k_calc + 1, n_calc - k_calc + 1)
+          } else if (model == "poisson") {
+            t_uit$max_fout[[i]] <- qgamma(zekerheid, shape = k_calc + 1, rate = n_calc)
+          }
         }
 
         # Bij het optellen van LOS nemen we ook per stratum het hoogstratum bedrag mee
@@ -392,14 +408,18 @@ eval_stratified <-
 
       # Bereken eerst voor het steekproefdeel, tel daarna het totaal hoogstratum erbij op
       mw_fout_als1_laag <- k_calc_als1 / n_calc_als1
-      max_fout_als1_laag <- qbeta(zekerheid, k_calc_als1 + 1, n_calc_als1 - k_calc_als1 + 1)
-
+      if (model == "binomiaal") {
+        max_fout_als1_laag <- qbeta(zekerheid, k_calc_als1 + 1, n_calc_als1 - k_calc_als1 + 1)
+      } else if (model == "poisson") {
+        max_fout_als1_laag <- qgamma(zekerheid, shape = k_calc_als1 + 1, rate = n_calc_als1)
+      }
       mw_fout_als1 <- (mw_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
       max_fout_als1 <- (max_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
     }
 
     invoer <- list(
       steekproeven = steekproeven,
+      model = model,
       zekerheid = zekerheid,
       MC = MC,
       start = start,
