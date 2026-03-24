@@ -34,9 +34,9 @@ De tibble eist de volgende expliciete kolommen voor redundantie en veiligheid:
 \code{waarde_populatie}, De totale boekwaarde van de hele populatie (waarde_laag + waarde_hoog).}
 
 \item{model}{Het statistische model dat gebruikt wordt voor de extrapolatie.
-Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
-#' @param zekerheid
-Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
+Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
+
+\item{zekerheid}{Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
 
 \item{MC}{Het aantal Monte Carlo iteraties dat gebruikt wordt.
 Monte Carlo berekeningen baseren zich op toevalsgetallen.}

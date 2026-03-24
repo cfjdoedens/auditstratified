@@ -1,3 +1,5 @@
+utils::globalVariables(c("x_geld", "y_dichtheid"))
+
 #' @title Teken de kanskromme van de evaluatie
 #' @description Genereert een ggplot2 object van de resulterende kanskromme.
 #' @param res Het resultaat object uit de functie eval_stratified.
