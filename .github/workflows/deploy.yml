@@ -39,6 +39,8 @@ jobs:
             any::ggplot2
             any::bslib
             any::bsicons
+            any::cpp11
+            any::progress
 
       # DE POORTWACHTER: Deze stap test je package!
       - name: R CMD check draaien
