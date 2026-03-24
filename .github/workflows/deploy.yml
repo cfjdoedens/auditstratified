@@ -51,5 +51,4 @@ jobs:
                                     secret=Sys.getenv("SHINYAPPS_SECRET"))
 
           # 2. De app naar de server sturen (Let op: check of dit pad klopt!)
-          rsconnect::deployApp(appDir = "inst/shiny/evalstratified", appName = "evalstratified")
-        shell: Rscript {0}
+          rsconnect::deployApp(appDir = "inst/shiny/evalstratified", appName = "evalstratified", forceUpdate = TRUE)        shell: Rscript {0}
