@@ -30,6 +30,15 @@ jobs:
           extra-packages: |
             any::rcmdcheck
             any::rsconnect
+            any::shiny
+            any::tibble
+            any::dplyr
+            any::readr
+            any::rhandsontable
+            any::htmlwidgets
+            any::ggplot2
+            any::bslib
+            any::bsicons
 
       # DE POORTWACHTER: Deze stap test je package!
       - name: R CMD check draaien
