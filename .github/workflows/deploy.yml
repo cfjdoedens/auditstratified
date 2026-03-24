@@ -4,7 +4,7 @@ name: Check en Deploy Shiny App
 on:
   push:
     branches:
-      - main # (Verander dit naar 'master' als jouw hoofd-branch master heet)
+      - master # (Verander dit naar 'master' als jouw hoofd-branch master heet)
 
 jobs:
   check-and-deploy:
