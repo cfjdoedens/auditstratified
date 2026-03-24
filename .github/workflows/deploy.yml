@@ -44,11 +44,18 @@ jobs:
           SHINYAPPS_ACCOUNT: ${{ secrets.SHINYAPPS_ACCOUNT }}
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
+        shell: Rscript {0}
         run: |
           # 1. Inloggen met de veilige secrets
-          rsconnect::setAccountInfo(name=Sys.getenv("SHINYAPPS_ACCOUNT"),
-                                    token=Sys.getenv("SHINYAPPS_TOKEN"),
-                                    secret=Sys.getenv("SHINYAPPS_SECRET"))
+          rsconnect::setAccountInfo(
+            name=Sys.getenv("SHINYAPPS_ACCOUNT"),
+            token=Sys.getenv("SHINYAPPS_TOKEN"),
+            secret=Sys.getenv("SHINYAPPS_SECRET")
+          )
 
-          # 2. De app naar de server sturen (Let op: check of dit pad klopt!)
-          rsconnect::deployApp(appDir = "inst/shiny/evalstratified", appName = "evalstratified", forceUpdate = TRUE)        shell: Rscript {0}
+          # 2. De app naar de server sturen met forceUpdate
+          rsconnect::deployApp(
+            appDir = "inst/shiny/evalstratified",
+            appName = "evalstratified",
+            forceUpdate = TRUE
+          )
