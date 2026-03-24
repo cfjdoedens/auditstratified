@@ -23,12 +23,13 @@ RoxygenNote: 7.3.3
 Imports:
     drawsneeded,
     dplyr,
-    tibble,
-    rlang,
+    ggplot2,
+    htmlwidgets,
     readr,
-    shiny,
     rhandsontable,
-    htmlwidgets
+    rlang,
+    shiny,
+    tibble
 Remotes:
     cfjdoedens/drawsneeded
 URL: https://github.com/cfjdoedens/evalstratified, https://cfjdoedens.github.io/evalstratified/
