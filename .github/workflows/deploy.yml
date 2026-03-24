@@ -48,6 +48,13 @@ jobs:
           rcmdcheck::rcmdcheck(args = c("--no-manual"), error_on = "error")
         shell: Rscript {0}
 
+      # DE OPLOSSING VOOR HET EIGEN PACKAGE
+      - name: Installeer het eigen evalstratified package via GitHub
+        run: |
+          install.packages("remotes")
+          remotes::install_github("${{ github.repository }}", force = TRUE)
+        shell: Rscript {0}
+
       # DE LIVE-GANG: Voert alléén uit als de vorige stap geen errors had
       - name: Deploy naar shinyapps.io
         if: success()
