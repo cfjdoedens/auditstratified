@@ -113,7 +113,7 @@
 #' @param model
 #' Het statistische model dat gebruikt wordt voor de extrapolatie.
 #' Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
-#' #' @param zekerheid
+#' @param zekerheid
 #' Het zekerheidsniveau waarop we de maximale foutfractie berekenen.
 #' @param MC
 #' Het aantal Monte Carlo iteraties dat gebruikt wordt.
