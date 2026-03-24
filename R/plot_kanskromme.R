@@ -1,4 +1,4 @@
-utils::globalVariables(c("x_geld", "y_dichtheid"))
+utils::globalVariables(c("x_geld", "y_dichtheid", "gebied"))
 
 #' @title Teken de kanskromme van de evaluatie
 #' @description Genereert een ggplot2 object van de resulterende kanskromme.
@@ -11,20 +11,28 @@ plot_kanskromme <- function(res) {
   totaal_geld <- res$populatie_totaal
   min_geld <- sum(res$steekproeven$fout_hoog)
 
-  df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y) %>%
-    filter(x_geld >= min_geld & x_geld <= totaal_geld)
-
-  if(nrow(df_plot) > 0) {
-    df_plot <- bind_rows(
-      data.frame(x_geld = min_geld, y_dichtheid = 0),
-      df_plot,
-      data.frame(x_geld = totaal_geld, y_dichtheid = 0)
-    ) %>% arrange(x_geld, y_dichtheid)
-  }
-
   mode_val <- max(res$mw_fout_convolutie_geld, min_geld)
   max_val <- max(res$max_fout_convolutie_geld, min_geld)
   zekerheid_pct <- res$invoer$zekerheid * 100
+
+  # 1. DATA BEHANDELEN: We filteren niets weg, maar geven elk datapunt een label
+  df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y) %>%
+    mutate(
+      gebied = case_when(
+        x_geld < min_geld ~ "Onmogelijk (< minimum fout)",
+        x_geld > totaal_geld ~ "Onmogelijk (> populatiewaarde)",
+        x_geld <= max_val ~ "Geldig (binnen betrouwbaarheid)",
+        TRUE ~ "Geldig (buiten betrouwbaarheid)"
+      ),
+
+      # Factor om de volgorde in de legenda logisch en vast te zetten
+      gebied = factor(gebied, levels = c(
+        "Geldig (binnen betrouwbaarheid)",
+        "Geldig (buiten betrouwbaarheid)",
+        "Onmogelijk (< minimum fout)",
+        "Onmogelijk (> populatiewaarde)"
+      ))
+    )
 
   totaal_laag_geld <- sum(res$steekproeven$waarde_laag)
 
@@ -39,13 +47,31 @@ plot_kanskromme <- function(res) {
     return(p)
   }
 
-  # Reguliere kanskromme
+  # Reguliere kanskromme met de nieuwe ingekleurde vlakken
   p <- ggplot(df_plot, aes(x = x_geld, y = y_dichtheid)) +
-    geom_area(data = subset(df_plot, x_geld <= max_val), fill = "#e0e0e0", alpha = 0.7) +
+    # Het vlak inkleuren op basis van de kolom 'gebied'
+    geom_area(aes(fill = gebied), alpha = 0.6) +
     geom_line(color = "#2c3e50", linewidth = 1) +
+
     geom_vline(xintercept = mode_val, color = "blue", linetype = "dashed", linewidth = 1) +
     geom_vline(xintercept = max_val, color = "red", linetype = "dashed", linewidth = 1) +
+
     scale_x_continuous(labels = function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, prefix = "\u20ac ")) +
+
+    # Hier bepalen we exact de kleuren voor elk vlak
+    scale_fill_manual(
+      values = c(
+        "Onmogelijk (< minimum fout)" = "#e74c3c",       # Waarschuwing: Rood
+        "Geldig (binnen betrouwbaarheid)" = "#bdc3c7",   # Normaal: Grijs
+        "Geldig (buiten betrouwbaarheid)" = "transparent", # Normaal: Wit/Doorzichtig
+        "Onmogelijk (> populatiewaarde)" = "#e67e22"     # Waarschuwing: Oranje
+      ),
+      name = "Verdeling van de geprojecteerde fout:",
+      guide = guide_legend(nrow = 2,
+                           byrow = TRUE,
+                           override.aes = list(color = "black", linewidth = 0.5))
+    ) +
+
     labs(
       title = "kanskromme van de geprojecteerde fout",
       subtitle = paste0("blauwe lijn = meest waarschijnlijke fout | rode lijn = maximale fout (", zekerheid_pct, "% zekerheid)"),
@@ -56,8 +82,10 @@ plot_kanskromme <- function(res) {
       text = element_text(size = 14),
       plot.title = element_text(face = "bold"),
       axis.text.y = element_blank(),
-      panel.grid.minor = element_blank()
+      panel.grid.minor = element_blank(),
+      legend.position = "bottom",          # Zet de legenda mooi onder de grafiek
+      legend.direction = "vertical",
+      legend.title = element_text(face = "bold")
     )
-
   return(p)
 }
