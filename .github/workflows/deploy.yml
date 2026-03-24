@@ -4,7 +4,7 @@ name: Check en Deploy Shiny App
 on:
   push:
     branches:
-      - master # (Verander dit naar 'master' als jouw hoofd-branch master heet)
+      - main # (Verander dit naar 'master' als jouw hoofd-branch master heet)
 
 jobs:
   check-and-deploy:
@@ -14,66 +14,57 @@ jobs:
 
     steps:
       - name: Code ophalen
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: R installeren
         uses: r-lib/actions/setup-r@v2
         with:
+          r-version: '4.4'
           use-public-rspm: true
 
-      - name: Pandoc installeren (nodig voor het PDF rapport)
+      - name: Pandoc installeren (nodig voor PDF rapport)
         uses: r-lib/actions/setup-pandoc@v2
 
-      - name: R packages en dependencies installeren
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: |
-            any::rcmdcheck
-            any::rsconnect
-            any::shiny
-            any::tibble
-            any::dplyr
-            any::readr
-            any::rhandsontable
-            any::htmlwidgets
-            any::ggplot2
-            any::bslib
-            any::bsicons
-            any::cpp11
-            any::progress
+      # --- DE NIEUWE, ROBUUSTE INSTALLATIE METHODE ---
+      - name: R packages installeren (Klassieke methode)
+        run: |
+          Rscript -e "
+            # 1. Installeer alle benodigde CRAN packages in één keer (inclusief rcmdcheck voor de volgende stap)
+            install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress', 'bslib', 'bsicons', 'rcmdcheck'))
 
-      # DE POORTWACHTER: Deze stap test je package!
+            # 2. Installeer jouw eigen package direct vanaf GitHub
+            remotes::install_github('${{ github.repository }}', force = TRUE)
+          "
+
+      # --- DE POORTWACHTER ---
       - name: R CMD check draaien
         run: |
           rcmdcheck::rcmdcheck(args = c("--no-manual"), error_on = "error")
         shell: Rscript {0}
 
-      # DE OPLOSSING VOOR HET EIGEN PACKAGE
-      - name: Installeer het eigen evalstratified package via GitHub
-        run: |
-          install.packages("remotes")
-          remotes::install_github("${{ github.repository }}", force = TRUE)
-        shell: Rscript {0}
-
-      # DE LIVE-GANG: Voert alléén uit als de vorige stap geen errors had
+      # --- DE LIVE-GANG ---
       - name: Deploy naar shinyapps.io
         if: success()
         env:
           SHINYAPPS_ACCOUNT: ${{ secrets.SHINYAPPS_ACCOUNT }}
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
-        shell: Rscript {0}
         run: |
-          # 1. Inloggen met de veilige secrets
-          rsconnect::setAccountInfo(
-            name=Sys.getenv("SHINYAPPS_ACCOUNT"),
-            token=Sys.getenv("SHINYAPPS_TOKEN"),
-            secret=Sys.getenv("SHINYAPPS_SECRET")
-          )
+          Rscript -e "
+            # Fix voor Shinyapps: Vertel rsconnect exact waar packages vandaan komen
+            options(repos = c(CRAN = 'https://cloud.r-project.org'))
 
-          # 2. De app naar de server sturen met forceUpdate
-          rsconnect::deployApp(
-            appDir = "inst/shiny/evalstratified",
-            appName = "evalstratified",
-            forceUpdate = TRUE
-          )
+            # Inloggen met jouw veilige secrets (Let op: we gebruiken de namen die je al had ingesteld!)
+            rsconnect::setAccountInfo(
+              name = Sys.getenv('SHINYAPPS_ACCOUNT'),
+              token = Sys.getenv('SHINYAPPS_TOKEN'),
+              secret = Sys.getenv('SHINYAPPS_SECRET')
+            )
+
+            # De app naar de server sturen en altijd overschrijven
+            rsconnect::deployApp(
+              appDir = 'inst/shiny/evalstratified',
+              appName = 'evalstratified',
+              forceUpdate = TRUE
+            )
+          "
