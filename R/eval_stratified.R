@@ -268,7 +268,7 @@ eval_stratified <-
       stopifnot(is.logical(vergelijk))
     }
 
-    # Bepaal totaal geldswaarde, nu inclusief het 100%-getoetste deel
+    # Bepaal totaal geldswaarde, inclusief het 100%-getoetste deel.
     totaalgeld_laag <- sum(waarde_laag)
     totaalgeld_fout_hoog <- sum(fout_hoog)
     totaalgeld_goed_hoog <- sum(goed_hoog)
@@ -358,20 +358,42 @@ eval_stratified <-
         }
       }
 
-      # We zetten de geprojecteerde foutfracties van het laagstratum om naar bedragen,
-      # tellen ALLE harde deterministische fouten uit de hoogstrata hierbij op,
-      # en delen door het algehele totaal om de nieuwe kanskromme van de *totale* fractie te krijgen.
+      # We zetten de geprojecteerde foutfracties van het laagstratum om naar
+      # bedragen, tellen alle harde deterministische fouten uit de hoogstrata
+      # hierbij op, en delen door het algehele totaal om de nieuwe kanskromme
+      # van de *totale* fractie te krijgen.
       convolutie <-
         (krommen %*% t_uit$waarde_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
       stopifnot(ncol(convolutie) == 1)
 
-      max_fout_convolutie <- unname(quantile(convolutie, probs = zekerheid))
-      mediaan_fout_convolutie <- unname(quantile(convolutie, probs = 0.5))
+      # Kanskromme genereren en normaliseren.
+      {
+        # Bepaal de logische bovengrens voor de density berekening
+        # Bij binomiaal is dat 1 (100%). Bij Poisson rekken we hem op.
+        bovengrens <- if (model == "binomiaal") {
+          1
+        } else {
+          max(convolutie) + 0.1 # Een beetje marge voor de lange Poisson-staart.
+        }
 
-      d <- density(convolutie)
-      modus_fout_convolutie <- d$x[which.max(d$y)]
-      gemiddelde_fout_convolutie <- mean(convolutie)
+        # Genereer de kromme met smoothing (adjust) en harde grenzen (from/to).
+        # Dit voorkomt gewiebel bij kleine steekproeven én knipt onmogelijke
+        # waarden af (zoals onder de 0 of boven de 1 bij binomiaal).
+        d <- density(convolutie,
+                     adjust = 1.5,
+                     from = 0,
+                     to = bovengrens)
+
+        # Normaliseren: Zorg dat het overgebleven oppervlak weer exact 1 wordt.
+        oppervlakte <- sum(d$y) * (d$x[2] - d$x[1])
+        d$y <- d$y / oppervlakte
+      }
     }
+
+    max_fout_convolutie <- unname(quantile(convolutie, probs = zekerheid))
+    mediaan_fout_convolutie <- unname(quantile(convolutie, probs = 0.5))
+    modus_fout_convolutie <- d$x[which.max(d$y)]
+    gemiddelde_fout_convolutie <- mean(convolutie)
 
     mw_fout_los <- NA
     max_fout_los <- NA
