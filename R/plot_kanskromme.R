@@ -14,11 +14,18 @@ plot_kanskromme <- function(res) {
 
   mode_val <- max(res$mw_fout_convolutie_geld, min_geld)
   max_val <- max(res$max_fout_convolutie_geld, min_geld)
+
+  # Bereken de percentages voor de legenda
   zekerheid_pct <- res$invoer$zekerheid * 100
+  rest_pct <- 100 - zekerheid_pct
+
+  # 1. Dynamische labels instellen voor de legenda
+  lbl_binnen <- paste0("linker ", zekerheid_pct, "%")
+  lbl_buiten <- paste0("rechter ", rest_pct, "%")
+  lbl_onm_min <- "Onmogelijk (< minimum fout)"
+  lbl_onm_max <- "Onmogelijk (> populatiewaarde)"
 
   # Als alle posten zijn gecontroleerd, is er geen statistische onzekerheid.
-  # De grafiek zou dan alleen maar bestaan uit 1 verticale lijn.
-  # In plaats daarvan drukken we een verklarend tekstje af.
   if (totaal_laag_geld < 0.01) {
     p <- ggplot() +
       annotate("text", x = 0.5, y = 0.5,
@@ -29,31 +36,37 @@ plot_kanskromme <- function(res) {
     return(p)
   }
 
-  # Data behandelen: We filteren niets weg, maar geven elk datapunt een label.
+  # Data behandelen met de nieuwe dynamische labels
   df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y) %>%
     mutate(
       gebied = case_when(
-        x_geld < min_geld ~ "Onmogelijk (< minimum fout)",
-        x_geld > totaal_geld ~ "Onmogelijk (> populatiewaarde)",
-        x_geld <= max_val ~ "Geldig (binnen betrouwbaarheid)",
-        TRUE ~ "Geldig (buiten betrouwbaarheid)"
+        x_geld < min_geld ~ lbl_onm_min,
+        x_geld > totaal_geld ~ lbl_onm_max,
+        x_geld <= max_val ~ lbl_binnen,
+        TRUE ~ lbl_buiten
       ),
-
-      # Maak van gebied een factor om de volgorde in de legenda logisch vast te zetten.
-      gebied = factor(gebied, levels = c(
-        "Geldig (binnen betrouwbaarheid)",
-        "Geldig (buiten betrouwbaarheid)",
-        "Onmogelijk (< minimum fout)",
-        "Onmogelijk (> populatiewaarde)"
-      ))
+      # Maak van gebied een factor om de volgorde in de legenda vast te zetten
+      gebied = factor(gebied, levels = c(lbl_binnen, lbl_buiten, lbl_onm_min, lbl_onm_max))
     )
 
-  # Reguliere kanskromme met de nieuwe ingekleurde vlakken
-  p <- ggplot(df_plot, aes(x = x_geld, y = y_dichtheid)) +
-    # Het vlak inkleuren op basis van de kolom 'gebied'
-    geom_area(aes(fill = gebied), alpha = 0.6) +
+  # 2. Kleuren dynamisch koppelen aan de variabelen labels (met setNames)
+  kleuren_vlak <- setNames(
+    # Ik gebruik hier twee mooie, rustige tinten blauw (donker en licht).
+    # Rood en oranje blijven voor de onmogelijke waarschuwingen.
+    c("#2980b9", "#aed6f1", "#e74c3c", "#e67e22"),
+    c(lbl_binnen, lbl_buiten, lbl_onm_min, lbl_onm_max)
+  )
 
-    # NIEUW: De lijn inkleuren op basis van het gebied (in plaats van 1 vaste kleur)
+  kleuren_lijn <- setNames(
+    # Voor de buitenste lijn houden we het hele geldige vlak netjes donkerblauw (#2c3e50)
+    # zodat de berg een strak, ononderbroken dak heeft.
+    c("#2c3e50", "#2c3e50", "#e74c3c", "#e67e22"),
+    c(lbl_binnen, lbl_buiten, lbl_onm_min, lbl_onm_max)
+  )
+
+  # Reguliere kanskromme tekenen
+  p <- ggplot(df_plot, aes(x = x_geld, y = y_dichtheid)) +
+    geom_area(aes(fill = gebied), alpha = 0.8) +
     geom_line(aes(color = gebied, group = 1), linewidth = 1, show.legend = FALSE) +
 
     geom_vline(xintercept = mode_val, color = "blue", linetype = "dashed", linewidth = 1) +
@@ -61,28 +74,18 @@ plot_kanskromme <- function(res) {
 
     scale_x_continuous(labels = function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE, prefix = "\u20ac ")) +
 
-    # Hier bepalen we exact de kleuren voor elk vlak
+    # Kleuren voor de ingekleurde vlakken + nieuwe legenda naam
     scale_fill_manual(
-      values = c(
-        "Onmogelijk (< minimum fout)" = "#e74c3c",       # Waarschuwing: Rood
-        "Geldig (binnen betrouwbaarheid)" = "#bdc3c7",   # Normaal: Grijs
-        "Geldig (buiten betrouwbaarheid)" = "transparent", # Normaal: Wit/Doorzichtig
-        "Onmogelijk (> populatiewaarde)" = "#e67e22"     # Waarschuwing: Oranje
-      ),
-      name = "Verdeling van de geprojecteerde fout:",
+      values = kleuren_vlak,
+      name = "kansmassa",  # <--- HIER IS DE NAAM AANGEPAST
       guide = guide_legend(nrow = 2,
                            byrow = TRUE,
                            override.aes = list(color = "black", linewidth = 0.5))
     ) +
 
-    # NIEUW: Hier bepalen we de specifieke kleuren voor de buitenste lijn
+    # Kleuren voor de buitenste lijn
     scale_color_manual(
-      values = c(
-        "Onmogelijk (< minimum fout)" = "#e74c3c",       # Rood
-        "Geldig (binnen betrouwbaarheid)" = "#2c3e50",   # Donkerblauw
-        "Geldig (buiten betrouwbaarheid)" = "#2c3e50",   # Donkerblauw
-        "Onmogelijk (> populatiewaarde)" = "#e67e22"     # Oranje
-      )
+      values = kleuren_lijn
     ) +
 
     labs(
@@ -96,9 +99,10 @@ plot_kanskromme <- function(res) {
       plot.title = element_text(face = "bold"),
       axis.text.y = element_blank(),
       panel.grid.minor = element_blank(),
-      legend.position = "bottom",          # Zet de legenda mooi onder de grafiek
+      legend.position = "bottom",
       legend.direction = "vertical",
       legend.title = element_text(face = "bold")
     )
+
   return(p)
 }

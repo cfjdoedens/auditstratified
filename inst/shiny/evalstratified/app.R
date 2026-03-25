@@ -117,7 +117,7 @@ ui <- navbarPage(
         h4("risico & materialiteit"),
         helpText("Bereken hoeveel foutloze posten uw risico-inschatting waard is."),
         selectInput(
-          "haro_ihr",
+          "fpe_ihr",
           label = info_label(
             "inherent risico (ihr):",
             "De inschatting van de kans op een materiële fout zonder gebruik van interne beheersing en cijferanalyse."
@@ -125,7 +125,7 @@ ui <- navbarPage(
           choices = risk_choices
         ),
         selectInput(
-          "haro_ibr",
+          "fpe_ibr",
           label = info_label(
             "interne beheersingsrisico (ibr):",
             "Het risico dat de interne beheersing niet goed werkt."
@@ -133,7 +133,7 @@ ui <- navbarPage(
           choices = risk_choices
         ),
         selectInput(
-          "haro_car",
+          "fpe_car",
           label = info_label(
             "cijferanalyse (car):",
             "Het risico dat cijferbeoordelingen en analytische procedures fouten niet vinden."
@@ -285,20 +285,30 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "hoofd_tabs", selected = "tab_grafiek")
   })
 
-  # --- logic tab 1 & 2 ---
+  # --- logic tab 1 ---
   output$res_haro <- renderText({
+    # Wacht veilig tot de inputs geladen zijn
+    req(input$haro_ihr, input$haro_ibr, input$haro_car)
+
     val <- haro_nog_nodige_zekerheid(input$haro_ihr, input$haro_ibr, input$haro_car)
     paste("nog nodige zekerheid:",
           format(round(val, 4), decimal.mark = ",", nsmall = 4))
   })
 
+  # --- logic tab 2 ---
   output$res_fpe <- renderText({
+    # Wacht veilig tot de unieke fpe_ inputs geladen zijn
+    req(input$fpe_ihr, input$fpe_ibr, input$fpe_car, input$fpe_mat)
+
     mat_val <- parse_dutch_num(input$fpe_mat)
+
     validate(need(
       !is.na(mat_val),
       "Vul een geldig getal in voor materialiteit."
     ))
+
     val <- foutloze_posten_equivalent(input$fpe_ihr, input$fpe_ibr, input$fpe_car, mat_val)
+
     paste("foutlozepostenequivalent:",
           format(
             round(val, 0),
