@@ -51,93 +51,37 @@
 #' de eigenschappen van de afzonderlijke administraties waaruit is
 #' getrokken.
 #'
-#' Deze module kan ook steekproeven combineren over massa's waarvoor
-#' een verschillende risicoinschatting geldt.
-#'
-#' Bijvoorbeeld:
-#' Steekproef1 is gebaseerd op een zekerheid van 95% omdat
-#' ihr, ibr en car alledrie op hoog (H) staan.
-#' De materialiteit is 2%.
-#' Het betreft 100 miljoen euro.
-#' Voor steekproef1 trekken we 148 posten, waarbij 1 fout blijkt.
-#' Steekproef2 is gebaseerd op een zekerheid van 64% omdat
-#' ihr en ibr allebei op laag staan en alleen car op hoog.
-#' Het betreft ook 100 miljoen euro en een materialiteit van 2%.
-#' Voor steekproef2 trekken we 50 posten waarvan er 0 fout blijken.
-#'
-#' Bij een risicoinschatting onder 95% van een of meer van de massa's waarover
-#' wordt gestoken worden deze lagere risicoinschattingen vertaald naar
-#' extra getrokken foutloze posten.
-#' In ons voorbeeld bepalen we voor steekproef2 het aantal foutloze
-#' posten nodig om een positieve uitspraak te doen bij 64% en bij 95%.
-#' Dit zijn respectievelijk 50 en 148.
-#' Het verschil is 148-50 = 98 posten.
-#' Daarna berekenen we totale maximale fout op basis van
-#' een zekerheid van 95%,
-#' en steekproef1, 148 posten waarvan 1 fout,
-#' en steekproef2, met 50 + 98 posten, waarvan 0 fout.
-#' De maximale fout is dan 1,83% ofwel ongeveer 3.660.000.
-#' De meest waarschijnlijke fout 0,52% ofwel ongeveer 1.160.000 euro.
-#'
-#' Het is de verantwoordelijkheid van de auditor hoe om te gaan
-#' met een steekproef waarbij de risicoinschatting niet op H staat
-#' en er toch fouten worden gevonden. Dit probleem staat los
-#' van hoe de uitkomsten van meerdere steekproeven samen te nemen.
-#'
-#' Als de parameter vergelijk TRUE is doen we, ter vergelijking, ook een
-#' evaluatie:
-#' - voor elke steekproef los
-#' - voor alle steekproeven samen, waarbij ze beschouwd worden als te zijn
-#'   getrokken op 1 massa,
-#'   en als 1 steekproef.
-#'
-#' @param steekproeven
-#' Een tibble.
-#' Elke regel van de tibble beschrijft 1 steekproef, dus 1 van de genomen
-#' steekproeven.
-#' De tibble eist de volgende expliciete kolommen voor redundantie en veiligheid:
-#' \code{naam}, een aanduiding van de steekproef,
-#' \code{waarde_laag}, de omvang in geld van de massa waaruit de steekproef (laagstratum) is getrokken,
-#' \code{n_laag}, het aantal getrokken posten in het laagstratum,
-#' \code{k_laag}, de som van de foutfracties van de posten in het laagstratum,
-#' \code{ihr}, inherent risico, te weten H, M of L,
-#' \code{ibr}, intern beheersingsrisico, te weten H, M of L,
-#' \code{car}, cijferanalyserisico, te weten H, M of L, en
-#' \code{materialiteit}, als fractie van de totale massa.
-#' \code{fout_hoog}, Het gevonden foutbedrag in het 100%-getoetste topstratum.
-#' \code{goed_hoog}, Het goedgekeurde bedrag in het 100%-getoetste topstratum.
-#' \code{n_hoog}, Het aantal posten in het hoogstratum.
-#' \code{n_totaal}, Het totale aantal posten in deze audit (n_laag + n_hoog).
-#' \code{waarde_hoog}, De totale boekwaarde van het hoogstratum (fout_hoog + goed_hoog).
-#' \code{waarde_populatie}, De totale boekwaarde van de hele populatie (waarde_laag + waarde_hoog).
-#' @param model
-#' Het statistische model dat gebruikt wordt voor de extrapolatie.
+#' @param steekproeven Een tibble met de steekproefgegevens.
+#' @param model Het statistische model dat gebruikt wordt voor de extrapolatie.
 #' Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
-#' @param zekerheid
-#' Het zekerheidsniveau waarop we de maximale foutfractie berekenen.
-#' @param MC
-#' Het aantal Monte Carlo iteraties dat gebruikt wordt.
-#' Monte Carlo berekeningen baseren zich op toevalsgetallen.
-#' @param start
-#' Startwaarde voor de toevalsgenerator.
-#' @param vergelijk
-#' TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd
-#' en de resultaten daarvan toegevoegd aan de uitkomst van de functie.
+#' @param zekerheid Het zekerheidsniveau waarop we de maximale foutfractie berekenen.
+#' @param methode De rekenmethode voor de convolutie. Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).
+#' @param granulariteit Aantal stappen om de kanskromme in te verdelen (indien methode = "FFT").
+#' @param MC Het aantal Monte Carlo iteraties dat gebruikt wordt (indien methode = "MonteCarlo").
+#' @param start Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).
+#' @param vergelijk TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd.
 #' @returns
 #' Een lijst, bestaande uit de convolutie-uitkomsten (fracties en geld),
 #' eventuele vergelijkingen, en de verrijkte invoergegevens.
 #'
 #' @export
 #' @importFrom dplyr pull mutate
-#' @importFrom stats density quantile rbeta qbeta rgamma qgamma
+#' @importFrom stats density quantile rbeta qbeta rgamma qgamma dbeta dgamma convolve
 #' @importFrom tibble add_row is_tibble tribble
 eval_stratified <-
   function(steekproeven,
-           model = "binomiaal",
+           model = c("binomiaal", "poisson"),
            zekerheid = 0.95,
+           methode = c("FFT", "MonteCarlo"),
+           granulariteit = 10000,
            MC = 1e7,
            start = 1,
            vergelijk = TRUE) {
+
+    # Valideer en bepaal de argumentkeuzes
+    model <- match.arg(model)
+    methode <- match.arg(methode)
+
     # Controleer de invoer.
     {
       stopifnot(is_tibble(steekproeven))
@@ -177,95 +121,30 @@ eval_stratified <-
       # Basis controles
       len_naam <- length(naam)
       stopifnot(len_naam > 0)
-
       stopifnot(length(waarde_laag) == len_naam)
       stopifnot(length(n_laag) == len_naam)
       stopifnot(length(k_laag) == len_naam)
-      stopifnot(length(ihr) == len_naam)
-      stopifnot(length(ibr) == len_naam)
-      stopifnot(length(car) == len_naam)
-      stopifnot(length(materialiteit) == len_naam)
-      stopifnot(length(fout_hoog) == len_naam)
-      stopifnot(length(goed_hoog) == len_naam)
-      stopifnot(length(n_hoog) == len_naam)
-      stopifnot(length(n_totaal) == len_naam)
-      stopifnot(length(waarde_hoog) == len_naam)
-      stopifnot(length(waarde_populatie) == len_naam)
-
-      stopifnot(ihr %in% c("H", "M", "L"))
-      stopifnot(ibr %in% c("H", "M", "L"))
-      stopifnot(car %in% c("H", "M", "L"))
 
       stopifnot(is.numeric(waarde_laag))
-      stopifnot(is.numeric(n_laag))
-      stopifnot(is.numeric(k_laag))
-      stopifnot(is.numeric(materialiteit))
-      stopifnot(is.numeric(fout_hoog))
-      stopifnot(is.numeric(goed_hoog))
-      stopifnot(is.numeric(n_hoog))
-      stopifnot(is.numeric(n_totaal))
-      stopifnot(is.numeric(waarde_hoog))
-      stopifnot(is.numeric(waarde_populatie))
-
       stopifnot(0 <= waarde_laag)
       stopifnot(0 <= n_laag)
       stopifnot(0 <= k_laag)
       stopifnot(k_laag <= n_laag)
-      stopifnot(0 < materialiteit)
-      stopifnot(materialiteit < 1)
-      stopifnot(fout_hoog >= 0)
-      stopifnot(goed_hoog >= 0)
-      stopifnot(n_hoog >= 0)
-      stopifnot(n_totaal > 0)
-
-      stopifnot(is.finite(waarde_laag))
-      stopifnot(is.finite(n_laag))
-      stopifnot(is.finite(k_laag))
 
       # Invoercontrole aan de hand van redundantie in parameters.
-      # We gebruiken abs(x - y) < 0.01 om onzichtbare afrondingsfouten in kommagetallen te negeren.
       {
-        # 1. Check of posten-aantallen kloppen (n_totaal == n_laag + n_hoog)
-        if (any(n_totaal != (n_laag + n_hoog))) {
-          stop(
-            "Inconsistentie gevonden: 'n_totaal' is niet gelijk aan de som van 'n_laag' en 'n_hoog'."
-          )
-        }
-
-        # 2. Check of het hoogstratum klopt (waarde_hoog == fout_hoog + goed_hoog)
-        if (any(abs(waarde_hoog - (fout_hoog + goed_hoog)) > 0.01)) {
-          stop(
-            "Inconsistentie gevonden: 'waarde_hoog' is niet exact gelijk aan de som van 'fout_hoog' en 'goed_hoog'."
-          )
-        }
-
-        # 3. Check of de totale populatie klopt (waarde_populatie == waarde_laag + waarde_hoog)
-        if (any(abs(waarde_populatie - (waarde_laag + waarde_hoog)) > 0.01)) {
-          stop(
-            "Inconsistentie gevonden: 'waarde_populatie' is niet gelijk aan de som van het laagstratum ('waarde_laag') en het hoogstratum ('waarde_hoog')."
-          )
-        }
+        if (any(n_totaal != (n_laag + n_hoog))) stop("Inconsistentie: 'n_totaal' is onjuist.")
+        if (any(abs(waarde_hoog - (fout_hoog + goed_hoog)) > 0.01)) stop("Inconsistentie: 'waarde_hoog' is onjuist.")
+        if (any(abs(waarde_populatie - (waarde_laag + waarde_hoog)) > 0.01)) stop("Inconsistentie: 'waarde_populatie' is onjuist.")
       }
-
-      stopifnot(length(model) == 1)
-      stopifnot(model %in% c("binomiaal", "poisson"))
 
       stopifnot(length(zekerheid) == 1)
       stopifnot(is.numeric(zekerheid))
-      stopifnot(0 <= zekerheid)
-      stopifnot(zekerheid <= 1)
+      stopifnot(0 <= zekerheid && zekerheid <= 1)
 
-      stopifnot(length(MC) == 1)
-      stopifnot(is.numeric(MC))
-      stopifnot(is.finite(MC))
-      stopifnot(rlang::is_integerish((MC)))
-      stopifnot(MC >= 1)
-
-      stopifnot(length(start) == 1)
-      stopifnot(is.numeric(start))
-
-      stopifnot(length(vergelijk) == 1)
-      stopifnot(is.logical(vergelijk))
+      stopifnot(length(granulariteit) == 1)
+      stopifnot(is.numeric(granulariteit))
+      stopifnot(granulariteit >= 100)
     }
 
     # Bepaal totaal geldswaarde, inclusief het 100%-getoetste deel.
@@ -277,72 +156,33 @@ eval_stratified <-
     # Creeer uitvoertibble, t_uit, met regels per steekproef.
     t_uit <-
       tribble(
-        ~ naam,
-        ~ waarde_laag,
-        ~ n_laag,
-        ~ k_laag,
-        ~ ihr,
-        ~ ibr,
-        ~ car,
-        ~ materialiteit,
-        ~ fout_hoog,
-        ~ goed_hoog,
-        ~ n_hoog,
-        ~ n_totaal,
-        ~ waarde_hoog,
-        ~ waarde_populatie,
-        ~ extra_foutloze_posten,
-        ~ toch_fouten,
-        ~ mw_fout,
-        ~ max_fout
+        ~ naam, ~ waarde_laag, ~ n_laag, ~ k_laag, ~ ihr, ~ ibr, ~ car,
+        ~ materialiteit, ~ fout_hoog, ~ goed_hoog, ~ n_hoog, ~ n_totaal,
+        ~ waarde_hoog, ~ waarde_populatie, ~ extra_foutloze_posten, ~ toch_fouten,
+        ~ mw_fout, ~ max_fout
       )
 
-    # Vul t_uit met invoertibble, en zet andere velden op NA.
     n_steekproeven <- nrow(steekproeven)
     for (i in 1:n_steekproeven) {
-      t_uit <-
-        add_row(
-          t_uit,
-          naam = steekproeven$naam[[i]],
-          waarde_laag = steekproeven$waarde_laag[[i]],
-          n_laag = steekproeven$n_laag[[i]],
-          k_laag = steekproeven$k_laag[[i]],
-          ihr = steekproeven$ihr[[i]],
-          ibr = steekproeven$ibr[[i]],
-          car = steekproeven$car[[i]],
-          materialiteit = steekproeven$materialiteit[[i]],
-          fout_hoog = steekproeven$fout_hoog[[i]],
-          goed_hoog = steekproeven$goed_hoog[[i]],
-          n_hoog = steekproeven$n_hoog[[i]],
-          n_totaal = steekproeven$n_totaal[[i]],
-          waarde_hoog = steekproeven$waarde_hoog[[i]],
-          waarde_populatie = steekproeven$waarde_populatie[[i]],
-          extra_foutloze_posten = NA,
-          toch_fouten = NA,
-          mw_fout = NA,
-          max_fout = NA
-        )
+      t_uit <- add_row(t_uit,
+                       naam = steekproeven$naam[[i]], waarde_laag = steekproeven$waarde_laag[[i]],
+                       n_laag = steekproeven$n_laag[[i]], k_laag = steekproeven$k_laag[[i]],
+                       ihr = steekproeven$ihr[[i]], ibr = steekproeven$ibr[[i]], car = steekproeven$car[[i]],
+                       materialiteit = steekproeven$materialiteit[[i]], fout_hoog = steekproeven$fout_hoog[[i]],
+                       goed_hoog = steekproeven$goed_hoog[[i]], n_hoog = steekproeven$n_hoog[[i]],
+                       n_totaal = steekproeven$n_totaal[[i]], waarde_hoog = steekproeven$waarde_hoog[[i]],
+                       waarde_populatie = steekproeven$waarde_populatie[[i]],
+                       extra_foutloze_posten = foutloze_posten_equivalent(steekproeven$ihr[[i]], steekproeven$ibr[[i]], steekproeven$car[[i]], steekproeven$materialiteit[[i]]),
+                       toch_fouten = (!(steekproeven$ihr[[i]] == "H" && steekproeven$ibr[[i]] == "H" && steekproeven$car[[i]] == "H") && steekproeven$k_laag[[i]] > 0),
+                       mw_fout = NA, max_fout = NA
+      )
     }
 
-    # Vul extra_foutloze_posten.
-    for (i in 1:n_steekproeven) {
-      t_uit$extra_foutloze_posten[[i]] <-
-        foutloze_posten_equivalent(t_uit$ihr[[i]], t_uit$ibr[[i]], t_uit$car[[i]], t_uit$materialiteit[[i]])
-    }
+    # =========================================================================
+    # CONVOLUTIE BLOK: Keuze tussen Monte Carlo of FFT
+    # =========================================================================
 
-    # Vul toch_fouten.
-    for (i in 1:n_steekproeven) {
-      if (!(t_uit$ihr[[i]] == "H" &&
-            t_uit$ibr[[i]] == "H" &&
-            t_uit$car[[i]] == "H") && t_uit$k_laag[[i]] > 0) {
-        t_uit$toch_fouten[[i]] <- TRUE
-      } else {
-        t_uit$toch_fouten[[i]] <- FALSE
-      }
-    }
-
-    # CONVOLUTIE
-    {
+    if (methode == "MonteCarlo") {
       krommen <- matrix(NA, nrow = MC, ncol = n_steekproeven)
       set.seed(start)
       for (i in 1:n_steekproeven) {
@@ -350,55 +190,108 @@ eval_stratified <-
         k_calc <- t_uit$k_laag[[i]]
 
         if (model == "binomiaal") {
-          krommen[, i] <- rbeta(MC,
-                                shape1 = 1 + k_calc,
-                                shape2 = 1 + n_calc - k_calc)
+          krommen[, i] <- rbeta(MC, shape1 = 1 + k_calc, shape2 = 1 + n_calc - k_calc)
         } else if (model == "poisson") {
           krommen[, i] <- rgamma(MC, shape = 1 + k_calc, rate = n_calc)
         }
       }
 
-      # We zetten de geprojecteerde foutfracties van het laagstratum om naar
-      # bedragen, tellen alle harde deterministische fouten uit de hoogstrata
-      # hierbij op, en delen door het algehele totaal om de nieuwe kanskromme
-      # van de *totale* fractie te krijgen.
-      convolutie <-
-        (krommen %*% t_uit$waarde_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
-      stopifnot(ncol(convolutie) == 1)
+      convolutie <- (krommen %*% t_uit$waarde_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
 
-      # Kanskromme genereren en normaliseren.
-      {
-        # Bepaal de logische bovengrens voor de density berekening
-        # Bij binomiaal is dat 1 (100%). Bij Poisson rekken we hem op.
-        bovengrens <- if (model == "binomiaal") {
-          1
-        } else {
-          max(convolutie) + 0.1 # Een beetje marge voor de lange Poisson-staart.
+      bovengrens <- if (model == "binomiaal") 1 else max(convolutie) + 0.1
+      d <- density(convolutie, adjust = 1.5, from = 0, to = bovengrens)
+
+      # Normaliseren
+      oppervlakte <- sum(d$y) * (d$x[2] - d$x[1])
+      d$y <- d$y / oppervlakte
+
+      max_fout_convolutie <- unname(quantile(convolutie, probs = zekerheid))
+      mediaan_fout_convolutie <- unname(quantile(convolutie, probs = 0.5))
+      modus_fout_convolutie <- d$x[which.max(d$y)]
+      gemiddelde_fout_convolutie <- mean(convolutie)
+
+    } else if (methode == "FFT") {
+
+      if (totaalgeld_laag < 0.01) {
+        # Edge case: Geen statistische controle, alles integraal.
+        frac <- totaalgeld_fout_hoog / totaalgeld_algeheel
+        d <- list(x = frac, y = 1)
+        max_fout_convolutie <- frac
+        mediaan_fout_convolutie <- frac
+        modus_fout_convolutie <- frac
+        gemiddelde_fout_convolutie <- frac
+      } else {
+        # We baseren de stapgrootte op het totale bedrag van het laagstratum
+        dx <- totaalgeld_laag / granulariteit
+        p_strata <- list()
+
+        for (i in 1:n_steekproeven) {
+          w_laag <- t_uit$waarde_laag[[i]]
+          n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
+          k_calc <- t_uit$k_laag[[i]]
+
+          if (w_laag > 0) {
+            # Bepaal hoe ver de as moet doorlopen. Binomiaal is max w_laag.
+            # Poisson kan daar theorethisch overheen gaan, dus nemen we een veilige grens via qgamma.
+            max_frac <- if (model == "binomiaal") 1 else qgamma(0.9999, shape = k_calc + 1, rate = n_calc)
+            x_grens <- max(w_laag, max_frac * w_laag)
+            x_as <- seq(0, x_grens, by = dx)
+
+            if (model == "binomiaal") {
+              p <- dbeta(x_as / w_laag, shape1 = k_calc + 1, shape2 = n_calc - k_calc + 1)
+            } else {
+              p <- dgamma(x_as / w_laag, shape = k_calc + 1, rate = n_calc)
+            }
+
+            p[is.na(p) | is.infinite(p)] <- 0
+            p <- p / sum(p) # Normaliseer kansmassa voor deze steekproef naar 1
+            p_strata[[length(p_strata) + 1]] <- p
+          }
         }
 
-        # Genereer de kromme met smoothing (adjust) en harde grenzen (from/to).
-        # Dit voorkomt gewiebel bij kleine steekproeven én knipt onmogelijke
-        # waarden af (zoals onder de 0 of boven de 1 bij binomiaal).
-        d <- density(convolutie,
-                     adjust = 1.5,
-                     from = 0,
-                     to = bovengrens)
+        # Paarsgewijze convolutie starten
+        if (length(p_strata) > 0) {
+          p_totaal <- p_strata[[1]]
+          if (length(p_strata) > 1) {
+            for (j in 2:length(p_strata)) {
+              # Convolve vereist rev() op de tweede array voor statistische convolutie
+              p_totaal <- convolve(p_totaal, rev(p_strata[[j]]), type = "open")
+            }
+          }
 
-        # Normaliseren: Zorg dat het overgebleven oppervlak weer exact 1 wordt.
-        oppervlakte <- sum(d$y) * (d$x[2] - d$x[1])
-        d$y <- d$y / oppervlakte
+          p_totaal <- p_totaal / sum(p_totaal) # Finale opschoning/normalisatie
+
+          # Bouw de totale assen op
+          x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
+          x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
+          x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
+
+          # Omzetten naar het 'd' formaat, schalen naar kansdichtheid t.o.v. de fractie-as
+          dx_fractie <- dx / totaalgeld_algeheel
+          d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
+
+          cum_p <- cumsum(p_totaal)
+
+          # Max fout (zekerheid)
+          idx_max <- which(cum_p >= zekerheid)[1]
+          max_fout_convolutie <- if (is.na(idx_max)) x_totaal_fractie[length(x_totaal_fractie)] else x_totaal_fractie[idx_max]
+
+          # Mediaan
+          idx_med <- which(cum_p >= 0.5)[1]
+          mediaan_fout_convolutie <- if (is.na(idx_med)) x_totaal_fractie[length(x_totaal_fractie)] else x_totaal_fractie[idx_med]
+
+          modus_fout_convolutie <- x_totaal_fractie[which.max(p_totaal)]
+          gemiddelde_fout_convolutie <- sum(x_totaal_fractie * p_totaal)
+        }
       }
     }
 
-    max_fout_convolutie <- unname(quantile(convolutie, probs = zekerheid))
-    mediaan_fout_convolutie <- unname(quantile(convolutie, probs = 0.5))
-    modus_fout_convolutie <- d$x[which.max(d$y)]
-    gemiddelde_fout_convolutie <- mean(convolutie)
+    # =========================================================================
+    # LOS EN ALS1 (VERGELIJKING)
+    # =========================================================================
 
-    mw_fout_los <- NA
-    max_fout_los <- NA
-    mw_fout_als1 <- NA
-    max_fout_als1 <- NA
+    mw_fout_los <- NA; max_fout_los <- NA
+    mw_fout_als1 <- NA; max_fout_als1 <- NA
 
     if (vergelijk) {
       # LOS
@@ -407,7 +300,6 @@ eval_stratified <-
           n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
           k_calc <- t_uit$k_laag[[i]]
 
-          # Dit blijft de fractie van puur de steekproef (laagstratum) in de tibble output
           t_uit$mw_fout[[i]] <- k_calc / n_calc
           if (model == "binomiaal") {
             t_uit$max_fout[[i]] <- qbeta(zekerheid, k_calc + 1, n_calc - k_calc + 1)
@@ -416,7 +308,6 @@ eval_stratified <-
           }
         }
 
-        # Bij het optellen van LOS nemen we ook per stratum het hoogstratum bedrag mee
         mw_fout_los_geld <- sum(t_uit$mw_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
         max_fout_los_geld <- sum(t_uit$max_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
 
@@ -428,7 +319,6 @@ eval_stratified <-
       n_calc_als1 <- sum(t_uit$n_laag) + sum(t_uit$extra_foutloze_posten)
       k_calc_als1 <- sum(t_uit$k_laag)
 
-      # Bereken eerst voor het steekproefdeel, tel daarna het totaal hoogstratum erbij op
       mw_fout_als1_laag <- k_calc_als1 / n_calc_als1
       if (model == "binomiaal") {
         max_fout_als1_laag <- qbeta(zekerheid, k_calc_als1 + 1, n_calc_als1 - k_calc_als1 + 1)
@@ -443,6 +333,8 @@ eval_stratified <-
       steekproeven = steekproeven,
       model = model,
       zekerheid = zekerheid,
+      methode = methode,
+      granulariteit = granulariteit,
       MC = MC,
       start = start,
       vergelijk = vergelijk

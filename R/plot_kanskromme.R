@@ -5,7 +5,9 @@ utils::globalVariables(c("x_geld", "y_dichtheid", "gebied"))
 #' @param res Het resultaat object uit de functie eval_stratified.
 #' @returns Een ggplot2 object.
 #' @export
-#' @import ggplot2 dplyr
+#' @import ggplot2
+#' @import dplyr
+#' @importFrom stats setNames
 plot_kanskromme <- function(res) {
   d <- res$kanskromme
   totaal_geld <- res$populatie_totaal

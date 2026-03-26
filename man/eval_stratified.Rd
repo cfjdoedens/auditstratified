@@ -6,45 +6,32 @@
 \usage{
 eval_stratified(
   steekproeven,
-  model = "binomiaal",
+  model = c("binomiaal", "poisson"),
   zekerheid = 0.95,
+  methode = c("FFT", "MonteCarlo"),
+  granulariteit = 10000,
   MC = 1e+07,
   start = 1,
   vergelijk = TRUE
 )
 }
 \arguments{
-\item{steekproeven}{Een tibble.
-Elke regel van de tibble beschrijft 1 steekproef, dus 1 van de genomen
-steekproeven.
-De tibble eist de volgende expliciete kolommen voor redundantie en veiligheid:
-\code{naam}, een aanduiding van de steekproef,
-\code{waarde_laag}, de omvang in geld van de massa waaruit de steekproef (laagstratum) is getrokken,
-\code{n_laag}, het aantal getrokken posten in het laagstratum,
-\code{k_laag}, de som van de foutfracties van de posten in het laagstratum,
-\code{ihr}, inherent risico, te weten H, M of L,
-\code{ibr}, intern beheersingsrisico, te weten H, M of L,
-\code{car}, cijferanalyserisico, te weten H, M of L, en
-\code{materialiteit}, als fractie van de totale massa.
-\code{fout_hoog}, Het gevonden foutbedrag in het 100\%-getoetste topstratum.
-\code{goed_hoog}, Het goedgekeurde bedrag in het 100\%-getoetste topstratum.
-\code{n_hoog}, Het aantal posten in het hoogstratum.
-\code{n_totaal}, Het totale aantal posten in deze audit (n_laag + n_hoog).
-\code{waarde_hoog}, De totale boekwaarde van het hoogstratum (fout_hoog + goed_hoog).
-\code{waarde_populatie}, De totale boekwaarde van de hele populatie (waarde_laag + waarde_hoog).}
+\item{steekproeven}{Een tibble met de steekproefgegevens.}
 
 \item{model}{Het statistische model dat gebruikt wordt voor de extrapolatie.
 Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
 \item{zekerheid}{Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
 
-\item{MC}{Het aantal Monte Carlo iteraties dat gebruikt wordt.
-Monte Carlo berekeningen baseren zich op toevalsgetallen.}
+\item{methode}{De rekenmethode voor de convolutie. Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).}
 
-\item{start}{Startwaarde voor de toevalsgenerator.}
+\item{granulariteit}{Aantal stappen om de kanskromme in te verdelen (indien methode = "FFT").}
 
-\item{vergelijk}{TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd
-en de resultaten daarvan toegevoegd aan de uitkomst van de functie.}
+\item{MC}{Het aantal Monte Carlo iteraties dat gebruikt wordt (indien methode = "MonteCarlo").}
+
+\item{start}{Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).}
+
+\item{vergelijk}{TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd.}
 }
 \value{
 Een lijst, bestaande uit de convolutie-uitkomsten (fracties en geld),
@@ -99,46 +86,4 @@ Dus, bij het aggregeren van de resultaten van de verschillende steekproeven
 wordt geen enkele aanname gedaan over gelijkenis tussen
 de eigenschappen van de afzonderlijke administraties waaruit is
 getrokken.
-
-Deze module kan ook steekproeven combineren over massa's waarvoor
-een verschillende risicoinschatting geldt.
-
-Bijvoorbeeld:
-Steekproef1 is gebaseerd op een zekerheid van 95\% omdat
-ihr, ibr en car alledrie op hoog (H) staan.
-De materialiteit is 2\%.
-Het betreft 100 miljoen euro.
-Voor steekproef1 trekken we 148 posten, waarbij 1 fout blijkt.
-Steekproef2 is gebaseerd op een zekerheid van 64\% omdat
-ihr en ibr allebei op laag staan en alleen car op hoog.
-Het betreft ook 100 miljoen euro en een materialiteit van 2\%.
-Voor steekproef2 trekken we 50 posten waarvan er 0 fout blijken.
-
-Bij een risicoinschatting onder 95\% van een of meer van de massa's waarover
-wordt gestoken worden deze lagere risicoinschattingen vertaald naar
-extra getrokken foutloze posten.
-In ons voorbeeld bepalen we voor steekproef2 het aantal foutloze
-posten nodig om een positieve uitspraak te doen bij 64\% en bij 95\%.
-Dit zijn respectievelijk 50 en 148.
-Het verschil is 148-50 = 98 posten.
-Daarna berekenen we totale maximale fout op basis van
-een zekerheid van 95\%,
-en steekproef1, 148 posten waarvan 1 fout,
-en steekproef2, met 50 + 98 posten, waarvan 0 fout.
-De maximale fout is dan 1,83\% ofwel ongeveer 3.660.000.
-De meest waarschijnlijke fout 0,52\% ofwel ongeveer 1.160.000 euro.
-
-Het is de verantwoordelijkheid van de auditor hoe om te gaan
-met een steekproef waarbij de risicoinschatting niet op H staat
-en er toch fouten worden gevonden. Dit probleem staat los
-van hoe de uitkomsten van meerdere steekproeven samen te nemen.
-
-Als de parameter vergelijk TRUE is doen we, ter vergelijking, ook een
-evaluatie:
-\itemize{
-\item voor elke steekproef los
-\item voor alle steekproeven samen, waarbij ze beschouwd worden als te zijn
-getrokken op 1 massa,
-en als 1 steekproef.
-}
 }

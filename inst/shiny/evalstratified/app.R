@@ -194,6 +194,17 @@ ui <- navbarPage(
           inline = TRUE
         ),
 
+        # NIEUW: Keuze voor de rekenmethode
+        radioButtons(
+          "strat_methode",
+          label = info_label(
+            "rekenmethode:",
+            "Kies tussen exacte numerieke berekening (FFT) of stochastische simulatie (Monte Carlo)."
+          ),
+          choices = c("numeriek (FFT)" = "FFT", "simulatie (Monte Carlo)" = "MonteCarlo"),
+          inline = TRUE
+        ),
+
         textInput(
           "strat_conf",
           label = info_label(
@@ -202,24 +213,45 @@ ui <- navbarPage(
           ),
           value = "0,95"
         ),
-        numericInput(
-          "strat_mc",
-          label = info_label(
-            "Monte Carlo iteraties:",
-            "Aantal simulaties. Een hoger getal is nauwkeuriger, maar het rekenen duurt langer."
-          ),
-          value = 100000,
-          min = 1000,
-          step = 10000
+
+        # NIEUW: Toon granulariteit als FFT is gekozen
+        conditionalPanel(
+          condition = "input.strat_methode == 'FFT'",
+          numericInput(
+            "strat_gran",
+            label = info_label(
+              "granulariteit:",
+              "Aantal stappen voor de x-as bij de FFT berekening. Hoger is nauwkeuriger maar rekent fractioneel langer."
+            ),
+            value = 10000,
+            min = 100,
+            step = 1000
+          )
         ),
-        numericInput(
-          "strat_seed",
-          label = info_label(
-            "seed (startwaarde):",
-            "Een vast startpunt voor de simulatie. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."
+
+        # NIEUW: Toon MC opties als Monte Carlo is gekozen
+        conditionalPanel(
+          condition = "input.strat_methode == 'MonteCarlo'",
+          numericInput(
+            "strat_mc",
+            label = info_label(
+              "Monte Carlo iteraties:",
+              "Aantal simulaties. Een hoger getal is nauwkeuriger, maar het rekenen duurt langer."
+            ),
+            value = 100000,
+            min = 1000,
+            step = 10000
           ),
-          value = 1
+          numericInput(
+            "strat_seed",
+            label = info_label(
+              "seed (startwaarde):",
+              "Een vast startpunt voor de simulatie. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."
+            ),
+            value = 1
+          )
         ),
+
         checkboxInput(
           "strat_comp",
           label = info_label(
@@ -547,8 +579,9 @@ server <- function(input, output, session) {
       res <- eval_stratified(
         steekproeven = final_df,
         model = input$strat_model,
-        # NIEUW: Geef het gekozen model door aan de package-functie
         zekerheid = conf_val,
+        methode = input$strat_methode,              # <--- NIEUW
+        granulariteit = as.integer(input$strat_gran), # <--- NIEUW
         MC = as.integer(input$strat_mc),
         start = input$strat_seed,
         vergelijk = input$strat_comp

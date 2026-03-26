@@ -22,8 +22,16 @@ Voor deze evaluatie zijn de volgende parameters en instellingen gebruikt:
 
 * **Statistisch model:** `r tools::toTitleCase(res$invoer$model)`
 * **Gewenste zekerheid:** `r params$zekerheid * 100`%
-* **Monte Carlo iteraties:** `r format(res$invoer$MC, big.mark = ".", decimal.mark = ",", scientific = FALSE)`
-* **Startwaarde toevalsgenerator:** `r res$invoer$start`
+* **Rekenmethode:** `r ifelse(res$invoer$methode == "FFT", "Numerieke convolutie (FFT)", "Monte Carlo simulatie")`
+
+```{r, results='asis'}
+if (res$invoer$methode == "FFT") {
+  cat(paste("* **Granulariteit:**", format(res$invoer$granulariteit, big.mark = ".", decimal.mark = ",")))
+} else {
+  cat(paste("* **Monte Carlo iteraties:**", format(res$invoer$MC, big.mark = ".", decimal.mark = ","), "\n"))
+  cat(paste("* **Startwaarde toevalsgenerator:**", res$invoer$start))
+}
+```
 
 ## Invoertabel (Steekproeven)
 
