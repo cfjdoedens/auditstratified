@@ -202,6 +202,38 @@ print(virtuele_posten)
 
 Wanneer je de hoofdfunctie eval_stratified() gebruikt om je volledige audit met meerdere steekproeven door te rekenen, hoef je deze stappen niet zelf uit te voeren. Het package roept deze hulpfuncties op de achtergrond per geüploade steekproefregel automatisch aan. Zo wordt elke steekproef feilloos en transparant geharmoniseerd voordat de convolutie (het samenvoegen) plaatsvindt.
 
+## Keuze tussen twee statistische modellen
+
+`Evalstratified` biedt de mogelijkheid om twee verschillende statistische modellen 
+toe te passen. De keuze is tussen:
+
+- binomiaal: Dit is het meest nauwkeurige model.
+- Poisson: Dit wordt traditioneel veel gebruikt in de audit. Maar het is minder
+        nauwkeurig, en bij grote foutfracties, wordt het erg onnauwkeurig.
+
+## Keuze tussen twee berekeningswijzes
+
+`Evalstratified` biedt de mogelijkheid om twee verschillende berekeningswijzen
+voor de convolutie, het met elkaar combineren, van de
+kanskrommes die de resultaten van de afzonderlijke steekproeven vertegenwoordigen.
+
+De keuze is tussen:
+
+- Fast Fourier Transformatie (FFT): werkt door elk van de kanskrommen te verdelen in
+  een eindig raster, en die rasters met elkaar te vermenigvuldigen.
+- Monte Carlo: werkt door het willekeurig combineren van punten (tot op
+  machineprecisie) uit de kanskrommen.
+
+Beide methoden berekenen een benadering van de resulterende kromme
+en de daarbij behorende meest waarschijnlijke fout, maximale fout,
+en andere kenmerkende waarden.
+Benadering: de opgegeven waarden kunnen mogelijk worden verbeterd binnen
+de nauwkeurigheid van de floating point module van de onderliggende
+computer.
+De nauwkeurigheid van beide methoden neemt toe bij grotere granulariteit.
+Dus bij grotere granulariteit wordt de benadering beter.
+Beide zijn grofweg even efficient. Beide zijn deterministisch, dit wel afhankelijk van granulariteit, machinenauwkeurigheid, en details van de onderliggende routines.
+
 ## Webversie
 
 Zie https://cfjdoedens.shinyapps.io/evalstratified/.
