@@ -10,7 +10,6 @@ eval_stratified(
   zekerheid = 0.95,
   methode = c("FFT", "MonteCarlo"),
   granulariteit = 10000,
-  MC = 1e+07,
   start = 1,
   vergelijk = TRUE
 )
@@ -25,9 +24,7 @@ Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
 \item{methode}{De rekenmethode voor de convolutie. Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).}
 
-\item{granulariteit}{Aantal stappen om de kanskromme in te verdelen (indien methode = "FFT").}
-
-\item{MC}{Het aantal Monte Carlo iteraties dat gebruikt wordt (indien methode = "MonteCarlo").}
+\item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening. Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as. Bij \code{"MonteCarlo"} is dit het aantal random iteraties.}
 
 \item{start}{Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).}
 

@@ -56,8 +56,7 @@
 #' Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
 #' @param zekerheid Het zekerheidsniveau waarop we de maximale foutfractie berekenen.
 #' @param methode De rekenmethode voor de convolutie. Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).
-#' @param granulariteit Aantal stappen om de kanskromme in te verdelen (indien methode = "FFT").
-#' @param MC Het aantal Monte Carlo iteraties dat gebruikt wordt (indien methode = "MonteCarlo").
+#' @param granulariteit Bepaalt de nauwkeurigheid van de berekening. Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as. Bij \code{"MonteCarlo"} is dit het aantal random iteraties.
 #' @param start Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).
 #' @param vergelijk TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd.
 #' @returns
@@ -74,7 +73,6 @@ eval_stratified <-
            zekerheid = 0.95,
            methode = c("FFT", "MonteCarlo"),
            granulariteit = 10000,
-           MC = 1e7,
            start = 1,
            vergelijk = TRUE) {
 
@@ -144,7 +142,7 @@ eval_stratified <-
 
       stopifnot(length(granulariteit) == 1)
       stopifnot(is.numeric(granulariteit))
-      stopifnot(granulariteit >= 100)
+      stopifnot(granulariteit >= 1)
     }
 
     # Bepaal totaal geldswaarde, inclusief het 100%-getoetste deel.
@@ -183,16 +181,16 @@ eval_stratified <-
     # =========================================================================
 
     if (methode == "MonteCarlo") {
-      krommen <- matrix(NA, nrow = MC, ncol = n_steekproeven)
+      krommen <- matrix(NA, nrow = granulariteit, ncol = n_steekproeven)
       set.seed(start)
       for (i in 1:n_steekproeven) {
         n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
         k_calc <- t_uit$k_laag[[i]]
 
         if (model == "binomiaal") {
-          krommen[, i] <- rbeta(MC, shape1 = 1 + k_calc, shape2 = 1 + n_calc - k_calc)
+          krommen[, i] <- rbeta(granulariteit, shape1 = 1 + k_calc, shape2 = 1 + n_calc - k_calc)
         } else if (model == "poisson") {
-          krommen[, i] <- rgamma(MC, shape = 1 + k_calc, rate = n_calc)
+          krommen[, i] <- rgamma(granulariteit, shape = 1 + k_calc, rate = n_calc)
         }
       }
 
@@ -335,7 +333,6 @@ eval_stratified <-
       zekerheid = zekerheid,
       methode = methode,
       granulariteit = granulariteit,
-      MC = MC,
       start = start,
       vergelijk = vergelijk
     )

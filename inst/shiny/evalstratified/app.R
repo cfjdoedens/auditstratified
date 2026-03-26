@@ -188,7 +188,7 @@ ui <- navbarPage(
           "strat_model",
           label = info_label(
             "statistisch model:",
-            "Kies het model voor de extrapolatie. Poisson wordt vaak gebruikt (bijv. in MUS) wanneer de verwachte foutfractie relatief laag is."
+            "Kies het model voor de extrapolatie. Binomiaal is nauwkeurig. Poisson wordt traditioneel gebruikt maar is minder nauwkeurig en gaat bij grotere foutfracties de mist in."
           ),
           choices = c("binomiaal" = "binomiaal", "poisson" = "poisson"),
           inline = TRUE
@@ -198,55 +198,42 @@ ui <- navbarPage(
         radioButtons(
           "strat_methode",
           label = info_label(
-            "rekenmethode:",
-            "Kies tussen exacte numerieke berekening (FFT) of stochastische simulatie (Monte Carlo)."
+            "rekenmethode",
+            "FFT of Monte Carlo. De nauwkeurigheid van beide methoden neemt toe bij grotere granulariteit. Beide zijn grofweg even efficient. Beide zijn deterministisch, dit wel afhankelijk van granulariteit, machinenauwkeurigheid, en details van de onderliggende routines."
           ),
-          choices = c("numeriek (FFT)" = "FFT", "simulatie (Monte Carlo)" = "MonteCarlo"),
+          choices = c("FFT" = "FFT", "Monte Carlo" = "MonteCarlo"),
           inline = TRUE
         ),
 
         textInput(
           "strat_conf",
           label = info_label(
-            "zekerheid (0,95 = 95%):",
-            "Het gewenste betrouwbaarheidsniveau voor de uiteindelijke evaluatie."
+            "zekerheid (0,95 = 95%)",
+            "Het gewenste betrouwbaarheidsniveau voor de evaluatie."
           ),
           value = "0,95"
         ),
 
-        # NIEUW: Toon granulariteit als FFT is gekozen
-        conditionalPanel(
-          condition = "input.strat_methode == 'FFT'",
-          numericInput(
-            "strat_gran",
-            label = info_label(
-              "granulariteit:",
-              "Aantal stappen voor de x-as bij de FFT berekening. Hoger is nauwkeuriger maar rekent fractioneel langer."
-            ),
-            value = 10000,
-            min = 100,
-            step = 1000
-          )
+        # Granulariteit geldt nu voor BEIDE methodes
+        numericInput(
+          "strat_gran",
+          label = info_label(
+            "granulariteit / iteraties",
+            ">= 1. Hoe meer, hoe nauwkeuriger de berekening van de maximale fout. Maar het rekenen duurt langer."
+          ),
+          value = 10000,
+          min = 100,
+          step = 1000
         ),
 
-        # NIEUW: Toon MC opties als Monte Carlo is gekozen
+        # Seed is ALLEEN relevant voor Monte Carlo
         conditionalPanel(
           condition = "input.strat_methode == 'MonteCarlo'",
           numericInput(
-            "strat_mc",
-            label = info_label(
-              "Monte Carlo iteraties:",
-              "Aantal simulaties. Een hoger getal is nauwkeuriger, maar het rekenen duurt langer."
-            ),
-            value = 100000,
-            min = 1000,
-            step = 10000
-          ),
-          numericInput(
             "strat_seed",
             label = info_label(
-              "seed (startwaarde):",
-              "Een vast startpunt voor de simulatie. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."
+              "seed (startwaarde)",
+              "Een vast startpunt voor de randomgenerator. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."
             ),
             value = 1
           )
@@ -580,9 +567,8 @@ server <- function(input, output, session) {
         steekproeven = final_df,
         model = input$strat_model,
         zekerheid = conf_val,
-        methode = input$strat_methode,              # <--- NIEUW
-        granulariteit = as.integer(input$strat_gran), # <--- NIEUW
-        MC = as.integer(input$strat_mc),
+        methode = input$strat_methode,
+        granulariteit = as.integer(input$strat_gran),
         start = input$strat_seed,
         vergelijk = input$strat_comp
       )
