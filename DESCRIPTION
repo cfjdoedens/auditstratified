@@ -1,7 +1,8 @@
 Package: evalstratified
 Type: Package
-Title: Estimate overall defect rate over multiple sampled masses
-Version: 0.1.0
+Title: Estimate overall defect rate over multiple sampled monetary masses
+Version: 1.0.0
+Date: 2026-03-26
 Authors@R: c(
     person(
       "Crist-Jan", "Doedens",
@@ -9,7 +10,7 @@ Authors@R: c(
       role = c("aut", "cre")
     )
   )
-Description: Given one or more different and not related masses
+Description: Given one or more different and not related monetary masses
   of items, which each has been sampled, estimate the overall defect rate.
 License: MIT + file LICENSE
 Encoding: UTF-8

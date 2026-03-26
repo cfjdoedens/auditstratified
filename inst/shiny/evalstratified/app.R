@@ -690,7 +690,7 @@ server <- function(input, output, session) {
     df_disp %>% select(-any_of("n_hoog"))
   })
 
-  # --- PDF Rapportage ---
+  # PDF rapportage
   output$download_report <- downloadHandler(
     filename = function() {
       paste0("evaluatie_rapport_", Sys.Date(), ".pdf")
