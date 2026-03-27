@@ -8,10 +8,10 @@
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_col renderRHandsontable rHandsontableOutput hot_table
 #' @export
 run_app <- function() {
-  app_dir <- system.file("shiny", "evalstratified", package = "evalstratified")
+  app_dir <- system.file("shiny", "auditstratified", package = "auditstratified")
 
   if (app_dir == "") {
-    app_dir <- "./inst/shiny/evalstratified"
+    app_dir <- "./inst/shiny/auditstratified"
   }
 
   if (!file.exists(app_dir)) {

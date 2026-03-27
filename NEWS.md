@@ -1,4 +1,4 @@
-# evalstratified 1.0.0
+# auditstratified 1.0.0
 
 * Volledig werkende Shiny-applicatie afgerond.
 * Monte Carlo convolutie geoptimaliseerd met wiskundig genormaliseerde kanskrommes.

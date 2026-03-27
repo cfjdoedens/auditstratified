@@ -26,7 +26,7 @@ jobs:
             install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress', 'bslib', 'bsicons'))
 
             # Installeer jouw eigen package
-            remotes::install_github('cfjdoedens/evalstratified', force = TRUE)
+            remotes::install_github('cfjdoedens/auditstratified', force = TRUE)
           "
 
       - name: Deploy to shinyapps.io
@@ -42,8 +42,8 @@ jobs:
             )
 
             rsconnect::deployApp(
-              appDir = 'inst/shiny/evalstratified',
-              appName = 'evalstratified',
+              appDir = 'inst/shiny/auditstratified',
+              appName = 'auditstratified',
               forceUpdate = TRUE
             )
           "

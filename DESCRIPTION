@@ -1,4 +1,4 @@
-Package: evalstratified
+Package: auditstratified
 Type: Package
 Title: Estimate overall defect rate over multiple sampled monetary masses
 Version: 1.0.0
@@ -32,5 +32,5 @@ Imports:
     tibble
 Remotes:
     cfjdoedens/drawsneeded
-URL: https://github.com/cfjdoedens/evalstratified, https://cfjdoedens.github.io/evalstratified/
-BugReports: https://github.com/cfjdoedens/evalstratified/issues
+URL: https://github.com/cfjdoedens/auditstratified, https://cfjdoedens.github.io/auditstratified/
+BugReports: https://github.com/cfjdoedens/auditstratified/issues

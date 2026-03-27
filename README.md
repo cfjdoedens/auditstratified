@@ -1,9 +1,9 @@
 
-# evalstratified
+# auditstratified
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/cfjdoedens/evalstratified/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/cfjdoedens/evalstratified/actions/workflows/R-CMD-check.yaml)
-<!-- badges: end --> Het doel van evalstratified is om een schatting te
+[![R-CMD-check](https://github.com/cfjdoedens/auditstratified/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/cfjdoedens/auditstratified/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end --> Het doel van auditstratified is om een schatting te
 maken van de foutfractie van een aantal monetaire bestanden. Dit gebeurt
 op basis van een algeheel betrouwbaarheidsniveau, een
 betrouwbaarheidsniveau per bestand, en de foutfracties die zijn gevonden
@@ -11,19 +11,19 @@ in de steekproefposten van elk van deze bestanden.
 
 ## Installatie
 
-Je kunt de ontwikkelversie van evalstratified laden van
+Je kunt de ontwikkelversie van auditstratified laden van
 [GitHub](https://github.com/):
 
 ``` r
 if (!requireNamespace("devtools", quietly = TRUE)) {
 install.packages("devtools")
 }
-devtools::install_github("cfjdoedens/evalstratified")
+devtools::install_github("cfjdoedens/auditstratified")
 ```
 
 ## De basis: meerdere steekproeven combineren
 
-De functie van `evalstratified` is het statistisch samenvoegen van de
+De functie van `auditstratified` is het statistisch samenvoegen van de
 evaluaties van meerdere, afzonderlijke steekproeven. Dit is nodig in de
 auditpraktijk wanneer een totale populatie bestaat uit verschillende
 deelpopulaties (bijvoorbeeld verschillende locaties, systemen of
@@ -37,7 +37,7 @@ integraal (100%) gecontroleerd hoeven te worden; de zogenaamde
 
 Wanneer je de resultaten van deze losse steekproeven simpelweg bij
 elkaar op zou tellen, zou je de statistische onzekerheid verkeerd
-inschatten. `evalstratified` lost dit op door de afzonderlijke
+inschatten. `auditstratified` lost dit op door de afzonderlijke
 kansverdelingen van de verschillende steekproeven wiskundig te
 combineren door middel van **convolutie**. Het resultaat is één zuivere,
 gecombineerde kanskromme met één correct berekende maximale
@@ -47,7 +47,7 @@ fout(fractie) en precisie voor de totale organisatie.
 
 In de praktijk komt het voor dat bestanden wél enkele zeer grote posten
 bevatten die integraal gecontroleerd worden. Om hier wiskundig correct
-mee om te gaan, biedt `evalstratified` een verfijning op bovenstaand
+mee om te gaan, biedt `auditstratified` een verfijning op bovenstaand
 basisprincipe: het onderscheid tussen een **hoogstratum** en een
 **laagstratum** binnen de steekproeven. Het hoogstratum bevat de
 integraal gecontroleerde posten, deze zijn niet geextrapoleerd bij de
@@ -58,7 +58,7 @@ de massa van posten kleiner dan het steekproefinterval.
 
 ### Voorbeelden van verschillende evaluatie-scenario’s
 
-Om de flexibiliteit van `evalstratified` te demonstreren, schetsen we
+Om de flexibiliteit van `auditstratified` te demonstreren, schetsen we
 hieronder drie veelvoorkomende praktijksituaties en hoe het package
 hiermee omgaat. Het is hierbij belangrijk om te onthouden dat de
 uiteindelijke evaluatie een *foutfractie* is: de totale (geprojecteerde)
@@ -69,7 +69,7 @@ verdunningseffect)** We evalueren twee steekproeven die beide bestaan
 uit een laagstratum (de getrokken steekproef) en een hoogstratum (de
 100% gecontroleerde grote posten). In de steekproeven (laagstrata)
 zitten enkele fouten, maar in de hoogstrata van beide bestanden worden
-*geen* fouten aangetroffen (absolute fout = € 0). *Hoe `evalstratified`
+*geen* fouten aangetroffen (absolute fout = € 0). *Hoe `auditstratified`
 dit verwerkt:* Het package berekent via convolutie de gecombineerde
 onzekerheid en geprojecteerde fout van de twee laagstrata. Omdat de fout
 in de hoogstrata € 0 is, wordt de teller (de fout) niet verhoogd, maar
@@ -81,7 +81,7 @@ foutfractie voor het geheel significant daalt.
 nemen dezelfde opzet als hierboven, maar nu worden er wél fouten
 gevonden in de grote posten. In het hoogstratum van steekproef 1 vinden
 we een werkelijke fout van € 15.000, en in steekproef 2 een fout van €
-5.000. *Hoe `evalstratified` dit verwerkt:* De statistische onzekerheid
+5.000. *Hoe `auditstratified` dit verwerkt:* De statistische onzekerheid
 van de laagstrata wordt opnieuw zuiver via convolutie gecombineerd.
 Vervolgens telt het package de absolute, vastgestelde fouten uit de
 hoogstrata (samen € 20.000) direct op bij de uitkomst van de convolutie
@@ -94,13 +94,13 @@ Het package kan ook overweg met asymmetrische controlesituaties. Stel,
 bestand 1 wordt regulier gecontroleerd via een steekproef (laagstratum).
 Bestand 2 wordt door de auditor echter *volledig* (100%) gecontroleerd.
 Hierbij wordt in totaal voor € 12.500 aan fouten gevonden in bestand 2.
-*Hoe `evalstratified` dit verwerkt:* Bestand 2 heeft door de 100%
+*Hoe `auditstratified` dit verwerkt:* Bestand 2 heeft door de 100%
 controle geen statistische onzekerheid meer. De gebruiker van het
 package geeft daarom voor het laagstratum een omvang van 0 euro op, en
 de 100% populatie wordt door de gebruiker in de parameters fout_hoog en
 goed_hoog geplaatst. Dus het integraal gecontroleerde bestand wordt dan
 door het package in zijn geheel behandeld als één groot ‘hoogstratum’.
-`evalstratified` berekent de verdeling van bestand 1, slaat de
+`auditstratified` berekent de verdeling van bestand 1, slaat de
 convolutie voor bestand 2 over, en voegt de omvang én de exacte fout van
 € 12.500 van bestand 2 direct toe aan de breuk voor de algehele
 eindevaluatie.
@@ -109,7 +109,7 @@ eindevaluatie.
 
 Wanneer bestanden uit verschillende bedrijfsonderdelen of processen
 komen, worden ze zelden met exact hetzelfde risicoprofiel gecontroleerd.
-`evalstratified` is speciaal ontworpen om steekproeven met verschillende
+`auditstratified` is speciaal ontworpen om steekproeven met verschillende
 risico-inschattingen toch wiskundig zuiver met elkaar te kunnen
 combineren. Om te begrijpen hoe het package dit doet, is het belangrijk
 te kijken naar de wisselwerking tussen risicofactoren, materialiteit en
@@ -148,7 +148,7 @@ wordt jouw bewijslast ‘aangevuld’ door de virtuele foutloze posten die
 voortkomen uit je positieve risicoanalyse.
 
 **Verschillende steekproeven combineren via harmonisatie** Dit concept
-vormt het wiskundige fundament onder `evalstratified` bij het combineren
+vormt het wiskundige fundament onder `auditstratified` bij het combineren
 van verschillende steekproeven:
 
 - **Steekproef A (Hoog risico):** Vereist 95% zekerheid. Er is geen
@@ -163,7 +163,7 @@ Als je de resultaten van Steekproef A en B wilt samenvoegen, kun je niet
 zomaar de gevonden fouten en getrokken aantallen bij elkaar optellen;
 het statistische vertrekpunt is immers ongelijk.
 
-`evalstratified` lost dit op door bij de evaluatie voor élke
+`auditstratified` lost dit op door bij de evaluatie voor élke
 afzonderlijke steekproef het totale bewijs te harmoniseren (fysiek
 getrokken posten + virtuele foutloze posten op basis van de opgegeven
 IHR/IBR/CAR-parameters en materialiteit). Pas nadat de kansverdelingen
@@ -188,7 +188,7 @@ gebaseerd op de twee eerder genoemde steekproeven:
 
 ``` r
 library(tibble)
-library(evalstratified)
+library(auditstratified)
 
 mijn_audit_data <- tribble(
   ~naam,          ~waarde_laag, ~n_laag, ~k_laag, ~ihr, ~ibr, ~car, ~materialiteit, ~fout_hoog, ~goed_hoog, ~n_hoog, ~n_totaal, ~waarde_hoog, ~waarde_populatie,
@@ -232,7 +232,7 @@ resultaat <- eval_stratified(steekproeven = mijn_audit_data, zekerheid = 0.95)
 
 ### In de praktijk: Rekenen met risico’s en virtuele posten
 
-`evalstratified` bevat twee ingebouwde hulpfuncties waarmee je deze
+`auditstratified` bevat twee ingebouwde hulpfuncties waarmee je deze
 theoretische stappen zelf inzichtelijk kunt maken en kunt narekenen:
 `haro_nog_nodige_zekerheid()` en `foutloze_posten_equivalent()`.
 
@@ -243,7 +243,7 @@ statistische zekerheid volgens het HARo-model direct opvragen met de
 volgende functie:
 
 ``` r
-library(evalstratified)
+library(auditstratified)
 
 # Bereken de benodigde zekerheid voor IHR=L, IBR=M, CAR=H
 zekerheid <- haro_nog_nodige_zekerheid(ihr = "L", ibr = "M", car = "H")
@@ -280,7 +280,7 @@ steekproef feilloos en transparant geharmoniseerd voordat de convolutie
 
 ## Keuze tussen twee statistische modellen
 
-`Evalstratified` biedt de mogelijkheid om twee verschillende
+`auditstratified` biedt de mogelijkheid om twee verschillende
 statistische modellen toe te passen. De keuze is tussen:
 
 - binomiaal: Dit is het meest nauwkeurige model.
@@ -288,34 +288,45 @@ statistische modellen toe te passen. De keuze is tussen:
   minder nauwkeurig, en bij grote foutfracties, wordt het erg
   onnauwkeurig.
 
-## Keuze tussen twee berekeningswijzes
+## Keuze tussen twee rekenmethoden voor de convolutie
 
-`Evalstratified` biedt de mogelijkheid om twee verschillende
-berekeningswijzen voor de convolutie, het met elkaar combineren, van de
-kanskrommes die de resultaten van de afzonderlijke steekproeven
-vertegenwoordigen.
+`auditstratified` biedt twee verschillende numerieke benaderingen om de
+convolutie (het wiskundig samenvoegen van de kanskrommes van de
+afzonderlijke steekproeven) uit te voeren.
 
 De keuze is tussen:
 
-- Fast Fourier Transformatie (FFT): werkt door elk van de kanskrommen te
-  verdelen in een eindig raster, en die rasters met elkaar te
-  vermenigvuldigen.
-- Monte Carlo: werkt door het willekeurig combineren van punten (tot op
-  machineprecisie) uit de kanskrommen.
+- **Fast Fourier Transformatie (FFT):** Een numerieke benadering die de
+  as met mogelijke fouten in euro’s opdeelt in een eindig, discreet
+  raster (grid). De kanskrommen worden vervolgens via de stappen op dit
+  raster met elkaar gecombineerd.
+- **Monte Carlo:** Een numerieke benadering die de resulterende
+  verdeling opbouwt door het algoritmisch trekken van een groot aantal
+  (pseudo-)willekeurige waarden uit de theoretische kansverdelingen van
+  de afzonderlijke steekproeven.
 
-Beide methoden berekenen een benadering van de resulterende kromme en de
-daarbij behorende meest waarschijnlijke fout, maximale fout, en andere
-kenmerkende waarden. Benadering: de opgegeven waarden kunnen mogelijk
-worden verbeterd binnen de nauwkeurigheid van de floating point module
-van de onderliggende computer. De nauwkeurigheid van beide methoden
-neemt toe bij grotere granulariteit. Dus bij grotere granulariteit wordt
-de benadering beter. Beide zijn grofweg even efficient. Beide zijn
-deterministisch, dit wel afhankelijk van granulariteit,
-machinenauwkeurigheid, en details van de onderliggende routines.
+**Overeenkomsten en verschillen:** Beide methoden berekenen een
+numerieke benadering van de theoretisch exacte kanskromme en de daarbij
+behorende maximale en meest waarschijnlijke fout. De nauwkeurigheid van
+beide methoden neemt toe naarmate de parameter **granulariteit** wordt
+verhoogd:
+
+- Bij FFT betekent een hogere granulariteit een fijner raster (kleinere
+  stapjes in euro’s).
+- Bij Monte Carlo betekent een hogere granulariteit een groter aantal
+  iteraties (trekkingen).
+
+Beide methoden zijn grofweg even efficiënt. Omdat het allebei numerieke
+benaderingen zijn, is de ultieme nauwkeurigheid van de uitkomst
+afhankelijk van de gekozen granulariteit en de interne machineprecisie
+(floating-point nauwkeurigheid) van de computer. Tot slot leveren beide
+methoden in dit package altijd exact reproduceerbare (deterministische)
+resultaten op, bij de Monte Carlo-methode hangt dit mede af van de
+gekozen startwaarde.
 
 ## Webversie
 
-Zie <https://cfjdoedens.shinyapps.io/evalstratified/>.
+Zie <https://cfjdoedens.shinyapps.io/auditstratified/>.
 
 ## Ideeën voor verdere ontwikkeling
 

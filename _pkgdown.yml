@@ -1,4 +1,4 @@
-url: https://cfjdoedens.github.io/evalstratified/
+url: https://cfjdoedens.github.io/auditstratified/
 template:
   bootstrap: 5
 
@@ -9,5 +9,5 @@ navbar:
   components:
     shinyapp:
       text: "Run Live App"
-      href: https://cfjdoedens.shinyapps.io/evalstratified/
+      href: https://cfjdoedens.shinyapps.io/auditstratified/
       icon: fa-rocket

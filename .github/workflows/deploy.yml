@@ -63,8 +63,8 @@ jobs:
 
             # De app naar de server sturen en altijd overschrijven
             rsconnect::deployApp(
-              appDir = 'inst/shiny/evalstratified',
-              appName = 'evalstratified',
+              appDir = 'inst/shiny/auditstratified',
+              appName = 'auditstratified',
               forceUpdate = TRUE
             )
           "

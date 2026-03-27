@@ -1,5 +1,5 @@
 library(shiny)
-library(evalstratified)
+library(auditstratified)
 library(tibble)
 library(dplyr)
 library(readr)
@@ -30,7 +30,7 @@ info_label <- function(tekst, tooltip_tekst) {
 }
 
 ui <- navbarPage(
-  "evalstratified",
+  "auditstratified",
   theme = bs_theme(version = 5),
 
   # --- head: css en force-resize script ---

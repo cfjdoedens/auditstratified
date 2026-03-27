@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(evalstratified)
+library(auditstratified)
 
-test_check("evalstratified")
+test_check("auditstratified")
