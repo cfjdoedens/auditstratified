@@ -109,11 +109,11 @@ eindevaluatie.
 
 Wanneer bestanden uit verschillende bedrijfsonderdelen of processen
 komen, worden ze zelden met exact hetzelfde risicoprofiel gecontroleerd.
-`auditstratified` is speciaal ontworpen om steekproeven met verschillende
-risico-inschattingen toch wiskundig zuiver met elkaar te kunnen
-combineren. Om te begrijpen hoe het package dit doet, is het belangrijk
-te kijken naar de wisselwerking tussen risicofactoren, materialiteit en
-zogenaamde “virtuele foutloze posten”.
+`auditstratified` is speciaal ontworpen om steekproeven met
+verschillende risico-inschattingen toch wiskundig zuiver met elkaar te
+kunnen combineren. Om te begrijpen hoe het package dit doet, is het
+belangrijk te kijken naar de wisselwerking tussen risicofactoren,
+materialiteit en zogenaamde “virtuele foutloze posten”.
 
 **De basis: Risico en Materialiteit** In de auditpraktijk wordt de
 benodigde statistische zekerheid voor een steekproef bepaald door de
@@ -148,8 +148,8 @@ wordt jouw bewijslast ‘aangevuld’ door de virtuele foutloze posten die
 voortkomen uit je positieve risicoanalyse.
 
 **Verschillende steekproeven combineren via harmonisatie** Dit concept
-vormt het wiskundige fundament onder `auditstratified` bij het combineren
-van verschillende steekproeven:
+vormt het wiskundige fundament onder `auditstratified` bij het
+combineren van verschillende steekproeven:
 
 - **Steekproef A (Hoog risico):** Vereist 95% zekerheid. Er is geen
   steun op interne controles, dus er zijn **0** virtuele posten. Het
@@ -316,17 +316,73 @@ verhoogd:
 - Bij Monte Carlo betekent een hogere granulariteit een groter aantal
   iteraties (trekkingen).
 
-Beide methoden zijn grofweg even efficiënt. Omdat het allebei numerieke
-benaderingen zijn, is de ultieme nauwkeurigheid van de uitkomst
-afhankelijk van de gekozen granulariteit en de interne machineprecisie
-(floating-point nauwkeurigheid) van de computer. Tot slot leveren beide
-methoden in dit package altijd exact reproduceerbare (deterministische)
-resultaten op, bij de Monte Carlo-methode hangt dit mede af van de
-gekozen startwaarde.
+Beide methoden zijn grofweg even efficiënt, althans voor deze
+toepassing. Omdat het allebei numerieke benaderingen zijn, is de ultieme
+nauwkeurigheid van de uitkomst afhankelijk van de gekozen granulariteit
+en de interne machineprecisie (floating-point nauwkeurigheid) van de
+computer. Tot slot leveren beide methoden in dit package altijd exact
+reproduceerbare (deterministische) resultaten op, bij de Monte
+Carlo-methode hangt dit mede af van de gekozen startwaarde.
 
 ## Webversie
 
 Zie <https://cfjdoedens.shinyapps.io/auditstratified/>.
+
+## Referenties
+
+### Wikipedia: convolutie
+
+<https://en.wikipedia.org/wiki/Convolution>
+
+### JCGM 101:2008. Propagation of distributions using a Monte Carlo method.
+
+<https://www.bipm.org/documents/20126/2071204/JCGM_101_2008_E.pdf>
+
+Dit BIPM-document stelt dat de onzekerheid over verschillende bronnen
+(strata) moet worden berekend door de volledige kansverdelingen te
+combineren (convolutie). Alleen puntschattingen gebruiken is
+onvoldoende. BIPM, Bureau International des Poids et Mesures, wordt
+wereldwijd als gezaghebbend gezien. Het publiceert publiceert onder meer
+de GUM-richtlijnen (Guide to the Expression of Uncertainty in
+Measurement).
+
+### Wikipedia: Monte Carlo methode
+
+<https://en.wikipedia.org/wiki/Monte_Carlo_method>
+
+Dit Wikipedia-artikel beschrijft de Monte Carlo-simulatie.
+
+### Stevens 2024
+
+Alan Stevens, Monte-Carlo Simulation An Introduction for Engineers and
+Scientists, ISBN 9781032280806, Published October 4, 2024 by CRC Press
+
+<https://www.routledge.com/Monte-Carlo-Simulation-An-Introduction-for-Engineers-and-Scientists/Stevens/p/book/9781032280806>
+
+Dit boek geeft de basisprincipes van Monte Carlo-simulatie plus wat
+toepassingen.
+
+### MathWorks: Fast Fourier Transform (FFT)
+
+<https://nl.mathworks.com/discovery/fft.html>
+
+Dit korte artikel beschijft de Fast Fourier transformatie.
+
+### Abate & Whitt 1992
+
+Abate, J., & Whitt, W. (1992). The Fourier-series method for inverting
+transforms of probability distributions.
+
+<https://www.columbia.edu/~ww2040/FourierSeries1992.pdf>
+
+Dit artikel gaat dieper in op de FFT.
+
+### Wang 1988
+
+<https://www.casact.org/sites/default/files/database/proceed_proceed98_980848.pdf>
+
+Dit artikel beschrijft hoe meerdere risico’s samen te nemen met onder
+meer Monte Carlo-simulatie en FFT.
 
 ## Ideeën voor verdere ontwikkeling
 

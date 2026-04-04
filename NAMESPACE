@@ -3,6 +3,7 @@
 export(eval_stratified)
 export(foutloze_posten_equivalent)
 export(haro_nog_nodige_zekerheid)
+export(plan_stratified)
 export(plot_kanskromme)
 export(run_app)
 import(dplyr)
