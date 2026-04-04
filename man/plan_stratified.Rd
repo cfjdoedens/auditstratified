@@ -14,10 +14,7 @@ plan_stratified(
 )
 }
 \arguments{
-\item{steekproeven}{Een tibble met de planningsgegevens. Vereiste kolommen:
-\code{naam}, \code{waarde_laag}, \code{verwachte_foutfractie}, \code{ihr},
-\code{ibr}, \code{car}, \code{materialiteit}. Optioneel: \code{fout_hoog},
-\code{goed_hoog}, \code{n_hoog}.}
+\item{steekproeven}{Een tibble met de planningsgegevens.}
 
 \item{totale_materialiteit}{De maximaal toegestane foutfractie voor de gehele populatie.}
 
@@ -30,22 +27,11 @@ plan_stratified(
 \item{max_iteraties}{Veiligheidslimiet voor de greedy loop om vastlopen te voorkomen.}
 }
 \value{
-Een verrijkte tibble met de berekende \code{n_laag}, \code{k_laag}, \code{n_totaal}
-en de uiteindelijke \code{geplande_max_fout_totaal} als attribuut.
+Een verrijkte tibble met de berekende \code{n_basis}, \code{n_definitief},
+\code{k_laag}, \code{n_totaal} en de uiteindelijke \code{geplande_max_fout_totaal} als attribuut.
 }
 \description{
 Deze functie berekent de optimale steekproefomvang (n) en verwachte fout (k)
 voor afzonderlijke strata, zodat deze bij gezamenlijke evaluatie onder
 de algehele materialiteit blijven.
-}
-\details{
-Het algoritme werkt in twee stappen:
-\enumerate{
-\item Basisplanning: Voor elk stratum wordt de minimaal benodigde steekproefomvang
-berekend via \code{drawsneeded()}, gebaseerd op het HARo-risicomodel en de
-materialiteit per stratum.
-\item Greedy Optimalisatie: Indien de gecombineerde maximale fout van deze basis
-boven de algehele materialiteit uitkomt, voegt het algoritme iteratief
-1 post toe aan het stratum dat de totale maximale fout het sterkst verlaagt.
-}
 }
