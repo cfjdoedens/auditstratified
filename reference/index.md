@@ -10,6 +10,9 @@
   risicoschattingen.
 - [`haro_nog_nodige_zekerheid()`](https://cfjdoedens.github.io/auditstratified/reference/haro_nog_nodige_zekerheid.md)
   : Bereken de nog benodigde zekerheid te verkrijgen uit detailcontrole
+- [`plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified.md)
+  : Plan de steekproefomvang voor meerdere strata (gestratificeerde
+  steekproef)
 - [`plot_kanskromme()`](https://cfjdoedens.github.io/auditstratified/reference/plot_kanskromme.md)
   : Teken de kanskromme van de evaluatie
 - [`run_app()`](https://cfjdoedens.github.io/auditstratified/reference/run_app.md)

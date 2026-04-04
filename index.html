@@ -208,12 +208,59 @@
 <li>Bij FFT betekent een hogere granulariteit een fijner raster (kleinere stapjes in euro’s).</li>
 <li>Bij Monte Carlo betekent een hogere granulariteit een groter aantal iteraties (trekkingen).</li>
 </ul>
-<p>Beide methoden zijn grofweg even efficiënt. Omdat het allebei numerieke benaderingen zijn, is de ultieme nauwkeurigheid van de uitkomst afhankelijk van de gekozen granulariteit en de interne machineprecisie (floating-point nauwkeurigheid) van de computer. Tot slot leveren beide methoden in dit package altijd exact reproduceerbare (deterministische) resultaten op, bij de Monte Carlo-methode hangt dit mede af van de gekozen startwaarde.</p>
+<p>Beide methoden zijn grofweg even efficiënt, althans voor deze toepassing. Omdat het allebei numerieke benaderingen zijn, is de ultieme nauwkeurigheid van de uitkomst afhankelijk van de gekozen granulariteit en de interne machineprecisie (floating-point nauwkeurigheid) van de computer. Tot slot leveren beide methoden in dit package altijd exact reproduceerbare (deterministische) resultaten op, bij de Monte Carlo-methode hangt dit mede af van de gekozen startwaarde.</p>
 </div>
 <div class="section level2">
 <h2 id="webversie">Webversie<a class="anchor" aria-label="anchor" href="#webversie"></a>
 </h2>
 <p>Zie <a href="https://cfjdoedens.shinyapps.io/auditstratified/" class="external-link uri">https://cfjdoedens.shinyapps.io/auditstratified/</a>.</p>
+</div>
+<div class="section level2">
+<h2 id="referenties">Referenties<a class="anchor" aria-label="anchor" href="#referenties"></a>
+</h2>
+<div class="section level3">
+<h3 id="wikipedia-convolutie">Wikipedia: convolutie<a class="anchor" aria-label="anchor" href="#wikipedia-convolutie"></a>
+</h3>
+<p><a href="https://en.wikipedia.org/wiki/Convolution" class="external-link uri">https://en.wikipedia.org/wiki/Convolution</a></p>
+</div>
+<div class="section level3">
+<h3 id="jcgm-1012008-propagation-of-distributions-using-a-monte-carlo-method">JCGM 101:2008. Propagation of distributions using a Monte Carlo method.<a class="anchor" aria-label="anchor" href="#jcgm-1012008-propagation-of-distributions-using-a-monte-carlo-method"></a>
+</h3>
+<p><a href="https://www.bipm.org/documents/20126/2071204/JCGM_101_2008_E.pdf" class="external-link uri">https://www.bipm.org/documents/20126/2071204/JCGM_101_2008_E.pdf</a></p>
+<p>Dit BIPM-document stelt dat de onzekerheid over verschillende bronnen (strata) moet worden berekend door de volledige kansverdelingen te combineren (convolutie). Alleen puntschattingen gebruiken is onvoldoende. BIPM, Bureau International des Poids et Mesures, wordt wereldwijd als gezaghebbend gezien. Het publiceert publiceert onder meer de GUM-richtlijnen (Guide to the Expression of Uncertainty in Measurement).</p>
+</div>
+<div class="section level3">
+<h3 id="wikipedia-monte-carlo-methode">Wikipedia: Monte Carlo methode<a class="anchor" aria-label="anchor" href="#wikipedia-monte-carlo-methode"></a>
+</h3>
+<p><a href="https://en.wikipedia.org/wiki/Monte_Carlo_method" class="external-link uri">https://en.wikipedia.org/wiki/Monte_Carlo_method</a></p>
+<p>Dit Wikipedia-artikel beschrijft de Monte Carlo-simulatie.</p>
+</div>
+<div class="section level3">
+<h3 id="stevens-2024">Stevens 2024<a class="anchor" aria-label="anchor" href="#stevens-2024"></a>
+</h3>
+<p>Alan Stevens, Monte-Carlo Simulation An Introduction for Engineers and Scientists, ISBN 9781032280806, Published October 4, 2024 by CRC Press</p>
+<p><a href="https://www.routledge.com/Monte-Carlo-Simulation-An-Introduction-for-Engineers-and-Scientists/Stevens/p/book/9781032280806" class="external-link uri">https://www.routledge.com/Monte-Carlo-Simulation-An-Introduction-for-Engineers-and-Scientists/Stevens/p/book/9781032280806</a></p>
+<p>Dit boek geeft de basisprincipes van Monte Carlo-simulatie plus wat toepassingen.</p>
+</div>
+<div class="section level3">
+<h3 id="mathworks-fast-fourier-transform-fft">MathWorks: Fast Fourier Transform (FFT)<a class="anchor" aria-label="anchor" href="#mathworks-fast-fourier-transform-fft"></a>
+</h3>
+<p><a href="https://nl.mathworks.com/discovery/fft.html" class="external-link uri">https://nl.mathworks.com/discovery/fft.html</a></p>
+<p>Dit korte artikel beschijft de Fast Fourier transformatie.</p>
+</div>
+<div class="section level3">
+<h3 id="abate--whitt-1992">Abate &amp; Whitt 1992<a class="anchor" aria-label="anchor" href="#abate--whitt-1992"></a>
+</h3>
+<p>Abate, J., &amp; Whitt, W. (1992). The Fourier-series method for inverting transforms of probability distributions.</p>
+<p><a href="https://www.columbia.edu/~ww2040/FourierSeries1992.pdf" class="external-link uri">https://www.columbia.edu/~ww2040/FourierSeries1992.pdf</a></p>
+<p>Dit artikel gaat dieper in op de FFT.</p>
+</div>
+<div class="section level3">
+<h3 id="wang-1988">Wang 1988<a class="anchor" aria-label="anchor" href="#wang-1988"></a>
+</h3>
+<p><a href="https://www.casact.org/sites/default/files/database/proceed_proceed98_980848.pdf" class="external-link uri">https://www.casact.org/sites/default/files/database/proceed_proceed98_980848.pdf</a></p>
+<p>Dit artikel beschrijft hoe meerdere risico’s samen te nemen met onder meer Monte Carlo-simulatie en FFT.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="ideeën-voor-verdere-ontwikkeling">Ideeën voor verdere ontwikkeling<a class="anchor" aria-label="anchor" href="#idee%C3%ABn-voor-verdere-ontwikkeling"></a>
