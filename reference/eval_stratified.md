@@ -37,12 +37,41 @@ eval_stratified(
 
 - steekproeven:
 
-  Een tibble met de steekproefgegevens.
+  Een tibble met de steekproefgegevens. Deze bestaat uit de volgende
+  kolommen:
+
+  - naam
+
+  - waarde_laag
+
+  - n_laag
+
+  - k_laag
+
+  - ihr
+
+  - ibr
+
+  - car
+
+  - materialiteit
+
+  - fout_hoog
+
+  - goed_hoog
+
+  - n_hoog
+
+  - n_totaal
+
+  - waarde_hoog
+
+  - waarde_populatie
 
 - model:
 
-  Het statistische model dat gebruikt wordt voor de extrapolatie. Keuze
-  uit `"binomiaal"` (standaard) of `"poisson"`.
+  Het statistische model dat gebruikt wordt. Keuze uit `"binomiaal"`
+  (standaard) of `"poisson"`.
 
 - zekerheid:
 
@@ -50,7 +79,10 @@ eval_stratified(
 
 - methode:
 
-  De rekenmethode voor de convolutie. Keuze uit `"FFT"` (standaard,
+  Methode voor de berekening. Keuze uit `"FFT"` (standaard) of
+  `"MonteCarlo"`. `"FFT"` wordt aanbevolen. Deels omdat dat ietsje
+  sneller is, deels omdat dat dezelfde resultatten geeft ongeacht de
+  startwaarde van de toevalsgenerator. Keuze uit `"FFT"` (standaard,
   numerieke convolutie via Fast Fourier Transform) of `"MonteCarlo"`
   (stochastische benadering).
 

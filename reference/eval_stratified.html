@@ -98,11 +98,26 @@ Het HARo wordt beheerd door Auditdienst Rijk, de ADR.</p>
 
 
 <dl><dt id="arg-steekproeven">steekproeven<a class="anchor" aria-label="anchor" href="#arg-steekproeven"></a></dt>
-<dd><p>Een tibble met de steekproefgegevens.</p></dd>
+<dd><p>Een tibble met de steekproefgegevens. Deze
+bestaat uit de volgende kolommen:</p><ul><li><p>naam</p></li>
+<li><p>waarde_laag</p></li>
+<li><p>n_laag</p></li>
+<li><p>k_laag</p></li>
+<li><p>ihr</p></li>
+<li><p>ibr</p></li>
+<li><p>car</p></li>
+<li><p>materialiteit</p></li>
+<li><p>fout_hoog</p></li>
+<li><p>goed_hoog</p></li>
+<li><p>n_hoog</p></li>
+<li><p>n_totaal</p></li>
+<li><p>waarde_hoog</p></li>
+<li><p>waarde_populatie</p></li>
+</ul></dd>
 
 
 <dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
-<dd><p>Het statistische model dat gebruikt wordt voor de extrapolatie.
+<dd><p>Het statistische model dat gebruikt wordt.
 Keuze uit <code>"binomiaal"</code> (standaard) of <code>"poisson"</code>.</p></dd>
 
 
@@ -111,7 +126,12 @@ Keuze uit <code>"binomiaal"</code> (standaard) of <code>"poisson"</code>.</p></d
 
 
 <dt id="arg-methode">methode<a class="anchor" aria-label="anchor" href="#arg-methode"></a></dt>
-<dd><p>De rekenmethode voor de convolutie. Keuze uit <code>"FFT"</code> (standaard, numerieke convolutie via Fast Fourier Transform) of <code>"MonteCarlo"</code> (stochastische benadering).</p></dd>
+<dd><p>Methode voor de berekening.
+Keuze uit <code>"FFT"</code> (standaard) of <code>"MonteCarlo"</code>.
+<code>"FFT"</code> wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
+omdat dat dezelfde resultatten geeft ongeacht de startwaarde van de
+toevalsgenerator.
+Keuze uit <code>"FFT"</code> (standaard, numerieke convolutie via Fast Fourier Transform) of <code>"MonteCarlo"</code> (stochastische benadering).</p></dd>
 
 
 <dt id="arg-granulariteit">granulariteit<a class="anchor" aria-label="anchor" href="#arg-granulariteit"></a></dt>

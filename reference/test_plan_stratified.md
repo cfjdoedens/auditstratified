@@ -1,20 +1,19 @@
-# Plan de steekproefomvang voor meerdere strata (gestratificeerde steekproef)
+# test plan_stratified()
 
-Deze functie berekent de optimale steekproefomvang (n) en verwachte fout
-(k) voor afzonderlijke strata, zodat deze bij gezamenlijke evaluatie
-onder de algehele materialiteit blijven.
+Test uitgaande van de invoervelden van plan_stratified plus de
+uitvoervelden of plan_stratified() juist heeft gewerkt.
 
 ## Usage
 
 ``` r
-plan_stratified(
+test_plan_stratified(
   steekproeven,
   totale_materialiteit,
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
   methode = c("FFT", "MonteCarlo"),
   granulariteit = 10000,
-  max_iteraties = 10000
+  plan_result
 )
 ```
 
@@ -22,36 +21,7 @@ plan_stratified(
 
 - steekproeven:
 
-  Een tibble met de planningsgegevens.Deze bestaat uit de volgende
-  kolommen:
-
-  - naam
-
-  - waarde_laag
-
-  - n_laag
-
-  - k_laag
-
-  - ihr
-
-  - ibr
-
-  - car
-
-  - materialiteit
-
-  - fout_hoog
-
-  - goed_hoog
-
-  - n_hoog
-
-  - n_totaal
-
-  - waarde_hoog
-
-  - waarde_populatie
+  Een tibble met de planningsgegevens.
 
 - totale_materialiteit:
 
@@ -79,13 +49,22 @@ plan_stratified(
   aantal stappen op de kanskromme-as. Bij `"MonteCarlo"` is dit het
   aantal toevalsiteraties.
 
-- max_iteraties:
+- plan_result:
 
-  Limiet voor hoeveel extra steekproefposten we willen trekken. Dit
-  beschermt ook tegen een eventuele eindeloze lus.
+  !!!!
 
 ## Value
 
-Een verrijkte tibble met de berekende `n_basis`, `n_definitief`,
-`k_laag`, `n_totaal` en de uiteindelijke `geplande_max_fout_totaal` als
-attribuut.
+List met antwoorden op vraag 1 en 2.
+
+examples
+
+## Details
+
+De functie test of:
+
+1.  De max_fout inderdaad onder de materialiteit ligt
+
+2.  Of voor elk van de strata waarvoor n_laag_extra \> 0 geldt, dat als
+    je deze waarde met 1 verlaagt, en je dan eval_stratified() toepast,
+    je dan boven de materialiteit uitkomt.

@@ -1,0 +1,57 @@
+# Convolutie via Monte Carlo simulatie.
+
+Convolutie via Monte Carlo simulatie.
+
+## Usage
+
+``` r
+convolutie_montecarlo(
+  t_uit,
+  model,
+  zekerheid,
+  granulariteit,
+  start,
+  totaalgeld_laag,
+  totaalgeld_fout_hoog,
+  totaalgeld_algeheel
+)
+```
+
+## Arguments
+
+- t_uit:
+
+  Verrijkte steekproef-tibble met n_laag, k_laag, extra_foutloze_posten,
+  waarde_laag.
+
+- model:
+
+  "binomiaal" of "poisson".
+
+- zekerheid:
+
+  Zekerheidsniveau (0-1).
+
+- granulariteit:
+
+  Aantal toevalsiteraties.
+
+- start:
+
+  Startwaarde voor de toevalsgenerator.
+
+- totaalgeld_laag:
+
+  Totale geldswaarde van het laagstratum.
+
+- totaalgeld_fout_hoog:
+
+  Totale fout in het hoogstratum.
+
+- totaalgeld_algeheel:
+
+  Totale geldswaarde van de gehele populatie.
+
+## Value
+
+Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
