@@ -15,14 +15,36 @@ eval_stratified(
 )
 }
 \arguments{
-\item{steekproeven}{Een tibble met de steekproefgegevens.}
+\item{steekproeven}{Een tibble met de steekproefgegevens. Deze
+bestaat uit de volgende kolommen:
+\itemize{
+\item naam
+\item waarde_laag
+\item n_laag
+\item k_laag
+\item ihr
+\item ibr
+\item car
+\item materialiteit
+\item fout_hoog
+\item goed_hoog
+\item n_hoog
+\item n_totaal
+\item waarde_hoog
+\item waarde_populatie
+}}
 
-\item{model}{Het statistische model dat gebruikt wordt voor de extrapolatie.
+\item{model}{Het statistische model dat gebruikt wordt.
 Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
 \item{zekerheid}{Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
 
-\item{methode}{De rekenmethode voor de convolutie. Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).}
+\item{methode}{Methode voor de berekening.
+Keuze uit \code{"FFT"} (standaard) of \code{"MonteCarlo"}.
+\code{"FFT"} wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
+omdat dat dezelfde resultatten geeft ongeacht de startwaarde van de
+toevalsgenerator.
+Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).}
 
 \item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
 Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.

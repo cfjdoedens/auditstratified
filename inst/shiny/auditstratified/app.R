@@ -7,6 +7,7 @@ library(htmlwidgets)
 library(ggplot2)
 library(bslib)
 library(bsicons)
+library(auditstratified)
 
 # risico opties voor de dropdowns.
 {

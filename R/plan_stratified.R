@@ -6,15 +6,37 @@
 #' voor afzonderlijke strata, zodat deze bij gezamenlijke evaluatie onder
 #' de algehele materialiteit blijven.
 #'
-#' @param steekproeven Een tibble met de planningsgegevens.
+#' @param steekproeven Een tibble met de planningsgegevens.Deze
+#'   bestaat uit de volgende kolommen:
+#'   - naam
+#'   - waarde_laag
+#'   - n_laag
+#'   - k_laag
+#'   - ihr
+#'   - ibr
+#'   - car
+#'   - materialiteit
+#'   - fout_hoog
+#'   - goed_hoog
+#'   - n_hoog
+#'   - n_totaal
+#'   - waarde_hoog
+#'   - waarde_populatie
 #' @param totale_materialiteit De maximaal toegestane foutfractie voor de gehele populatie.
 #' @param totale_zekerheid Het algehele zekerheidsniveau (bijv. 0.95).
-#' @param model Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
-#' @param methode Rekenmethode voor evaluatie. \code{"FFT"} is sterk aanbevolen voor snelheid.
+#' @param model Het statistische model dat gebruikt wordt voor de extrapolatie.
+#'   Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
+#' @param methode Rekenmethode voor evaluatie.
+#'   Keuze uit \code{"FFT"} (standaard) of \code{"MonteCarlo"}.
+#'   \code{"FFT"} wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
+#'   omdat dat dezelfde resultaten geeft ongeacht de startwaarde van de
+#'   toevalsgenerator.
 #' @param granulariteit Bepaalt de nauwkeurigheid van de berekening.
 #'   Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
 #'   Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.
-#' @param max_iteraties Veiligheidslimiet voor de greedy loop om vastlopen te voorkomen.
+#' @param max_iteraties Limiet voor hoeveel extra steekproefposten
+#'   we willen trekken. Dit beschermt ook tegen een eventuele
+#'   eindeloze lus.
 #'
 #' @returns Een verrijkte tibble met de berekende \code{n_basis}, \code{n_definitief},
 #' \code{k_laag}, \code{n_totaal} en de uiteindelijke \code{geplande_max_fout_totaal} als attribuut.
@@ -129,7 +151,8 @@ plan_stratified <- function(steekproeven,
     huidige_max_fout <- calc_current_max_error(strata)
   }
 
-  # Greedy optimalisatie loop: we verhogen steeds n_laag met 1, van dat stratum waarvoor we het beste resultaat krijgen.
+  # Greedy optimalisatie loop: we verhogen steeds n_laag met 1,
+  # van dat stratum waarvoor we het beste resultaat krijgen.
   {
     iteratie <- 0
 

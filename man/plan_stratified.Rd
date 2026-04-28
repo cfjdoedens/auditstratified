@@ -15,21 +15,45 @@ plan_stratified(
 )
 }
 \arguments{
-\item{steekproeven}{Een tibble met de planningsgegevens.}
+\item{steekproeven}{Een tibble met de planningsgegevens.Deze
+bestaat uit de volgende kolommen:
+\itemize{
+\item naam
+\item waarde_laag
+\item n_laag
+\item k_laag
+\item ihr
+\item ibr
+\item car
+\item materialiteit
+\item fout_hoog
+\item goed_hoog
+\item n_hoog
+\item n_totaal
+\item waarde_hoog
+\item waarde_populatie
+}}
 
 \item{totale_materialiteit}{De maximaal toegestane foutfractie voor de gehele populatie.}
 
 \item{totale_zekerheid}{Het algehele zekerheidsniveau (bijv. 0.95).}
 
-\item{model}{Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
+\item{model}{Het statistische model dat gebruikt wordt voor de extrapolatie.
+Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
-\item{methode}{Rekenmethode voor evaluatie. \code{"FFT"} is sterk aanbevolen voor snelheid.}
+\item{methode}{Rekenmethode voor evaluatie.
+Keuze uit \code{"FFT"} (standaard) of \code{"MonteCarlo"}.
+\code{"FFT"} wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
+omdat dat dezelfde resultaten geeft ongeacht de startwaarde van de
+toevalsgenerator.}
 
 \item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
 Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
 Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.}
 
-\item{max_iteraties}{Veiligheidslimiet voor de greedy loop om vastlopen te voorkomen.}
+\item{max_iteraties}{Limiet voor hoeveel extra steekproefposten
+we willen trekken. Dit beschermt ook tegen een eventuele
+eindeloze lus.}
 }
 \value{
 Een verrijkte tibble met de berekende \code{n_basis}, \code{n_definitief},
