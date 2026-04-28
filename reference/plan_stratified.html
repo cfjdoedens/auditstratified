@@ -52,7 +52,8 @@ de algehele materialiteit blijven.</p>
 <span>  totale_zekerheid <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"binomiaal"</span>, <span class="st">"poisson"</span><span class="op">)</span>,</span>
 <span>  methode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FFT"</span>, <span class="st">"MonteCarlo"</span><span class="op">)</span>,</span>
-<span>  max_iteraties <span class="op">=</span> <span class="fl">1000</span></span>
+<span>  granulariteit <span class="op">=</span> <span class="fl">10000</span>,</span>
+<span>  max_iteraties <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -78,6 +79,12 @@ de algehele materialiteit blijven.</p>
 
 <dt id="arg-methode">methode<a class="anchor" aria-label="anchor" href="#arg-methode"></a></dt>
 <dd><p>Rekenmethode voor evaluatie. <code>"FFT"</code> is sterk aanbevolen voor snelheid.</p></dd>
+
+
+<dt id="arg-granulariteit">granulariteit<a class="anchor" aria-label="anchor" href="#arg-granulariteit"></a></dt>
+<dd><p>Bepaalt de nauwkeurigheid van de berekening.
+Bij <code>"FFT"</code> is dit het aantal stappen op de kanskromme-as.
+Bij <code>"MonteCarlo"</code> is dit het aantal toevalsiteraties.</p></dd>
 
 
 <dt id="arg-max-iteraties">max_iteraties<a class="anchor" aria-label="anchor" href="#arg-max-iteraties"></a></dt>

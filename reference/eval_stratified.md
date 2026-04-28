@@ -58,7 +58,7 @@ eval_stratified(
 
   Bepaalt de nauwkeurigheid van de berekening. Bij `"FFT"` is dit het
   aantal stappen op de kanskromme-as. Bij `"MonteCarlo"` is dit het
-  aantal random iteraties.
+  aantal toevalsiteraties.
 
 - start:
 

@@ -13,7 +13,8 @@ plan_stratified(
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
   methode = c("FFT", "MonteCarlo"),
-  max_iteraties = 1000
+  granulariteit = 10000,
+  max_iteraties = 10000
 )
 ```
 
@@ -39,6 +40,12 @@ plan_stratified(
 
   Rekenmethode voor evaluatie. `"FFT"` is sterk aanbevolen voor
   snelheid.
+
+- granulariteit:
+
+  Bepaalt de nauwkeurigheid van de berekening. Bij `"FFT"` is dit het
+  aantal stappen op de kanskromme-as. Bij `"MonteCarlo"` is dit het
+  aantal toevalsiteraties.
 
 - max_iteraties:
 
