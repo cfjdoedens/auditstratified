@@ -11,6 +11,9 @@
 #' @param totale_zekerheid Het algehele zekerheidsniveau (bijv. 0.95).
 #' @param model Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
 #' @param methode Rekenmethode voor evaluatie. \code{"FFT"} is sterk aanbevolen voor snelheid.
+#' @param granulariteit Bepaalt de nauwkeurigheid van de berekening.
+#'   Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
+#'   Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.
 #' @param max_iteraties Veiligheidslimiet voor de greedy loop om vastlopen te voorkomen.
 #'
 #' @returns Een verrijkte tibble met de berekende \code{n_basis}, \code{n_definitief},
@@ -24,14 +27,15 @@ plan_stratified <- function(steekproeven,
                             totale_zekerheid = 0.95,
                             model = c("binomiaal", "poisson"),
                             methode = c("FFT", "MonteCarlo"),
-                            max_iteraties = 1000) {
+                            granulariteit = 10000,
+                            max_iteraties = 10000) {
 
   model <- match.arg(model)
   methode <- match.arg(methode)
   stopifnot(is_tibble(steekproeven))
   stopifnot(is.numeric(totale_materialiteit), totale_materialiteit > 0, totale_materialiteit < 1)
 
-  # Vertaal de Nederlandse modelnaam naar de Engelse voor drawsneeded().
+  # Vertaal de Nederlandse modelnaam naar de Engelse voor drawsneeded.
   dist_eng <- if(model == "binomiaal") "binomial" else "Poisson"
 
   # Preparatie van de invoer.
@@ -42,12 +46,18 @@ plan_stratified <- function(steekproeven,
       stop(paste("Ontbrekende kolommen in invoer:", paste(ontbrekend, collapse = ", ")))
     }
 
+    if (any(duplicated(steekproeven$naam))) {
+      dubbele <- unique(steekproeven$naam[duplicated(steekproeven$naam)])
+      stop(paste("Planningsfout: De volgende stratumnamen komen vaker dan \u00e9\u00e9n keer voor:",
+                 paste(dubbele, collapse = ", ")))
+    }
+
     if (!"fout_hoog" %in% colnames(steekproeven)) steekproeven$fout_hoog <- 0
     if (!"goed_hoog" %in% colnames(steekproeven)) steekproeven$goed_hoog <- 0
     if (!"n_hoog" %in% colnames(steekproeven)) steekproeven$n_hoog <- 0
   }
 
-  # Upfront validatie van onmogelijke situaties.
+  # Vooraf validatie van onmogelijke situaties.
   {
     totale_populatie <- sum(steekproeven$waarde_laag + steekproeven$fout_hoog + steekproeven$goed_hoog)
 
@@ -61,6 +71,14 @@ plan_stratified <- function(steekproeven,
       ))
     }
 
+    # Voor nu verbieden we dit.
+    # Toestaan vereist dat we ergens teruggeven in welke strata dit voorkomt.
+    # Die complicatie laten we nu even weg.
+    # In de toekomst gaan we dit wel toestaan.
+    # Je kunt je namelijk voorstellen dat je toch wilt weten als gebruiker
+    # of het mogelijk is om onder de totale materialiteit te blijven, en voor lief
+    # neemt dat sommige steekproeven qua maximale foutfractie boven de materialiteit
+    # uitkomen.
     if (any(steekproeven$verwachte_foutfractie >= steekproeven$materialiteit)) {
       foute_strata <- steekproeven$naam[steekproeven$verwachte_foutfractie >= steekproeven$materialiteit]
       stop(paste("Planningsfout: In de volgende strata is de verwachte foutfractie groter dan of gelijk aan de stratum-materialiteit:",
@@ -84,7 +102,6 @@ plan_stratified <- function(steekproeven,
       mutate(
         cert = purrr::pmap_dbl(list(ihr, ibr, car), haro_nog_nodige_zekerheid),
 
-        # Gebruik de Engelse vertaling voor drawsneeded().
         n_basis = ceiling(purrr::pmap_dbl(
           list(verwachte_foutfractie, materialiteit, cert),
           ~ drawsneeded(posited_defect_rate = ..1, allowed_defect_rate = ..2, cert = ..3, distribution = dist_eng)
@@ -103,6 +120,7 @@ plan_stratified <- function(steekproeven,
         model = model,
         zekerheid = totale_zekerheid,
         methode = methode,
+        granulariteit = granulariteit,
         vergelijk = FALSE
       )
       return(res$max_fout_convolutie)
@@ -111,44 +129,52 @@ plan_stratified <- function(steekproeven,
     huidige_max_fout <- calc_current_max_error(strata)
   }
 
-  # Greedy optimalisatie loop.
+  # Greedy optimalisatie loop: we verhogen steeds n_laag met 1, van dat stratum waarvoor we het beste resultaat krijgen.
   {
     iteratie <- 0
 
     while (huidige_max_fout > totale_materialiteit && iteratie < max_iteraties) {
       iteratie <- iteratie + 1
       beste_stratum <- NA
-      beste_verbetering <- 0
+      beste_verbetering <- -Inf
 
       for (i in 1:nrow(strata)) {
+        # We maken een kopie van strata: test_strata.
         test_strata <- strata
+
+        # Voor die kopie verhogen we de i-de n_laag met 1.
         test_strata$n_laag[i] <- test_strata$n_laag[i] + 1
+
+        # We passen de i-de k_laag navenant aan.
         test_strata$k_laag[i] <- test_strata$n_laag[i] * test_strata$verwachte_foutfractie[i]
+
+        # We passen de i-de n_totaal navenant aan.
         test_strata$n_totaal[i] <- test_strata$n_laag[i] + test_strata$n_hoog[i]
 
+        # We berekenen nu over het gehele zo gemaakte test_strata wat de maximale fout zou worden.
         test_max_fout <- calc_current_max_error(test_strata)
+
+        # We kijken wat dit oplevert aan verbetering: hoeveel wordt de huidige max fout kleiner.
         verbetering <- huidige_max_fout - test_max_fout
 
+        # Als de huidige verbetering de beste tot nu toe is, dan noteren we dit in beste_verbetering en beste_stratum.
         if (verbetering > beste_verbetering) {
           beste_verbetering <- verbetering
           beste_stratum <- i
         }
       }
 
-      if (is.na(beste_stratum) || beste_verbetering <= 0) {
-        warning("Algoritme kan de totale materialiteit niet bereiken. Optimalisatie gestopt.")
-        break
-      }
-
+      # Voer de beste verbetering door in de definitieve strata.
       strata$n_laag[beste_stratum] <- strata$n_laag[beste_stratum] + 1
       strata$k_laag[beste_stratum] <- strata$n_laag[beste_stratum] * strata$verwachte_foutfractie[beste_stratum]
       strata$n_totaal[beste_stratum] <- strata$n_laag[beste_stratum] + strata$n_hoog[beste_stratum]
 
-      huidige_max_fout <- huidige_max_fout - beste_verbetering
+      huidige_max_fout <- calc_current_max_error(strata)
     }
 
+    # Waarschuw bij bereiken max_iteraties.
     if (iteratie >= max_iteraties) {
-      warning("Maximale aantal iteraties bereikt. Het resultaat voldoet mogelijk nog niet aan de totale materialiteit.")
+      warning(paste0("Maximale aantal iteraties = maximaal aantal extra steken, ", max_iteraties, ", bereikt."))
     }
   }
 
@@ -156,8 +182,12 @@ plan_stratified <- function(steekproeven,
   {
     strata$cert <- NULL
 
-    # Hernoem n_laag naar n_definitief voor de eindgebruiker.
-    strata <- dplyr::rename(strata, n_definitief = n_laag)
+    if ("n_definitief" %in% colnames(strata)) {
+      strata$n_definitief <- strata$n_laag
+      strata$n_laag <- NULL
+    } else {
+      strata <- dplyr::rename(strata, n_definitief = n_laag)
+    }
 
     attr(strata, "geplande_max_fout_totaal") <- huidige_max_fout
 

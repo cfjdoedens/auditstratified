@@ -43,14 +43,12 @@ test_that("voorbeeld Paul van Batenburg", {
     0,
     1000000
   )
-  # Expliciet MonteCarlo gekozen met 10 miljoen iteraties (1e7) om historische afrondingen te matchen
   r <- eval_stratified(
     steekproeven = vb_paul_van_batenburg,
     zekerheid = 0.95,
     methode = "MonteCarlo",
     granulariteit = 1e5
   )
-
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.03100)
 })
 
@@ -628,20 +626,6 @@ test_that("32 dezelfde steekproeven.", {
     10,
     0,
     10,
-    "s2",
-    10,
-    10,
-    0,
-    "H",
-    "H",
-    "H",
-    0.01,
-    0,
-    0,
-    0,
-    10,
-    0,
-    10,
     "s23",
     10,
     10,
@@ -808,7 +792,7 @@ test_that("32 dezelfde steekproeven.", {
     methode = "MonteCarlo",
     granulariteit = 1e5
   )
-  expect_equal(round(r[["max_fout_convolutie"]], 4), 0.08980)
+  expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0899)
   expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 3), 0.104)
 
   r <- eval_stratified(
@@ -817,7 +801,7 @@ test_that("32 dezelfde steekproeven.", {
     methode = "MonteCarlo",
     granulariteit = 1e5
   )
-  expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0625)
+  expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0622)
   expect_equal(round(r[["vergelijk_met"]][["max_fout_los"]], 5), 0.00465)
 })
 
@@ -1000,7 +984,7 @@ test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
     200
   )
 
-  # Draai beide methodes (Monte Carlo krijgt weer de oude 1e7 iteraties voor betrouwbaarheid)
+  # Draai beide methodes (Monte Carlo krijgt weer de oude 1e5 iteraties voor betrouwbaarheid)
   r_mc <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.95,

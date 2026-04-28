@@ -24,7 +24,9 @@ Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
 \item{methode}{De rekenmethode voor de convolutie. Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).}
 
-\item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening. Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as. Bij \code{"MonteCarlo"} is dit het aantal random iteraties.}
+\item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
+Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
+Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.}
 
 \item{start}{Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).}
 

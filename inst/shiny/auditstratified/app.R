@@ -1,5 +1,4 @@
 library(shiny)
-library(auditstratified)
 library(tibble)
 library(dplyr)
 library(readr)
@@ -9,332 +8,241 @@ library(ggplot2)
 library(bslib)
 library(bsicons)
 
-# define risk options used in multiple tabs
-risk_choices <- c("hoog (H)" = "H",
-                  "midden (M)" = "M",
-                  "laag (L)" = "L")
-risk_vec_ui <- c("H", "M", "L")
+# risico opties voor de dropdowns.
+{
+  risk_choices <- c("hoog (H)" = "H",
+                    "midden (M)" = "M",
+                    "laag (L)" = "L")
 
-# helper functie: parseer getallen strict volgens nl notatie
-parse_dutch_num <- function(x) {
-  stopifnot(is.character(x))
-  parse_number(x, locale = locale(decimal_mark = ",", grouping_mark = "."))
+  risk_vec_ui <- c("H", "M", "L")
 }
 
-# helper functie: maakt netjes een label met een (i) tooltip voor de UI
-info_label <- function(tekst, tooltip_tekst) {
-  tags$span(tekst, tooltip(
-    bs_icon("info-circle", class = "ms-1", style = "font-size: 0.9em; color: #007bff;"),
-    tooltip_tekst
-  ))
+# Verbeterde helper functie die veilig is voor vectoren.
+{
+  parse_dutch_num <- function(x) {
+    if (is.null(x))
+      return(NA)
+
+    res <- as.character(x)
+    res[res == ""] <- NA
+
+    parse_number(res, locale = locale(decimal_mark = ",", grouping_mark = "."))
+  }
+}
+
+# Helper functie voor labels met tooltips.
+{
+  info_label <- function(tekst, tooltip_tekst) {
+    tags$span(tekst, tooltip(
+      bs_icon("info-circle", class = "ms-1", style = "font-size: 0.9em; color: #007bff;"),
+      tooltip_tekst
+    ))
+  }
 }
 
 ui <- navbarPage(
   "auditstratified",
   theme = bs_theme(version = 5),
 
-  # --- head: css en force-resize script ---
+  # css en scripts voor de tabel-opmaak.
   header = tags$head(tags$style(
     HTML(
       "
-      /* force all handsontable cells to be white with black text */
-      .handsontable td { background-color: #ffffff !important; color: #000000 !important; }
+      /* Toon de zandloper alleen als de berekening langer dan 200ms duurt. */
+      html.rekenen-bezig, html.rekenen-bezig * {
+        cursor: wait !important;
+      }
+      .handsontable, .handsontable * {
+        box-sizing: content-box;
+      }
+      .handsontable td {
+        background-color: #ffffff;
+        color: #000000;
+      }
+      .handsontable .readonly-cell {
+        background-color: #eeeeee !important;
+        color: #555555 !important;
+        font-weight: bold;
+      }
       .handsontable td.current { background-color: #e6f2ff !important; }
-      /* right align text columns that act as numbers */
       .handsontable .htRight { text-align: right; }
     "
     )
   ), tags$script(
     HTML(
-      '
-      // Forceer rhandsontable om zichzelf expliciet opnieuw te tekenen na een tab-wissel
-      $(document).on("shiny:tabshown", function(e) {
+      "
+      $(document).on('shiny:tabshown', function(e) {
         setTimeout(function() {
-          $(".html-widget").each(function() {
+          $('.html-widget').each(function() {
             var widget = HTMLWidgets.getInstance(this);
-            if (widget && widget.hot) {
-              widget.hot.render();
-            }
+            if (widget && widget.hot) { widget.hot.render(); }
           });
-          window.dispatchEvent(new Event("resize"));
+          window.dispatchEvent(new Event('resize'));
         }, 150);
       });
-    '
+
+      /* Trigger de formattering pas als de gebruiker het veld verlaat (focusout). */
+      $(document).on('focusout', '#plan_totale_mat, #plan_conf, #plan_gran', function() {
+        Shiny.setInputValue('format_plan_sidebar', Math.random(), {priority: 'event'});
+      });
+
+      /* Slimme zandloper-logica om geflikker bij kleine updates te voorkomen. */
+      var busyTimer;
+      $(document).on('shiny:busy', function() {
+        busyTimer = setTimeout(function() {
+          $('html').addClass('rekenen-bezig');
+        }, 200);
+      });
+      $(document).on('shiny:idle', function() {
+        clearTimeout(busyTimer);
+        $('html').removeClass('rekenen-bezig');
+      });
+    "
     )
   )),
 
-  # -------------------------------------------------------------------------
-  # tab 1: haro nog nodige zekerheid
-  # -------------------------------------------------------------------------
+  # Tab 1 voor de berekening van de benodigde zekerheid.
   tabPanel(
     "nog nodige zekerheid",
-    sidebarLayout(
-      sidebarPanel(
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 270,
         h4("risico-inschatting"),
         helpText(
           "Bereken de nog benodigde zekerheid volgens HARo paragraaf B7.3.4."
         ),
         selectInput(
           "haro_ihr",
-          label = info_label(
-            "inherent risico (ihr):",
-            "De inschatting van de kans op een materiële fout zonder gebruik van interne beheersing en cijferanalyse."
-          ),
+          label = info_label("ihr:", "Inherent risico."),
           choices = risk_choices
         ),
         selectInput(
           "haro_ibr",
-          label = info_label(
-            "interne beheersingsrisico (ibr):",
-            "Het risico dat de interne beheersing niet goed werkt."
-          ),
+          label = info_label("ibr:", "Interne beheersingsrisico."),
           choices = risk_choices
         ),
         selectInput(
           "haro_car",
-          label = info_label(
-            "cijferanalyserisico (car):",
-            "Het risico dat cijferbeoordelingen en analytische procedures fouten niet vinden."
-          ),
+          label = info_label("car:", "Cijferanalyserisico."),
           choices = risk_choices
         )
       ),
-      mainPanel(
-        h3("resultaat"),
-        verbatimTextOutput("res_haro"),
-        p(
-          "Dit is de zekerheid (fractie 0-1) die u nog uit detailcontroles moet halen."
-        )
+      h3("resultaat"),
+      verbatimTextOutput("res_haro"),
+      p(
+        "Dit is de zekerheid (fractie 0-1) die u nog uit detailcontroles moet halen."
       )
     )
   ),
 
-  # -------------------------------------------------------------------------
-  # tab 2: foutlozepostenequivalent
-  # -------------------------------------------------------------------------
+  # Tab 2 voor de berekening van het postenequivalent.
   tabPanel(
     "foutlozepostenequivalent",
-    sidebarLayout(
-      sidebarPanel(
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 270,
         h4("risico & materialiteit"),
         helpText("Bereken hoeveel foutloze posten uw risico-inschatting waard is."),
         selectInput(
           "fpe_ihr",
-          label = info_label(
-            "inherent risico (ihr):",
-            "De inschatting van de kans op een materiële fout zonder gebruik van interne beheersing en cijferanalyse."
-          ),
+          label = info_label("ihr:", "Inherent risico."),
           choices = risk_choices
         ),
         selectInput(
           "fpe_ibr",
-          label = info_label(
-            "interne beheersingsrisico (ibr):",
-            "Het risico dat de interne beheersing niet goed werkt."
-          ),
+          label = info_label("ibr:", "Interne beheersingsrisico."),
           choices = risk_choices
         ),
         selectInput(
           "fpe_car",
-          label = info_label(
-            "cijferanalyse (car):",
-            "Het risico dat cijferbeoordelingen en analytische procedures fouten niet vinden."
-          ),
+          label = info_label("car:", "Cijferanalyse."),
           choices = risk_choices
         ),
         textInput(
           "fpe_mat",
-          label = info_label(
-            "materialiteit (fractie):",
-            "De grens waarboven een afwijking als materieel wordt beschouwd (bijv. 0,01 voor 1%)."
-          ),
+          label = info_label("materialiteit:", "Grens (bijv. 0,01)."),
           value = "0,01"
         )
       ),
-      mainPanel(
-        h3("resultaat"),
-        verbatimTextOutput("res_fpe"),
-        p("Aantal posten dat overeenkomt met de verlaagde risico's.")
-      )
+      h3("resultaat"),
+      verbatimTextOutput("res_fpe"),
+      p("Aantal posten dat overeenkomt met de verlaagde risico's.")
     )
   ),
 
-  # -------------------------------------------------------------------------
-  # tab 3: evaluatie gestratificeerd
-  # -------------------------------------------------------------------------
+  # Tab 3 voor de evaluatie van de resultaten.
   tabPanel(
     "evaluatie gestratificeerd",
-    sidebarLayout(
-      sidebarPanel(
-        h4("1. data invoer"),
-        radioButtons(
-          "input_method",
-          "methode:",
-          choices = c("handmatige invoer" = "manual", "csv-upload" = "upload")
-        ),
-        conditionalPanel(
-          condition = "input.input_method == 'upload'",
-          fileInput("file_strat", "upload csv-bestand:", accept = ".csv"),
-          downloadButton("download_template", "download csv voorbeeldbestand")
-        ),
-        conditionalPanel(condition = "input.input_method == 'manual'", helpText("Vul de tabel rechts in.")),
-        hr(),
-        h4("2. instellingen"),
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 270,
+        h4("instellingen"),
+        textInput("strat_conf", "zekerheid:", value = "0,95"),
         radioButtons(
           "strat_model",
-          label = info_label(
-            "statistisch model:",
-            "Kies het model voor de extrapolatie. Binomiaal is nauwkeurig. Poisson wordt traditioneel gebruikt maar is minder nauwkeurig en gaat bij grotere foutfracties de mist in."
-          ),
-          choices = c("binomiaal" = "binomiaal", "poisson" = "poisson"),
+          "model:",
+          choices = c("binomiaal", "poisson"),
           inline = TRUE
         ),
         radioButtons(
           "strat_methode",
-          label = info_label(
-            "rekenmethode",
-            "FFT of Monte Carlo. De nauwkeurigheid van beide methoden neemt toe bij grotere granulariteit. Beide zijn grofweg even efficient. Beide zijn deterministisch, dit wel afhankelijk van granulariteit, machinenauwkeurigheid, en details van de onderliggende routines."
-          ),
+          "methode:",
           choices = c("FFT" = "FFT", "Monte Carlo" = "MonteCarlo"),
           inline = TRUE
         ),
-        textInput(
-          "strat_conf",
-          label = info_label(
-            "zekerheid (0,95 = 95%)",
-            "Het gewenste betrouwbaarheidsniveau voor de evaluatie."
-          ),
-          value = "0,95"
-        ),
-        numericInput(
-          "strat_gran",
-          label = info_label(
-            "granulariteit / iteraties",
-            ">= 1. Hoe meer, hoe nauwkeuriger de berekening van de maximale fout. Maar het rekenen duurt langer."
-          ),
-          value = 10000,
-          min = 100,
-          step = 1000
-        ),
-        conditionalPanel(
-          condition = "input.strat_methode == 'MonteCarlo'",
-          numericInput(
-            "strat_seed",
-            label = info_label(
-              "seed (startwaarde)",
-              "Een vast startpunt voor de randomgenerator. Gebruik hetzelfde getal om later exact dezelfde uitkomst te reproduceren."
-            ),
-            value = 1
-          )
-        ),
-        checkboxInput(
-          "strat_comp",
-          label = info_label(
-            "vergelijk met andere methoden",
-            "Berekent ter vergelijking ook de uitkomst volgens gewogen gemiddelde en als gepoold."
-          ),
-          value = TRUE
-        ),
+        textInput("strat_gran", "granulariteit:", value = "10.000"),
         hr(),
         actionButton(
           "run_strat",
           "bereken evaluatie",
           class = "btn-success",
           width = "100%"
-        ),
-        br(),
-        br(),
-        downloadButton(
-          "download_report",
-          "download PDF rapport",
-          class = "btn-primary",
-          style = "width: 100%;"
         )
       ),
-      mainPanel(tabsetPanel(
+      tabsetPanel(
         id = "hoofd_tabs",
+        tabPanel("1. invoertabel", br(), rHandsontableOutput("hot_input")),
         tabPanel(
-          "1. invoertabel",
-          br(),
-          conditionalPanel(
-            condition = "input.input_method == 'manual'",
-            helpText("Vul hieronder uw data in en klik links op 'bereken evaluatie'."),
-            rHandsontableOutput("hot_input")
-          )
-        ),
-        tabPanel(
-          "2. grafiek & hoofdresultaten",
+          "2. resultaten",
           value = "tab_grafiek",
           br(),
-          h3("convolutieresultaten"),
-          plotOutput("plot_strat_main", height = "400px"),
+          plotOutput("plot_strat_main"),
           br(),
           tableOutput("table_strat_main")
-        ),
-        tabPanel(
-          "3. details & vergelijking",
-          br(),
-          h3("vergelijking"),
-          tableOutput("table_strat_comp"),
-          hr(),
-          h4("data en resultaten per steekproef zoals verwerkt door het model"),
-          div(style = 'overflow-x: scroll', tableOutput("table_strat_input"))
         )
-      ))
+      )
     )
   ),
 
-  # -------------------------------------------------------------------------
-  # tab 4: planning gestratificeerd
-  # -------------------------------------------------------------------------
+  # Tab 4: Planning gestratificeerd met granulariteit onderaan de zijbalk.
   tabPanel(
     "planning gestratificeerd",
-    sidebarLayout(
-      sidebarPanel(
-        h4("1. data invoer"),
-        radioButtons(
-          "plan_input_method",
-          "methode:",
-          choices = c("handmatige invoer" = "manual", "csv-upload" = "upload")
-        ),
-        conditionalPanel(
-          condition = "input.plan_input_method == 'upload'",
-          fileInput("file_plan", "upload csv-bestand:", accept = ".csv"),
-          downloadButton("download_plan_template", "download csv voorbeeldbestand")
-        ),
-        hr(),
-        h4("2. instellingen"),
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 270,
+        h4("instellingen"),
         textInput(
           "plan_totale_mat",
           label = info_label(
-            "totale materialiteit (fractie):",
-            "Maximaal toegestane afwijking (bijv. 0,05)"
+            "materialiteit:",
+            "Voer een fractie (0,01) of absoluut eurobedrag in"
           ),
-          value = "0,05"
+          value = "0,01"
         ),
-        textInput(
-          "plan_conf",
-          label = info_label(
-            "totale zekerheid (fractie):",
-            "Algehele betrouwbaarheidsniveau (bijv. 0,95)"
-          ),
-          value = "0,95"
-        ),
+        textInput("plan_conf", "zekerheid:", value = "0,95"),
         radioButtons(
           "plan_model",
-          label = info_label("statistisch model:", "Kies het model"),
+          "model:",
           choices = c("binomiaal" = "binomiaal", "poisson" = "poisson"),
           inline = TRUE
         ),
         radioButtons(
           "plan_methode",
-          label = info_label(
-            "rekenmethode:",
-            "FFT is sneller en sterk aanbevolen voor planning."
-          ),
+          "methode:",
           choices = c("FFT" = "FFT", "Monte Carlo" = "MonteCarlo"),
           inline = TRUE
         ),
+        textInput("plan_gran", "granulariteit:", value = "10.000"),
         hr(),
         actionButton(
           "run_plan",
@@ -343,636 +251,544 @@ ui <- navbarPage(
           width = "100%"
         )
       ),
-      mainPanel(
-        h3("planningsdata & resultaten"),
-        helpText(
-          "Vul de witte velden in en klik links op 'bereken planning'. De grijze velden worden automatisch berekend."
-        ),
-        rHandsontableOutput("hot_plan_input"),
-        br(),
-        h4("controlewaarde"),
-        p(textOutput("text_plan_fout"), style = "color: #2c3e50; font-weight: bold;")
-      )
+      h3("planning"),
+      helpText(
+        "Vul de witte velden (links) in en klik op 'bereken planning'. De grijze velden (rechts) worden dan berekend."
+      ),
+      rHandsontableOutput("hot_plan_input")
     )
   )
 )
 
 server <- function(input, output, session) {
-  # =========================================================================
-  # GLOBALE RENDERERS (Beschikbaar voor alle tabbladen)
-  # =========================================================================
+  # Renderers voor correcte weergave van valuta met euroteken, percentages en getallen.
   renderer_nl_money <- JS(
-    "function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }"
+    "function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' }); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }"
   )
   renderer_nl_percent <- JS(
-    "function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL', { style: 'percent', minimumFractionDigits: 2 }); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }"
+    "function(instance, td, row, col, prop, value, cellProperties) {
+        Handsontable.renderers.TextRenderer.apply(this, arguments);
+        var numVal = NaN;
+        if (value !== null && value !== void 0 && value !== '') {
+          var str = value.toString().replace(/\\./g, '').replace(',', '.');
+          numVal = parseFloat(str);
+        }
+        if (!isNaN(numVal)) {
+          if (numVal > 1) {
+            td.innerHTML = numVal.toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
+          } else {
+            td.innerHTML = numVal.toLocaleString('nl-NL', { style: 'percent', minimumFractionDigits: 2 });
+          }
+        }
+        td.style.background = 'white';
+        td.style.color = 'black';
+        td.style.textAlign = 'right';
+      }"
   )
   renderer_nl_general <- JS(
     "function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); var numVal = NaN; if (value !== null && value !== void 0 && value !== '') { var str = value.toString().replace(/\\./g, '').replace(',', '.'); numVal = parseFloat(str); } if (!isNaN(numVal)) { td.innerHTML = numVal.toLocaleString('nl-NL'); } td.style.background = 'white'; td.style.color = 'black'; td.style.textAlign = 'right'; }"
   )
 
+  # berekening voor de eerste twee tabbladen.
+  {
+    output$res_haro <- renderText({
+      val <- haro_nog_nodige_zekerheid(input$haro_ihr, input$haro_ibr, input$haro_car)
 
-  # =========================================================================
-  # --- logic tab 1 & 2 ---
-  # =========================================================================
-  output$res_haro <- renderText({
-    req(input$haro_ihr, input$haro_ibr, input$haro_car)
-    val <- haro_nog_nodige_zekerheid(input$haro_ihr, input$haro_ibr, input$haro_car)
-    paste("nog nodige zekerheid:",
-          format(round(val, 4), decimal.mark = ",", nsmall = 4))
-  })
+      paste("nog nodige zekerheid:",
+            format(round(val, 4), decimal.mark = ","))
+    })
 
-  output$res_fpe <- renderText({
-    req(input$fpe_ihr,
-        input$fpe_ibr,
-        input$fpe_car,
-        input$fpe_mat)
-    mat_val <- parse_dutch_num(input$fpe_mat)
-    validate(need(
-      !is.na(mat_val),
-      "Vul een geldig getal in voor materialiteit."
-    ))
-    val <- foutloze_posten_equivalent(input$fpe_ihr, input$fpe_ibr, input$fpe_car, mat_val)
-    paste("foutlozepostenequivalent:",
-          format(
-            round(val, 0),
-            big.mark = ".",
-            decimal.mark = ","
-          ))
-  })
+    output$res_fpe <- renderText({
+      mat_val <- parse_dutch_num(input$fpe_mat)
+      if (is.na(mat_val))
+        return("Ongeldige materialiteit")
 
+      val <- foutloze_posten_equivalent(input$fpe_ihr, input$fpe_ibr, input$fpe_car, mat_val)
+      paste("foutlozepostenequivalent:", round(val, 0))
+    })
+  }
 
-  # =========================================================================
-  # --- logic tab 3: evaluatie gestratificeerd ---
-  # =========================================================================
-  observeEvent(input$run_strat, {
-    updateTabsetPanel(session, "hoofd_tabs", selected = "tab_grafiek")
-  })
+  # Evaluatie logica voor tabblad 3.
+  {
+    # Werk de tekst van de granulariteit bij met
+    # duizendtalscheidingstekens en verspring naar de resultaten.
+    observeEvent(input$run_strat, {
+      gran_val <- parse_dutch_num(input$strat_gran)
 
-  output$download_template <- downloadHandler(
-    filename = function() {
-      "steekproeven_template.csv"
-    },
-    content = function(file) {
-      df <- tibble(
-        naam = c("steekproef 1", "steekproef 2"),
-        waarde_laag = c(1000000, 500000),
-        n_laag = c(30, 20),
-        k_laag = c(0, 1),
-        fout_hoog = c(0, 5000),
-        goed_hoog = c(0, 45000),
-        ihr = c("H", "L"),
-        ibr = c("H", "L"),
-        car = c("H", "H"),
-        materialiteit = c(0.01, 0.01)
-      )
-      write_csv2(df, file)
-    }
-  )
-
-  output$hot_input <- renderRHandsontable({
-    df <- data.frame(
-      naam = rep(NA_character_, 8),
-      waarde_laag = rep(NA_character_, 8),
-      n_laag = rep(NA_character_, 8),
-      k_laag = rep(NA_character_, 8),
-      fout_hoog = rep("0", 8),
-      goed_hoog = rep("0", 8),
-      ihr = rep("H", 8),
-      ibr = rep("H", 8),
-      car = rep("H", 8),
-      materialiteit = rep("0,01", 8),
-      stringsAsFactors = FALSE
-    )
-    koppen <- c(
-      "naam <span>&#9432;</span>",
-      "waarde_laag <span>&#9432;</span>",
-      "n_laag <span>&#9432;</span>",
-      "k_laag <span>&#9432;</span>",
-      "fout_hoog <span>&#9432;</span>",
-      "goed_hoog <span>&#9432;</span>",
-      "ihr <span>&#9432;</span>",
-      "ibr <span>&#9432;</span>",
-      "car <span>&#9432;</span>",
-      "materialiteit <span>&#9432;</span>"
-    )
-
-    rhandsontable(df, stretchH = "all") %>%
-      hot_col("naam", type = "text") %>%
-      hot_col("waarde_laag", type = "text", renderer = renderer_nl_money) %>%
-      hot_col("n_laag", type = "text", renderer = renderer_nl_general) %>%
-      hot_col("k_laag", type = "text", renderer = renderer_nl_general) %>%
-      hot_col("fout_hoog", type = "text", renderer = renderer_nl_money) %>%
-      hot_col("goed_hoog", type = "text", renderer = renderer_nl_money) %>%
-      hot_col("ihr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
-      hot_col("ibr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
-      hot_col("car", type = "dropdown", source = as.list(risk_vec_ui)) %>%
-      hot_col("materialiteit", type = "text", renderer = renderer_nl_percent) %>%
-      hot_cols(colHeaders = koppen) %>%
-      onRender(
-        "
-        function(el, x) {
-          var hot = this.hot;
-          hot.updateSettings({
-            afterGetColHeader: function(col, TH) {
-              var tooltips = ['Naam van de steekproef', 'Totale boekwaarde van het lage stratum', 'Aantal gecontroleerde posten', 'Som van de foutfracties', 'Foute waarde in geld', 'Goede waarde in geld', 'Inherent risico', 'Interne beheersingsrisico', 'Cijferanalyserisico', 'Toegestane afwijking'];
-              if (col >= 0 && col < tooltips.length) { TH.setAttribute('title', tooltips[col]); TH.style.cursor = 'help'; }
-            }
-          });
-        }
-      "
-      )
-  })
-
-  strat_results <- eventReactive(input$run_strat, {
-    conf_val <- parse_dutch_num(input$strat_conf)
-    validate(need(!is.na(conf_val), "Vul een geldig getal in voor zekerheid."))
-
-    final_df <- NULL
-
-    if (input$input_method == "upload") {
-      req(input$file_strat)
-      tryCatch({
-        final_df <- read_csv2(input$file_strat$datapath, show_col_types = FALSE)
-        vereiste_kolommen <- c(
-          "naam",
-          "waarde_laag",
-          "n_laag",
-          "k_laag",
-          "ihr",
-          "ibr",
-          "car",
-          "materialiteit"
+      if (!is.na(gran_val)) {
+        opgemaakt_getal <- format(
+          gran_val,
+          big.mark = ".",
+          decimal.mark = ",",
+          scientific = FALSE
         )
-        ontbrekend <- setdiff(vereiste_kolommen, names(final_df))
-        if (length(ontbrekend) > 0) {
-          showNotification(
-            paste(
-              "Fout bij inlezen. Ontbrekende kolommen:",
-              paste(ontbrekend, collapse = ", ")
-            ),
-            type = "error",
-            duration = 10
-          )
-          return(NULL)
-        }
-        if (!"fout_hoog" %in% names(final_df))
-          final_df$fout_hoog <- 0
-        if (!"goed_hoog" %in% names(final_df))
-          final_df$goed_hoog <- 0
+        updateTextInput(session, "strat_gran", value = opgemaakt_getal)
+      }
 
-        final_df <- final_df %>% mutate(across(
-          c(
-            waarde_laag,
-            n_laag,
-            k_laag,
-            fout_hoog,
-            goed_hoog,
-            materialiteit
-          ),
-          parse_dutch_num
-        ))
-      }, error = function(e) {
-        showNotification("Kan het csv-bestand niet verwerken.", type = "error")
-        return(NULL)
-      })
-    } else {
+      updateTabsetPanel(session, "hoofd_tabs", selected = "tab_grafiek")
+    })
+
+    # Voeg de onrender functie toe aan de invoertabel van de evaluatie om tooltips bij de kolomkoppen te tonen.
+    output$hot_input <- renderRHandsontable({
+      df <- data.frame(
+        naam = rep(NA_character_, 8),
+        waarde_laag = rep(NA_character_, 8),
+        n_laag = rep(NA_character_, 8),
+        k_laag = rep(NA_character_, 8),
+        fout_hoog = rep("0", 8),
+        goed_hoog = rep("0", 8),
+        n_hoog = rep("0", 8),
+        ihr = rep("H", 8),
+        ibr = rep("H", 8),
+        car = rep("H", 8),
+        materialiteit = rep("0,01", 8),
+        stringsAsFactors = FALSE
+      )
+
+      rhandsontable(df, stretchH = "all") |>
+        hot_col("waarde_laag", renderer = renderer_nl_money) |>
+        hot_col("n_laag", renderer = renderer_nl_general) |>
+        hot_col("k_laag", renderer = renderer_nl_general) |>
+        hot_col("fout_hoog", renderer = renderer_nl_money) |>
+        hot_col("goed_hoog", renderer = renderer_nl_money) |>
+        hot_col("n_hoog", renderer = renderer_nl_general) |>
+        hot_col("ihr",
+                type = "dropdown",
+                source = risk_vec_ui,
+                strict = TRUE) |>
+        hot_col("ibr",
+                type = "dropdown",
+                source = risk_vec_ui,
+                strict = TRUE) |>
+        hot_col("car",
+                type = "dropdown",
+                source = risk_vec_ui,
+                strict = TRUE) |>
+        hot_col("materialiteit", renderer = renderer_nl_percent) |>
+        onRender(
+          "function(el, x) {
+        var hot = this.hot;
+        hot.updateSettings({
+          afterGetColHeader: function(col, TH) {
+            var tooltips = [
+              'naam van het stratum',
+              'boekwaarde in euro\\'s van het totale laagstratum',
+              'aantal gecontroleerde posten in het laagstratum',
+              'som van de foutfracties in de steekproef van het laagstratum',
+              'de totale som van de foute euro\\'s van de 100%-gecontroleerde posten',
+              'de totale som van de goede euro\\'s van de 100%-gecontroleerde posten',
+              'aantal posten in het hoogstratum',
+              'Inherent Risico (H, M, L)',
+              'Interne Beheersingsrisico (H, M, L)',
+              'Cijferanalyserisico (H, M, L)',
+              'de toegestane afwijking als percentage of absoluut bedrag'
+            ];
+            if (col >= 0 && col < tooltips.length) {
+              TH.setAttribute('title', tooltips[col]);
+              TH.style.cursor = 'help';
+            }
+          }
+        });
+      }"
+        )
+    })
+
+    strat_results <- eventReactive(input$run_strat, {
       req(input$hot_input)
       raw_df <- hot_to_r(input$hot_input)
-      names(raw_df) <- c(
-        "naam",
-        "waarde_laag",
-        "n_laag",
-        "k_laag",
-        "fout_hoog",
-        "goed_hoog",
-        "ihr",
-        "ibr",
-        "car",
-        "materialiteit"
-      )
-      final_df <- raw_df %>% as_tibble() %>% filter(!is.na(naam) &
-                                                      naam != "") %>%
-        mutate(across(
-          c(
-            waarde_laag,
-            n_laag,
-            k_laag,
-            fout_hoog,
-            goed_hoog,
-            materialiteit
-          ),
-          parse_dutch_num
-        ))
 
-      if (nrow(final_df) == 0) {
-        showNotification("Vul tenminste één regel in.", type = "warning")
-        return(NULL)
+      # Parsen en afgeleide kolommen berekenen.
+      {
+        final_df <- raw_df |>
+          as_tibble() |>
+          filter(!is.na(naam) & naam != "") |>
+          mutate(across(
+            c(
+              waarde_laag,
+              n_laag,
+              k_laag,
+              fout_hoog,
+              goed_hoog,
+              n_hoog,
+              materialiteit
+            ),
+            parse_dutch_num
+          )) |>
+          mutate(across(c(ihr, ibr, car), toupper)) |>
+          mutate(
+            waarde_hoog = fout_hoog + goed_hoog,
+            waarde_populatie = waarde_laag + waarde_hoog,
+            n_totaal = n_laag + n_hoog
+          ) |>
+          mutate(
+            materialiteit = ifelse(
+              materialiteit > 1 &
+                waarde_populatie > 0,
+              materialiteit / waarde_populatie,
+              materialiteit
+            )
+          )
       }
-    }
 
-    final_df <- final_df %>% mutate(
-      waarde_hoog = fout_hoog + goed_hoog,
-      n_hoog = ifelse(waarde_hoog > 0, 1, 0),
-      n_totaal = n_laag + n_hoog,
-      waarde_populatie = waarde_laag + waarde_hoog,
-      ihr = toupper(ihr),
-      ibr = toupper(ibr),
-      car = toupper(car)
-    )
+      validate(need(nrow(final_df) > 0, "Vul data in."))
 
-    if (nrow(final_df %>% filter(k_laag > n_laag)) > 0) {
-      showNotification(
-        "Foutfractie (k_laag) mag niet groter zijn dan (n_laag).",
-        type = "error",
-        duration = 10
-      )
-      return(NULL)
-    }
+      # toon een zandlopertje tijdens de evaluatieberekening.
+      withProgress(message = 'Berekening wordt uitgevoerd...', value = 0, {
+        Sys.sleep(0.1)
 
-    tryCatch({
-      res <- eval_stratified(
-        steekproeven = final_df,
-        model = input$strat_model,
-        zekerheid = conf_val,
-        methode = input$strat_methode,
-        granulariteit = as.integer(input$strat_gran),
-        start = input$strat_seed,
-        vergelijk = input$strat_comp
-      )
-      return(res)
-    }, error = function(e) {
-      showNotification(paste("fout in berekening:", e$message), type = "error")
-      return(NULL)
+        tryCatch(
+          withCallingHandlers({
+            eval_stratified(
+              final_df,
+              model = input$strat_model,
+              zekerheid = parse_dutch_num(input$strat_conf),
+              methode = input$strat_methode,
+              granulariteit = parse_dutch_num(input$strat_gran)
+            )
+          }, warning = function(w) {
+            showNotification(
+              paste("Waarschuwing:", conditionMessage(w)),
+              type = "warning",
+              duration = 10
+            )
+            invokeRestart("muffleWarning")
+          }),
+          error = function(e) {
+            showNotification(paste("Fout:", conditionMessage(e)),
+                             type = "error",
+                             duration = 10)
+            NULL
+          }
+        )
+      })
     })
-  })
 
-  output$plot_strat_main <- renderPlot({
-    res <- strat_results()
-    req(res, res$kanskromme)
-    plot_kanskromme(res)
-  })
-
-  output$table_strat_main <- renderTable({
-    res <- strat_results()
-    req(res)
-    min_geld <- sum(res$steekproeven$fout_hoog)
-    min_fractie <- min_geld / res$populatie_totaal
-    mw_frac <- max(res$mw_fout_convolutie, min_fractie)
-    mw_geld <- max(res$mw_fout_convolutie_geld, min_geld)
-    max_frac <- max(res$max_fout_convolutie, min_fractie)
-    max_geld <- max(res$max_fout_convolutie_geld, min_geld)
-
-    tibble(
-      metriek = c(
-        "meest waarschijnlijke fout (fractie)",
-        "meest waarschijnlijke fout (geld)",
-        "maximale fout (fractie)",
-        "maximale fout (geld)"
-      ),
-      waarde = c(
-        format(
-          round(mw_frac, 5),
-          decimal.mark = ",",
-          nsmall = 5
-        ),
-        format(
-          round(mw_geld, 2),
-          big.mark = ".",
-          decimal.mark = ",",
-          nsmall = 2
-        ),
-        format(
-          round(max_frac, 5),
-          decimal.mark = ",",
-          nsmall = 5
-        ),
-        format(
-          round(max_geld, 2),
-          big.mark = ".",
-          decimal.mark = ",",
-          nsmall = 2
-        )
-      )
-    )
-  })
-
-  output$table_strat_comp <- renderTable({
-    res <- strat_results()
-    req(res)
-    if (is.null(res$vergelijk_met))
-      return(tibble(info = "Geen vergelijking gevraagd."))
-    tibble(
-      scenario = c("los (gewogen gemiddelde)", "als 1 (gepoolde data)"),
-      `max fout (geld)` = c(
-        format(
-          round(res$vergelijk_met$max_fout_los_geld, 2),
-          big.mark = ".",
-          decimal.mark = ",",
-          nsmall = 2
-        ),
-        format(
-          round(res$vergelijk_met$max_fout_als1_geld, 2),
-          big.mark = ".",
-          decimal.mark = ",",
-          nsmall = 2
-        )
-      )
-    )
-  })
-
-  output$table_strat_input <- renderTable({
-    res <- strat_results()
-    req(res)
-    df_disp <- res$steekproeven
-    for (col in c("waarde_laag",
-                  "fout_hoog",
-                  "goed_hoog",
-                  "waarde_hoog",
-                  "waarde_populatie")) {
-      if (col %in% names(df_disp))
-        df_disp[[col]] <- format(
-          round(df_disp[[col]], 2),
-          big.mark = ".",
-          decimal.mark = ",",
-          nsmall = 2,
-          scientific = FALSE
-        )
-    }
-    for (col in c("n_laag", "k_laag", "n_totaal", "extra_foutloze_posten")) {
-      if (col %in% names(df_disp))
-        df_disp[[col]] <- format(
-          round(df_disp[[col]], 0),
-          big.mark = ".",
-          decimal.mark = ",",
-          scientific = FALSE
-        )
-    }
-    for (col in c("materialiteit", "mw_fout", "max_fout")) {
-      if (col %in% names(df_disp))
-        df_disp[[col]] <- format(
-          round(df_disp[[col]], 5),
-          big.mark = ".",
-          decimal.mark = ",",
-          scientific = FALSE
-        )
-    }
-    df_disp %>% select(-any_of("n_hoog"))
-  })
-
-  output$download_report <- downloadHandler(
-    filename = function() {
-      paste0("evaluatie_rapport_", Sys.Date(), ".pdf")
-    },
-    content = function(file) {
-      res <- strat_results()
-      req(res)
-      showNotification(
-        "PDF wordt gegenereerd, een moment geduld...",
-        type = "message",
-        duration = 5
-      )
-      tempReport <- file.path(tempdir(), "report.Rmd")
-      file.copy("report.Rmd", tempReport, overwrite = TRUE)
-      rmarkdown::render(
-        tempReport,
-        output_file = file,
-        params = list(res = res, zekerheid = parse_dutch_num(input$strat_conf)),
-        envir = new.env(parent = globalenv())
-      )
-    }
-  )
-
-  # =========================================================================
-  # --- logic tab 4: planning gestratificeerd (GECOMBINEERD) ---
-  # =========================================================================
-  output$download_plan_template <- downloadHandler(
-    filename = function() {
-      "planning_template.csv"
-    },
-    content = function(file) {
-      df <- tibble(
-        naam = c("steekproef 1", "steekproef 2"),
-        waarde_laag = c(1000000, 500000),
-        verwachte_foutfractie = c(0.01, 0.015),
-        fout_hoog = c(0, 5000),
-        goed_hoog = c(0, 45000),
-        n_hoog = c(0, 10),
-        ihr = c("H", "L"),
-        ibr = c("H", "L"),
-        car = c("H", "H"),
-        materialiteit = c(0.05, 0.05)
-      )
-      write_csv2(df, file)
-    }
-  )
-
-  plan_table_data <- reactiveVal({
-    data.frame(
-      naam = rep(NA_character_, 8),
-      waarde_laag = rep(NA_character_, 8),
-      verwachte_foutfractie = rep("0,01", 8),
-      fout_hoog = rep("0", 8),
-      goed_hoog = rep("0", 8),
-      n_hoog = rep("0", 8),
-      ihr = rep("H", 8),
-      ibr = rep("H", 8),
-      car = rep("H", 8),
-      materialiteit = rep("0,05", 8),
-      n_basis = rep("", 8),
-      n_definitief = rep("", 8),
-      k_laag = rep("", 8),
-      n_totaal = rep("", 8),
-      stringsAsFactors = FALSE
-    )
-  })
-
-  observeEvent(input$hot_plan_input, {
-    plan_table_data(hot_to_r(input$hot_plan_input))
-  })
-
-  observeEvent(input$file_plan, {
-    req(input$file_plan)
-    tryCatch({
-      df_up <- read_csv2(input$file_plan$datapath, show_col_types = FALSE)
-      if (!"fout_hoog" %in% names(df_up))
-        df_up$fout_hoog <- 0
-      if (!"goed_hoog" %in% names(df_up))
-        df_up$goed_hoog <- 0
-      if (!"n_hoog" %in% names(df_up))
-        df_up$n_hoog <- 0
-      df_up$n_basis <- ""
-      df_up$n_definitief <- ""
-      df_up$k_laag <- ""
-      df_up$n_totaal <- ""
-      plan_table_data(as.data.frame(df_up))
-    }, error = function(e) {
-      showNotification("Fout bij inlezen CSV.", type = "error")
+    output$plot_strat_main <- renderPlot({
+      req(strat_results())
+      plot_kanskromme(strat_results())
     })
-  })
 
-  output$hot_plan_input <- renderRHandsontable({
-    df <- plan_table_data()
-    koppen <- c(
-      "naam",
-      "waarde_laag",
-      "verwacht_fout%",
-      "fout_hoog",
-      "goed_hoog",
-      "n_hoog",
-      "ihr",
-      "ibr",
-      "car",
-      "materialiteit",
-      "n_basis",
-      "n_definitief",
-      "k_laag",
-      "n_totaal"
-    )
-    renderer_readonly <- JS(
-      "function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); td.style.background = '#f0f0f0'; td.style.color = '#333'; td.style.textAlign = 'right'; td.style.fontWeight = 'bold'; }"
-    )
+    # Maak de waarden in de resultatentabel op als eurobedragen in
+    # de Nederlandse stijl.
+    {
+      output$table_strat_main <- renderTable({
+        res <- strat_results()
+        req(res)
 
-    rhandsontable(df, stretchH = "all") %>%
-      hot_col("naam", type = "text") %>%
-      hot_col("waarde_laag", type = "text", renderer = renderer_nl_money) %>%
-      hot_col("verwachte_foutfractie",
-              type = "text",
-              renderer = renderer_nl_percent) %>%
-      hot_col("fout_hoog", type = "text", renderer = renderer_nl_money) %>%
-      hot_col("goed_hoog", type = "text", renderer = renderer_nl_money) %>%
-      hot_col("n_hoog", type = "text", renderer = renderer_nl_general) %>%
-      hot_col("ihr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
-      hot_col("ibr", type = "dropdown", source = as.list(risk_vec_ui)) %>%
-      hot_col("car", type = "dropdown", source = as.list(risk_vec_ui)) %>%
-      hot_col("materialiteit", type = "text", renderer = renderer_nl_percent) %>%
-      hot_col(
-        "n_basis",
-        type = "text",
-        readOnly = TRUE,
-        renderer = renderer_readonly
-      ) %>%
-      hot_col(
-        "n_definitief",
-        type = "text",
-        readOnly = TRUE,
-        renderer = renderer_readonly
-      ) %>%
-      hot_col("k_laag",
-              type = "text",
-              readOnly = TRUE,
-              renderer = renderer_readonly) %>%
-      hot_col(
-        "n_totaal",
-        type = "text",
-        readOnly = TRUE,
-        renderer = renderer_readonly
-      ) %>%
-      hot_cols(colHeaders = koppen)
-  })
+        tibble(
+          metriek = c("mw fout", "max fout"),
+          waarde = c(paste0(
+            "€ ",
+            format(
+              round(res$mw_fout_convolutie_geld, 2),
+              big.mark = ".",
+              decimal.mark = ",",
+              nsmall = 2,
+              scientific = FALSE
+            )
+          ), paste0(
+            "€ ",
+            format(
+              round(res$max_fout_convolutie_geld, 2),
+              big.mark = ".",
+              decimal.mark = ",",
+              nsmall = 2,
+              scientific = FALSE
+            )
+          ))
+        )
 
-  geplande_fout_val <- reactiveVal(NA)
+      }, align = "lr")
+    }
+  }
+
+  # Planning logica voor tabblad 4.
+  {
+    plan_table_data <- reactiveVal({
+      data.frame(
+        naam = rep(NA_character_, 8),
+        waarde_laag = rep(NA_character_, 8),
+        verwachte_foutfractie = rep("0,001", 8),
+        fout_hoog = rep("0", 8),
+        goed_hoog = rep("0", 8),
+        n_hoog = rep("0", 8),
+        ihr = rep("H", 8),
+        ibr = rep("H", 8),
+        car = rep("H", 8),
+        materialiteit = rep("0,01", 8),
+        n_laag = rep("", 8),
+        n_laag_extra = rep("", 8),
+        n_laag_tot = rep("", 8),
+        n_totaal = rep("", 8),
+        stringsAsFactors = FALSE
+      )
+    })
+
+    output$hot_plan_input <- renderRHandsontable({
+      df <- plan_table_data()
+      koppen <- c(
+        "naam <span>&#9432;</span>",
+        "waarde_laag <span>&#9432;</span>",
+        "verwacht_fout% <span>&#9432;</span>",
+        "fout_hoog <span>&#9432;</span>",
+        "goed_hoog <span>&#9432;</span>",
+        "n_hoog <span>&#9432;</span>",
+        "ihr <span>&#9432;</span>",
+        "ibr <span>&#9432;</span>",
+        "car <span>&#9432;</span>",
+        "materialiteit <span>&#9432;</span>",
+        "n_laag <span>&#9432;</span>",
+        "n_laag_extra <span>&#9432;</span>",
+        "n_laag_tot <span>&#9432;</span>",
+        "n_totaal <span>&#9432;</span>"
+      )
+
+      renderer_readonly <- JS(
+        "function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); td.className = 'readonly-cell htRight'; }"
+      )
+
+      rhandsontable(df, stretchH = "all") |>
+        hot_col("waarde_laag", renderer = renderer_nl_money) |>
+        hot_col("verwachte_foutfractie", renderer = renderer_nl_percent) |>
+        hot_col("fout_hoog", renderer = renderer_nl_money) |>
+        hot_col("goed_hoog", renderer = renderer_nl_money) |>
+        hot_col("n_hoog", renderer = renderer_nl_general) |>
+        hot_col("ihr",
+                type = "dropdown",
+                source = risk_vec_ui,
+                strict = TRUE) |>
+        hot_col("ibr",
+                type = "dropdown",
+                source = risk_vec_ui,
+                strict = TRUE) |>
+        hot_col("car",
+                type = "dropdown",
+                source = risk_vec_ui,
+                strict = TRUE) |>
+        hot_col("materialiteit", renderer = renderer_nl_percent) |>
+        hot_col("n_laag", readOnly = TRUE, renderer = renderer_readonly) |>
+        hot_col("n_laag_extra",
+                readOnly = TRUE,
+                renderer = renderer_readonly) |>
+        hot_col("n_laag_tot", readOnly = TRUE, renderer = renderer_readonly) |>
+        hot_col("n_totaal", readOnly = TRUE, renderer = renderer_readonly) |>
+        hot_cols(colHeaders = koppen) |>
+        onRender(
+          "function(el, x) { var hot = this.hot; hot.updateSettings({ afterGetColHeader: function(col, TH) {
+          var tooltips = [
+            'naam van het stratum',
+            'boekwaarde in euro\\'s van het totale laagstratum',
+            'de foutfractie die u verwacht aan te treffen in het laagstratum',
+            'de totale (verwachte en/of al gevonden) som van de foute euro\\'s van het hoogstratum',
+            'de totale (verwachte en/of al gevonden) som van de goede euro\\'s van het hoogstratum',
+            'aantal posten in het hoogstratum',
+            'Inherent Risico (H, M, L)',
+            'Interne Beheersingsrisico (H, M, L)',
+            'Cijferanalyserisico (H, M, L)',
+            'de toegestane afwijking als percentage van hoogstratum+laagstratum',
+            'het aantal posten dat getrokken moet worden uit het laagstratum om de maximale fout voor de afzonderlijke steekproef onder de materialiteit te houden',
+            'het aantal extra posten dat getrokken moet worden uit het laagstratum om de maximale fout voor de steekproeven samen onder de gezamenlijke materialiteit te houden',
+            'n_laag + n_laag_extra',
+            'n_laag_tot + n_hoog'
+          ];
+          if (col >= 0 && col < tooltips.length) { TH.setAttribute('title', tooltips[col]); TH.style.cursor = 'help'; }
+        } }); }"
+        )
+    })
+
+    # Formatteer de zijbalkvelden alleen als de nieuwe waarde echt afwijkt van de huidige invoer.
+    observeEvent(input$format_plan_sidebar, {
+      # Verwerk materialiteit.
+      mat_val <- parse_dutch_num(input$plan_totale_mat)
+      if (!is.na(mat_val)) {
+        fmt_mat <- if (mat_val > 1) {
+          paste0("€ ",
+                 format(
+                   mat_val,
+                   big.mark = ".",
+                   decimal.mark = ",",
+                   scientific = FALSE
+                 ))
+        } else {
+          format(mat_val,
+                 decimal.mark = ",",
+                 scientific = FALSE)
+        }
+        if (input$plan_totale_mat != fmt_mat) {
+          updateTextInput(session, "plan_totale_mat", value = fmt_mat)
+        }
+      }
+
+      # Verwerk zekerheid.
+      conf_val <- parse_dutch_num(input$plan_conf)
+      if (!is.na(conf_val)) {
+        fmt_conf <- format(conf_val,
+                           decimal.mark = ",",
+                           scientific = FALSE)
+        if (input$plan_conf != fmt_conf) {
+          updateTextInput(session, "plan_conf", value = fmt_conf)
+        }
+      }
+
+      # Verwerk granulariteit.
+      gran_val <- parse_dutch_num(input$plan_gran)
+      if (!is.na(gran_val)) {
+        fmt_gran <- format(
+          gran_val,
+          big.mark = ".",
+          decimal.mark = ",",
+          scientific = FALSE
+        )
+        if (input$plan_gran != fmt_gran) {
+          updateTextInput(session, "plan_gran", value = fmt_gran)
+        }
+      }
+    })
+  }
 
   observeEvent(input$run_plan, {
-    conf_val <- parse_dutch_num(input$plan_conf)
+    req(input$hot_plan_input)
     mat_val <- parse_dutch_num(input$plan_totale_mat)
-    validate(need(
-      !is.na(conf_val),
-      "Vul een geldig getal in voor totale zekerheid."
-    ))
-    validate(need(
-      !is.na(mat_val),
-      "Vul een geldig getal in voor totale materialiteit."
-    ))
+    conf_val <- parse_dutch_num(input$plan_conf)
+    gran_val <- parse_dutch_num(input$plan_gran)
 
-    raw_df <- plan_table_data()
-    final_df <- raw_df %>% as_tibble() %>% filter(!is.na(naam) &
-                                                    naam != "") %>%
-      mutate(
-        across(
-          c(
-            waarde_laag,
-            verwachte_foutfractie,
-            fout_hoog,
-            goed_hoog,
-            n_hoog,
-            materialiteit
-          ),
-          parse_dutch_num
+    if (!is.na(mat_val)) {
+      fmt_mat <- if (mat_val > 1) {
+        paste0("€ ",
+               format(
+                 mat_val,
+                 big.mark = ".",
+                 decimal.mark = ",",
+                 scientific = FALSE
+               ))
+      } else {
+        format(mat_val,
+               decimal.mark = ",",
+               scientific = FALSE)
+      }
+      updateTextInput(session, "plan_totale_mat", value = fmt_mat)
+    }
+
+    if (!is.na(gran_val)) {
+      updateTextInput(
+        session,
+        "plan_gran",
+        value = format(
+          gran_val,
+          big.mark = ".",
+          decimal.mark = ",",
+          scientific = FALSE
+        )
+      )
+    }
+
+    if (is.na(mat_val) || is.na(conf_val) || is.na(gran_val)) {
+      showNotification("Ongeldige instellingen.", type = "error")
+      return()
+    }
+    raw_df <- hot_to_r(input$hot_plan_input)
+
+    # Leegmaken van de resultaatkolommen voordat de berekening start.
+    {
+      raw_df$n_laag <- ""
+      raw_df$n_laag_extra <- ""
+
+      raw_df$n_laag_tot <- ""
+      raw_df$n_totaal <- ""
+    }
+
+    final_df <- raw_df |>
+      as_tibble() |>
+      mutate(across(
+        c(
+          waarde_laag,
+          verwachte_foutfractie,
+          fout_hoog,
+          goed_hoog,
+          n_hoog,
+          materialiteit
         ),
-        ihr = toupper(ihr),
-        ibr = toupper(ibr),
-        car = toupper(car)
+        parse_dutch_num
+      )) |>
+      mutate(across(c(ihr, ibr, car), toupper)) |>
+      filter(!is.na(naam) & naam != "" & !is.na(waarde_laag)) |>
+      mutate(waarde_hoog = fout_hoog + goed_hoog,
+             waarde_populatie = waarde_laag + waarde_hoog) |>
+      mutate(
+        materialiteit = ifelse(
+          materialiteit > 1 &
+            waarde_populatie > 0,
+          materialiteit / waarde_populatie,
+          materialiteit
+        )
       )
 
     if (nrow(final_df) == 0) {
-      showNotification("Vul tenminste één regel in.", type = "warning")
+      plan_table_data(raw_df)
+      showNotification("Vul minimaal een naam en waarde in.", type = "warning")
       return()
     }
 
-    tryCatch({
-      res <- plan_stratified(
-        steekproeven = final_df,
-        totale_materialiteit = mat_val,
-        totale_zekerheid = conf_val,
-        model = input$plan_model,
-        methode = input$plan_methode
-      )
-      geplande_fout_val(attr(res, "geplande_max_fout_totaal"))
+    # Berekening uitvoeren en zandlopertje tonen.
+    {
+      totale_pop_waarde <- sum(final_df$waarde_populatie, na.rm = TRUE)
+      reken_mat <- ifelse(mat_val > 1 &&
+                            totale_pop_waarde > 0,
+                          mat_val / totale_pop_waarde,
+                          mat_val)
 
-      res_formatted <- res %>% mutate(
-        n_basis = format(
-          round(n_basis, 0),
-          big.mark = ".",
-          decimal.mark = ","
-        ),
-        n_definitief = format(
-          round(n_definitief, 0),
-          big.mark = ".",
-          decimal.mark = ","
-        ),
-        k_laag = format(
-          round(k_laag, 2),
-          big.mark = ".",
-          decimal.mark = ","
-        ),
-        n_totaal = format(
-          round(n_totaal, 0),
-          big.mark = ".",
-          decimal.mark = ","
-        )
-      )
+      withProgress(message = 'Optimalisatie wordt uitgevoerd...', value = 0, {
+        Sys.sleep(0.1)
 
-      berekende_rijen <- nrow(res_formatted)
-      raw_df$n_basis[1:berekende_rijen] <- res_formatted$n_basis
-      raw_df$n_definitief[1:berekende_rijen] <- res_formatted$n_definitief
-      raw_df$k_laag[1:berekende_rijen] <- res_formatted$k_laag
-      raw_df$n_totaal[1:berekende_rijen] <- res_formatted$n_totaal
-      plan_table_data(raw_df)
+        tryCatch({
+          res <- plan_stratified(
+            final_df,
+            reken_mat,
+            conf_val,
+            model = input$plan_model,
+            methode = input$plan_methode,
+            granulariteit = gran_val,
+            max_iteraties = 1000
+          )
+          res_fmt <- res |> mutate(
+            n_l = n_basis,
+            n_l_e = n_definitief - n_basis,
+            n_l_t = n_definitief,
+            n_t = n_definitief + n_hoog
+          ) |>
+            mutate(across(
+              c(n_l, n_l_e, n_l_t, n_t),
+              ~ format(
+                round(., 0),
+                big.mark = ".",
+                decimal.mark = ","
+              )
+            ))
 
-    }, error = function(e) {
-      fout_tekst <- conditionMessage(e)
-      if (fout_tekst == "")
-        fout_tekst <- "Onbekende fout bij berekening. Controleer de R-console."
-      showNotification(paste("Foutmelding:", fout_tekst),
-                       type = "error",
-                       duration = 15)
-    })
-  })
+          for (i in 1:nrow(res_fmt)) {
+            idx <- which(raw_df$naam == res_fmt$naam[i])
+            if (length(idx) > 0) {
+              raw_df$n_laag[idx] <- res_fmt$n_l[i]
+              raw_df$n_laag_extra[idx] <- res_fmt$n_l_e[i]
+              raw_df$n_laag_tot[idx] <- res_fmt$n_l_t[i]
+              raw_df$n_totaal[idx] <- res_fmt$n_t[i]
+            }
+          }
 
-  output$text_plan_fout <- renderText({
-    fout <- geplande_fout_val()
-    if (is.na(fout))
-      return("Nog geen berekening uitgevoerd.")
-    paste0(
-      "De theoretisch maximaal haalbare fout over de gehele populatie is: ",
-      format(
-        round(fout * 100, 3),
-        decimal.mark = ",",
-        nsmall = 3
-      ),
-      "%"
-    )
+          plan_table_data(raw_df)
+        }, warning = function(w) {
+          showNotification(
+            paste("Let op:", conditionMessage(w)),
+            type = "warning",
+            duration = 15
+          )
+          plan_table_data(raw_df)
+        }, error = function(e) {
+          showNotification(paste("Fout:", conditionMessage(e)), type = "error")
+          plan_table_data(raw_df)
+        })
+      })
+    }
   })
 }
 

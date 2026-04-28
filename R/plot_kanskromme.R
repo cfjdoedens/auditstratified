@@ -5,8 +5,10 @@ utils::globalVariables(c("x_geld", "y_dichtheid", "gebied"))
 #' @param res Het resultaat object uit de functie eval_stratified.
 #' @returns Een ggplot2 object.
 #' @export
-#' @import ggplot2
-#' @import dplyr
+#' @importFrom ggplot2 ggplot aes geom_area geom_line geom_vline annotate
+#'   scale_x_continuous scale_fill_manual scale_color_manual
+#'   labs theme_minimal theme_void theme element_text element_blank guide_legend
+#' @importFrom dplyr mutate case_when
 #' @importFrom stats setNames
 plot_kanskromme <- function(res) {
   d <- res$kanskromme
@@ -39,7 +41,7 @@ plot_kanskromme <- function(res) {
   }
 
   # Data behandelen met de nieuwe dynamische labels
-  df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y) %>%
+  df_plot <- data.frame(x_geld = d$x * totaal_geld, y_dichtheid = d$y) |>
     mutate(
       gebied = case_when(
         x_geld < min_geld ~ lbl_onm_min,

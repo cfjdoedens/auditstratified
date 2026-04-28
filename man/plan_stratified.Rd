@@ -10,7 +10,8 @@ plan_stratified(
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
   methode = c("FFT", "MonteCarlo"),
-  max_iteraties = 1000
+  granulariteit = 10000,
+  max_iteraties = 10000
 )
 }
 \arguments{
@@ -23,6 +24,10 @@ plan_stratified(
 \item{model}{Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
 \item{methode}{Rekenmethode voor evaluatie. \code{"FFT"} is sterk aanbevolen voor snelheid.}
+
+\item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
+Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
+Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.}
 
 \item{max_iteraties}{Veiligheidslimiet voor de greedy loop om vastlopen te voorkomen.}
 }

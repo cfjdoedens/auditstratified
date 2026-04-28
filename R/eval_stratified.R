@@ -1,3 +1,239 @@
+# Convolutie via Monte Carlo simulatie.
+#
+# @param t_uit Verrijkte steekproef-tibble met n_laag, k_laag, extra_foutloze_posten, waarde_laag.
+# @param model "binomiaal" of "poisson".
+# @param zekerheid Zekerheidsniveau (0-1).
+# @param granulariteit Aantal toevalsiteraties.
+# @param start Startwaarde voor de toevalsgenerator.
+# @param totaalgeld_laag Totale geldswaarde van het laagstratum.
+# @param totaalgeld_fout_hoog Totale fout in het hoogstratum.
+# @param totaalgeld_algeheel Totale geldswaarde van de gehele populatie.
+# @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#
+#' @importFrom stats rbeta rgamma density quantile
+convolutie_montecarlo <- function(t_uit, model, zekerheid, granulariteit, start,
+                                  totaalgeld_laag, totaalgeld_fout_hoog, totaalgeld_algeheel) {
+  n_steekproeven <- nrow(t_uit)
+
+  # Simuleer foutfracties per stratum.
+  {
+    krommen <- matrix(NA, nrow = granulariteit, ncol = n_steekproeven)
+    set.seed(start)
+
+    for (i in 1:n_steekproeven) {
+      n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
+      k_calc <- t_uit$k_laag[[i]]
+
+      if (model == "binomiaal") {
+        krommen[, i] <- rbeta(
+          granulariteit,
+
+          shape1 = 1 + k_calc,
+          shape2 = 1 + n_calc - k_calc
+        )
+      } else if (model == "poisson") {
+        krommen[, i] <- rgamma(granulariteit,
+                               shape = 1 + k_calc,
+                               rate = n_calc)
+      }
+    }
+  }
+
+  # Convolutie via matrixvermenigvuldiging en kernel density.
+  {
+    convolutie <- (krommen %*% t_uit$waarde_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
+
+    bovengrens <- if (model == "binomiaal") 1 else max(convolutie) + 0.1
+    d <- density(convolutie, adjust = 1.5, from = 0, to = bovengrens)
+
+    # Normaliseren
+    oppervlakte <- sum(d$y) * (d$x[2] - d$x[1])
+    d$y <- d$y / oppervlakte
+  }
+
+  list(
+    d = d,
+    max_fout = unname(quantile(convolutie, probs = zekerheid)),
+    mediaan_fout = unname(quantile(convolutie, probs = 0.5)),
+    modus_fout = d$x[which.max(d$y)],
+    gemiddelde_fout = mean(convolutie)
+  )
+}
+
+
+# Convolutie via Fast Fourier Transform.
+#
+# @inheritParams convolutie_montecarlo
+# @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#
+#' @importFrom stats dbeta dgamma qgamma convolve
+convolutie_fft <- function(t_uit, model, zekerheid, granulariteit,
+                           totaalgeld_laag, totaalgeld_fout_hoog, totaalgeld_algeheel) {
+  n_steekproeven <- nrow(t_uit)
+
+  # Edge case: geen statistische controle, alles integraal.
+  if (totaalgeld_laag < 0.01) {
+    frac <- totaalgeld_fout_hoog / totaalgeld_algeheel
+    return(list(
+      d = list(x = frac, y = 1),
+      max_fout = frac,
+      mediaan_fout = frac,
+      modus_fout = frac,
+      gemiddelde_fout = frac
+    ))
+  }
+
+  # Bouw kansmassavectoren per stratum.
+  {
+    dx <- totaalgeld_laag / granulariteit
+    p_strata <- list()
+
+    for (i in 1:n_steekproeven) {
+      w_laag <- t_uit$waarde_laag[[i]]
+      n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
+      k_calc <- t_uit$k_laag[[i]]
+
+      if (w_laag > 0) {
+        # Bepaal hoe ver de as moet doorlopen. Binomiaal is max w_laag.
+        # Poisson kan daar theoretisch overheen gaan,
+        # dus nemen we een veilige grens via qgamma.
+        max_frac <- if (model == "binomiaal")
+          1
+        else
+          qgamma(0.9999, shape = k_calc + 1, rate = n_calc)
+        x_grens <- max(w_laag, max_frac * w_laag)
+        x_as <- seq(0, x_grens, by = dx)
+
+        if (model == "binomiaal") {
+          p <- dbeta(x_as / w_laag,
+                     shape1 = k_calc + 1,
+                     shape2 = n_calc - k_calc + 1)
+        } else {
+          p <- dgamma(x_as / w_laag,
+                      shape = k_calc + 1,
+                      rate = n_calc)
+        }
+
+        p[is.na(p) | is.infinite(p)] <- 0
+        p <- p / sum(p)
+        p_strata[[length(p_strata) + 1]] <- p
+      }
+    }
+  }
+
+  # Paarsgewijze convolutie en statistieken afleiden.
+  {
+    if (length(p_strata) > 0) {
+      p_totaal <- p_strata[[1]]
+      if (length(p_strata) > 1) {
+        for (j in 2:length(p_strata)) {
+          p_totaal <- convolve(p_totaal, rev(p_strata[[j]]), type = "open")
+        }
+      }
+
+      p_totaal <- p_totaal / sum(p_totaal)
+
+      # Bouw de totale assen op
+      x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
+      x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
+      x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
+
+      # Omzetten naar kansdichtheid t.o.v. de fractie-as
+      dx_fractie <- dx / totaalgeld_algeheel
+      d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
+
+      cum_p <- cumsum(p_totaal)
+
+      # Max fout (zekerheid)
+      idx_max <- which(cum_p >= zekerheid)[1]
+      max_fout <- if (is.na(idx_max))
+        x_totaal_fractie[length(x_totaal_fractie)]
+      else
+        x_totaal_fractie[idx_max]
+
+      # Mediaan
+      idx_med <- which(cum_p >= 0.5)[1]
+      mediaan_fout <- if (is.na(idx_med))
+        x_totaal_fractie[length(x_totaal_fractie)]
+      else
+        x_totaal_fractie[idx_med]
+    }
+  }
+
+  list(
+    d = d,
+    max_fout = max_fout,
+    mediaan_fout = mediaan_fout,
+    modus_fout = x_totaal_fractie[which.max(p_totaal)],
+    gemiddelde_fout = sum(x_totaal_fractie * p_totaal)
+  )
+}
+
+
+# Vergelijkingsmethoden: los (per stratum) en als1 (alles samengevoegd).
+#
+# Vult ook de kolommen mw_fout en max_fout in t_uit per stratum.
+#
+# @param t_uit Verrijkte steekproef-tibble.
+# @param model "binomiaal" of "poisson".
+# @param zekerheid Zekerheidsniveau (0-1).
+# @param totaalgeld_laag Totale geldswaarde van het laagstratum.
+# @param totaalgeld_fout_hoog Totale fout in het hoogstratum.
+# @param totaalgeld_algeheel Totale geldswaarde van de gehele populatie.
+# @returns Een lijst met t_uit, mw_fout_los, max_fout_los, mw_fout_als1, max_fout_als1.
+#
+#' @importFrom stats qbeta qgamma
+vergelijk_los_en_als1 <- function(t_uit, model, zekerheid,
+                                  totaalgeld_laag, totaalgeld_fout_hoog, totaalgeld_algeheel) {
+  n_steekproeven <- nrow(t_uit)
+
+  # LOS: per stratum apart extrapoleren, dan gewogen optellen.
+  {
+    for (i in 1:n_steekproeven) {
+      n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
+      k_calc <- t_uit$k_laag[[i]]
+
+      t_uit$mw_fout[[i]] <- k_calc / n_calc
+      if (model == "binomiaal") {
+        t_uit$max_fout[[i]] <- qbeta(zekerheid, k_calc + 1, n_calc - k_calc + 1)
+      } else if (model == "poisson") {
+        t_uit$max_fout[[i]] <- qgamma(zekerheid, shape = k_calc + 1, rate = n_calc)
+      }
+    }
+
+    mw_fout_los_geld <- sum(t_uit$mw_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
+    max_fout_los_geld <- sum(t_uit$max_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
+
+    mw_fout_los <- mw_fout_los_geld / totaalgeld_algeheel
+    max_fout_los <- max_fout_los_geld / totaalgeld_algeheel
+  }
+
+  # ALS1: alle strata samenvoegen alsof het 1 steekproef is.
+  {
+    n_calc_als1 <- sum(t_uit$n_laag) + sum(t_uit$extra_foutloze_posten)
+    k_calc_als1 <- sum(t_uit$k_laag)
+
+    mw_fout_als1_laag <- k_calc_als1 / n_calc_als1
+    if (model == "binomiaal") {
+      max_fout_als1_laag <- qbeta(zekerheid, k_calc_als1 + 1, n_calc_als1 - k_calc_als1 + 1)
+    } else if (model == "poisson") {
+      max_fout_als1_laag <- qgamma(zekerheid, shape = k_calc_als1 + 1, rate = n_calc_als1)
+    }
+
+    mw_fout_als1 <- (mw_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
+    max_fout_als1 <- (max_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
+  }
+
+  list(
+    t_uit = t_uit,
+    mw_fout_los = mw_fout_los,
+    max_fout_los = max_fout_los,
+    mw_fout_als1 = mw_fout_als1,
+    max_fout_als1 = max_fout_als1
+  )
+}
+
+
 #' @title
 #' Evalueer samen de resultaten van 1 of meer steekproeven op uitgaand geld
 #'
@@ -56,7 +292,9 @@
 #' Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
 #' @param zekerheid Het zekerheidsniveau waarop we de maximale foutfractie berekenen.
 #' @param methode De rekenmethode voor de convolutie. Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).
-#' @param granulariteit Bepaalt de nauwkeurigheid van de berekening. Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as. Bij \code{"MonteCarlo"} is dit het aantal random iteraties.
+#' @param granulariteit Bepaalt de nauwkeurigheid van de berekening.
+#'   Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
+#'   Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.
 #' @param start Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).
 #' @param vergelijk TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd.
 #' @returns
@@ -65,8 +303,7 @@
 #'
 #' @export
 #' @importFrom dplyr pull mutate
-#' @importFrom stats density quantile rbeta qbeta rgamma qgamma dbeta dgamma convolve
-#' @importFrom tibble add_row is_tibble tribble
+#' @importFrom tibble is_tibble tribble add_row
 eval_stratified <-
   function(steekproeven,
            model = c("binomiaal", "poisson"),
@@ -75,7 +312,6 @@ eval_stratified <-
            granulariteit = 10000,
            start = 1,
            vergelijk = TRUE) {
-
     # Valideer en bepaal de argumentkeuzes
     model <- match.arg(model)
     methode <- match.arg(methode)
@@ -84,7 +320,7 @@ eval_stratified <-
     {
       stopifnot(is_tibble(steekproeven))
 
-      # Strikte controle op álle vereiste kolommen
+      # Strikte controle op alle vereiste kolommen
       stopifnot("naam" %in% colnames(steekproeven))
       stopifnot("waarde_laag" %in% colnames(steekproeven))
       stopifnot("n_laag" %in% colnames(steekproeven))
@@ -116,7 +352,7 @@ eval_stratified <-
       waarde_hoog <- steekproeven |> pull(waarde_hoog)
       waarde_populatie <- steekproeven |> pull(waarde_populatie)
 
-      # Basis controles
+      # Basiscontroles
       len_naam <- length(naam)
       stopifnot(len_naam > 0)
       stopifnot(length(waarde_laag) == len_naam)
@@ -131,9 +367,12 @@ eval_stratified <-
 
       # Invoercontrole aan de hand van redundantie in parameters.
       {
-        if (any(n_totaal != (n_laag + n_hoog))) stop("Inconsistentie: 'n_totaal' is onjuist.")
-        if (any(abs(waarde_hoog - (fout_hoog + goed_hoog)) > 0.01)) stop("Inconsistentie: 'waarde_hoog' is onjuist.")
-        if (any(abs(waarde_populatie - (waarde_laag + waarde_hoog)) > 0.01)) stop("Inconsistentie: 'waarde_populatie' is onjuist.")
+        if (any(n_totaal != (n_laag + n_hoog)))
+          stop("Inconsistentie: 'n_totaal' is onjuist.")
+        if (any(abs(waarde_hoog - (fout_hoog + goed_hoog)) > 0.01))
+          stop("Inconsistentie: 'waarde_hoog' is onjuist.")
+        if (any(abs(waarde_populatie - (waarde_laag + waarde_hoog)) > 0.01))
+          stop("Inconsistentie: 'waarde_populatie' is onjuist.")
       }
 
       stopifnot(length(zekerheid) == 1)
@@ -143,6 +382,17 @@ eval_stratified <-
       stopifnot(length(granulariteit) == 1)
       stopifnot(is.numeric(granulariteit))
       stopifnot(granulariteit >= 1)
+
+      # Controle op dubbele stratumnamen.
+      if (any(duplicated(steekproeven$naam))) {
+        dubbele <- unique(steekproeven$naam[duplicated(steekproeven$naam)])
+        stop(
+          paste(
+            "Evaluatiefout: De volgende stratumnamen komen vaker dan \u00e9\u00e9n keer voor:",
+            paste(dubbele, collapse = ", ")
+          )
+        )
+      }
     }
 
     # Bepaal totaal geldswaarde, inclusief het 100%-getoetste deel.
@@ -152,179 +402,98 @@ eval_stratified <-
     totaalgeld_algeheel <- totaalgeld_laag + totaalgeld_fout_hoog + totaalgeld_goed_hoog
 
     # Creeer uitvoertibble, t_uit, met regels per steekproef.
-    t_uit <-
-      tribble(
-        ~ naam, ~ waarde_laag, ~ n_laag, ~ k_laag, ~ ihr, ~ ibr, ~ car,
-        ~ materialiteit, ~ fout_hoog, ~ goed_hoog, ~ n_hoog, ~ n_totaal,
-        ~ waarde_hoog, ~ waarde_populatie, ~ extra_foutloze_posten, ~ toch_fouten,
-        ~ mw_fout, ~ max_fout
-      )
+    {
+      t_uit <-
+        tribble(
+          ~ naam,
+          ~ waarde_laag,
+          ~ n_laag,
+          ~ k_laag,
+          ~ ihr,
+          ~ ibr,
+          ~ car,
+          ~ materialiteit,
+          ~ fout_hoog,
+          ~ goed_hoog,
+          ~ n_hoog,
+          ~ n_totaal,
+          ~ waarde_hoog,
+          ~ waarde_populatie,
+          ~ extra_foutloze_posten,
+          ~ toch_fouten,
+          ~ mw_fout,
+          ~ max_fout
+        )
 
-    n_steekproeven <- nrow(steekproeven)
-    for (i in 1:n_steekproeven) {
-      t_uit <- add_row(t_uit,
-                       naam = steekproeven$naam[[i]], waarde_laag = steekproeven$waarde_laag[[i]],
-                       n_laag = steekproeven$n_laag[[i]], k_laag = steekproeven$k_laag[[i]],
-                       ihr = steekproeven$ihr[[i]], ibr = steekproeven$ibr[[i]], car = steekproeven$car[[i]],
-                       materialiteit = steekproeven$materialiteit[[i]], fout_hoog = steekproeven$fout_hoog[[i]],
-                       goed_hoog = steekproeven$goed_hoog[[i]], n_hoog = steekproeven$n_hoog[[i]],
-                       n_totaal = steekproeven$n_totaal[[i]], waarde_hoog = steekproeven$waarde_hoog[[i]],
-                       waarde_populatie = steekproeven$waarde_populatie[[i]],
-                       extra_foutloze_posten = foutloze_posten_equivalent(steekproeven$ihr[[i]], steekproeven$ibr[[i]], steekproeven$car[[i]], steekproeven$materialiteit[[i]]),
-                       toch_fouten = (!(steekproeven$ihr[[i]] == "H" && steekproeven$ibr[[i]] == "H" && steekproeven$car[[i]] == "H") && steekproeven$k_laag[[i]] > 0),
-                       mw_fout = NA, max_fout = NA
-      )
-    }
-
-    # =========================================================================
-    # CONVOLUTIE BLOK: Keuze tussen Monte Carlo of FFT
-    # =========================================================================
-
-    if (methode == "MonteCarlo") {
-      krommen <- matrix(NA, nrow = granulariteit, ncol = n_steekproeven)
-      set.seed(start)
+      n_steekproeven <- nrow(steekproeven)
       for (i in 1:n_steekproeven) {
-        n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
-        k_calc <- t_uit$k_laag[[i]]
-
-        if (model == "binomiaal") {
-          krommen[, i] <- rbeta(granulariteit, shape1 = 1 + k_calc, shape2 = 1 + n_calc - k_calc)
-        } else if (model == "poisson") {
-          krommen[, i] <- rgamma(granulariteit, shape = 1 + k_calc, rate = n_calc)
-        }
-      }
-
-      convolutie <- (krommen %*% t_uit$waarde_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
-
-      bovengrens <- if (model == "binomiaal") 1 else max(convolutie) + 0.1
-      d <- density(convolutie, adjust = 1.5, from = 0, to = bovengrens)
-
-      # Normaliseren
-      oppervlakte <- sum(d$y) * (d$x[2] - d$x[1])
-      d$y <- d$y / oppervlakte
-
-      max_fout_convolutie <- unname(quantile(convolutie, probs = zekerheid))
-      mediaan_fout_convolutie <- unname(quantile(convolutie, probs = 0.5))
-      modus_fout_convolutie <- d$x[which.max(d$y)]
-      gemiddelde_fout_convolutie <- mean(convolutie)
-
-    } else if (methode == "FFT") {
-
-      if (totaalgeld_laag < 0.01) {
-        # Edge case: Geen statistische controle, alles integraal.
-        frac <- totaalgeld_fout_hoog / totaalgeld_algeheel
-        d <- list(x = frac, y = 1)
-        max_fout_convolutie <- frac
-        mediaan_fout_convolutie <- frac
-        modus_fout_convolutie <- frac
-        gemiddelde_fout_convolutie <- frac
-      } else {
-        # We baseren de stapgrootte op het totale bedrag van het laagstratum
-        dx <- totaalgeld_laag / granulariteit
-        p_strata <- list()
-
-        for (i in 1:n_steekproeven) {
-          w_laag <- t_uit$waarde_laag[[i]]
-          n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
-          k_calc <- t_uit$k_laag[[i]]
-
-          if (w_laag > 0) {
-            # Bepaal hoe ver de as moet doorlopen. Binomiaal is max w_laag.
-            # Poisson kan daar theorethisch overheen gaan, dus nemen we een veilige grens via qgamma.
-            max_frac <- if (model == "binomiaal") 1 else qgamma(0.9999, shape = k_calc + 1, rate = n_calc)
-            x_grens <- max(w_laag, max_frac * w_laag)
-            x_as <- seq(0, x_grens, by = dx)
-
-            if (model == "binomiaal") {
-              p <- dbeta(x_as / w_laag, shape1 = k_calc + 1, shape2 = n_calc - k_calc + 1)
-            } else {
-              p <- dgamma(x_as / w_laag, shape = k_calc + 1, rate = n_calc)
-            }
-
-            p[is.na(p) | is.infinite(p)] <- 0
-            p <- p / sum(p) # Normaliseer kansmassa voor deze steekproef naar 1
-            p_strata[[length(p_strata) + 1]] <- p
-          }
-        }
-
-        # Paarsgewijze convolutie starten
-        if (length(p_strata) > 0) {
-          p_totaal <- p_strata[[1]]
-          if (length(p_strata) > 1) {
-            for (j in 2:length(p_strata)) {
-              # Convolve vereist rev() op de tweede array voor statistische convolutie
-              p_totaal <- convolve(p_totaal, rev(p_strata[[j]]), type = "open")
-            }
-          }
-
-          p_totaal <- p_totaal / sum(p_totaal) # Finale opschoning/normalisatie
-
-          # Bouw de totale assen op
-          x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
-          x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
-          x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
-
-          # Omzetten naar het 'd' formaat, schalen naar kansdichtheid t.o.v. de fractie-as
-          dx_fractie <- dx / totaalgeld_algeheel
-          d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
-
-          cum_p <- cumsum(p_totaal)
-
-          # Max fout (zekerheid)
-          idx_max <- which(cum_p >= zekerheid)[1]
-          max_fout_convolutie <- if (is.na(idx_max)) x_totaal_fractie[length(x_totaal_fractie)] else x_totaal_fractie[idx_max]
-
-          # Mediaan
-          idx_med <- which(cum_p >= 0.5)[1]
-          mediaan_fout_convolutie <- if (is.na(idx_med)) x_totaal_fractie[length(x_totaal_fractie)] else x_totaal_fractie[idx_med]
-
-          modus_fout_convolutie <- x_totaal_fractie[which.max(p_totaal)]
-          gemiddelde_fout_convolutie <- sum(x_totaal_fractie * p_totaal)
-        }
+        t_uit <- add_row(
+          t_uit,
+          naam = steekproeven$naam[[i]],
+          waarde_laag = steekproeven$waarde_laag[[i]],
+          n_laag = steekproeven$n_laag[[i]],
+          k_laag = steekproeven$k_laag[[i]],
+          ihr = steekproeven$ihr[[i]],
+          ibr = steekproeven$ibr[[i]],
+          car = steekproeven$car[[i]],
+          materialiteit = steekproeven$materialiteit[[i]],
+          fout_hoog = steekproeven$fout_hoog[[i]],
+          goed_hoog = steekproeven$goed_hoog[[i]],
+          n_hoog = steekproeven$n_hoog[[i]],
+          n_totaal = steekproeven$n_totaal[[i]],
+          waarde_hoog = steekproeven$waarde_hoog[[i]],
+          waarde_populatie = steekproeven$waarde_populatie[[i]],
+          extra_foutloze_posten = foutloze_posten_equivalent(
+            steekproeven$ihr[[i]],
+            steekproeven$ibr[[i]],
+            steekproeven$car[[i]],
+            steekproeven$materialiteit[[i]]
+          ),
+          toch_fouten = (
+            !(
+              steekproeven$ihr[[i]] == "H" &&
+                steekproeven$ibr[[i]] == "H" &&
+                steekproeven$car[[i]] == "H"
+            ) && steekproeven$k_laag[[i]] > 0
+          ),
+          mw_fout = NA,
+          max_fout = NA
+        )
       }
     }
 
-    # =========================================================================
-    # LOS EN ALS1 (VERGELIJKING)
-    # =========================================================================
+    # Convolutie: MonteCarlo of FFT.
+    {
+      conv <- if (methode == "MonteCarlo")
+        convolutie_montecarlo(t_uit, model, zekerheid, granulariteit, start,
+                              totaalgeld_laag, totaalgeld_fout_hoog, totaalgeld_algeheel)
+      else
+        convolutie_fft(t_uit, model, zekerheid, granulariteit,
+                       totaalgeld_laag, totaalgeld_fout_hoog, totaalgeld_algeheel)
 
-    mw_fout_los <- NA; max_fout_los <- NA
-    mw_fout_als1 <- NA; max_fout_als1 <- NA
+      d <- conv$d
+      max_fout_convolutie <- conv$max_fout
+      mediaan_fout_convolutie <- conv$mediaan_fout
+      modus_fout_convolutie <- conv$modus_fout
+      gemiddelde_fout_convolutie <- conv$gemiddelde_fout
+    }
 
-    if (vergelijk) {
-      # LOS
-      {
-        for (i in 1:n_steekproeven) {
-          n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
-          k_calc <- t_uit$k_laag[[i]]
+    # Ter vergelijking: los en als1.
+    {
+      mw_fout_los <- NA
+      max_fout_los <- NA
+      mw_fout_als1 <- NA
+      max_fout_als1 <- NA
 
-          t_uit$mw_fout[[i]] <- k_calc / n_calc
-          if (model == "binomiaal") {
-            t_uit$max_fout[[i]] <- qbeta(zekerheid, k_calc + 1, n_calc - k_calc + 1)
-          } else if (model == "poisson") {
-            t_uit$max_fout[[i]] <- qgamma(zekerheid, shape = k_calc + 1, rate = n_calc)
-          }
-        }
-
-        mw_fout_los_geld <- sum(t_uit$mw_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
-        max_fout_los_geld <- sum(t_uit$max_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
-
-        mw_fout_los <- mw_fout_los_geld / totaalgeld_algeheel
-        max_fout_los <- max_fout_los_geld / totaalgeld_algeheel
+      if (vergelijk) {
+        verg <- vergelijk_los_en_als1(t_uit, model, zekerheid,
+                                      totaalgeld_laag, totaalgeld_fout_hoog, totaalgeld_algeheel)
+        t_uit <- verg$t_uit
+        mw_fout_los <- verg$mw_fout_los
+        max_fout_los <- verg$max_fout_los
+        mw_fout_als1 <- verg$mw_fout_als1
+        max_fout_als1 <- verg$max_fout_als1
       }
-
-      # ALS1
-      n_calc_als1 <- sum(t_uit$n_laag) + sum(t_uit$extra_foutloze_posten)
-      k_calc_als1 <- sum(t_uit$k_laag)
-
-      mw_fout_als1_laag <- k_calc_als1 / n_calc_als1
-      if (model == "binomiaal") {
-        max_fout_als1_laag <- qbeta(zekerheid, k_calc_als1 + 1, n_calc_als1 - k_calc_als1 + 1)
-      } else if (model == "poisson") {
-        max_fout_als1_laag <- qgamma(zekerheid, shape = k_calc_als1 + 1, rate = n_calc_als1)
-      }
-      mw_fout_als1 <- (mw_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
-      max_fout_als1 <- (max_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
     }
 
     invoer <- list(
