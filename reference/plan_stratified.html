@@ -65,8 +65,7 @@ de algehele materialiteit blijven.</p>
 <dd><p>Een tibble met de planningsgegevens.Deze
 bestaat uit de volgende kolommen:</p><ul><li><p>naam</p></li>
 <li><p>waarde_laag</p></li>
-<li><p>n_laag</p></li>
-<li><p>k_laag</p></li>
+<li><p>verwachte_foutfractie</p></li>
 <li><p>ihr</p></li>
 <li><p>ibr</p></li>
 <li><p>car</p></li>
@@ -74,9 +73,6 @@ bestaat uit de volgende kolommen:</p><ul><li><p>naam</p></li>
 <li><p>fout_hoog</p></li>
 <li><p>goed_hoog</p></li>
 <li><p>n_hoog</p></li>
-<li><p>n_totaal</p></li>
-<li><p>waarde_hoog</p></li>
-<li><p>waarde_populatie</p></li>
 </ul></dd>
 
 
@@ -115,8 +111,18 @@ eindeloze lus.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Een verrijkte tibble met de berekende <code>n_basis</code>, <code>n_definitief</code>,
-<code>k_laag</code>, <code>n_totaal</code> en de uiteindelijke <code>geplande_max_fout_totaal</code> als attribuut.</p>
+    <p>De tibble steekproeven verrijkt met de berekende
+<code>waarde_hoog</code>, # &lt;- fout_hoog + goed_hoog
+<code>waarde_populatie</code>, # &lt;- waarde_laag + waarde_hoog
+<code>n_basis</code>, # De n nodig om per steekproef om onder de
+# materialiteit voor die steekproef te blijven.
+<code>n_definitief</code>, # n_basis plus de extra nodige steken voor
+# het lage stratum om onder de totale
+# materialiteit te blijven.
+<code>k_laag</code>,
+<code>n_totaal</code> en
+met als attribuut de uiteindelijke
+<code>geplande_max_fout_totaal</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -29,9 +29,7 @@ plan_stratified(
 
   - waarde_laag
 
-  - n_laag
-
-  - k_laag
+  - verwachte_foutfractie
 
   - ihr
 
@@ -46,12 +44,6 @@ plan_stratified(
   - goed_hoog
 
   - n_hoog
-
-  - n_totaal
-
-  - waarde_hoog
-
-  - waarde_populatie
 
 - totale_materialiteit:
 
@@ -86,6 +78,10 @@ plan_stratified(
 
 ## Value
 
-Een verrijkte tibble met de berekende `n_basis`, `n_definitief`,
-`k_laag`, `n_totaal` en de uiteindelijke `geplande_max_fout_totaal` als
-attribuut.
+De tibble steekproeven verrijkt met de berekende `waarde_hoog`, \# \<-
+fout_hoog + goed_hoog `waarde_populatie`, \# \<- waarde_laag +
+waarde_hoog `n_basis`, \# De n nodig om per steekproef om onder de \#
+materialiteit voor die steekproef te blijven. `n_definitief`, \# n_basis
+plus de extra nodige steken voor \# het lage stratum om onder de totale
+\# materialiteit te blijven. `k_laag`, `n_totaal` en met als attribuut
+de uiteindelijke `geplande_max_fout_totaal`.

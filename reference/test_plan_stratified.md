@@ -12,8 +12,7 @@ test_plan_stratified(
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
   methode = c("FFT", "MonteCarlo"),
-  granulariteit = 10000,
-  plan_result
+  granulariteit = 10000
 )
 ```
 
@@ -49,15 +48,9 @@ test_plan_stratified(
   aantal stappen op de kanskromme-as. Bij `"MonteCarlo"` is dit het
   aantal toevalsiteraties.
 
-- plan_result:
-
-  !!!!
-
 ## Value
 
-List met antwoorden op vraag 1 en 2.
-
-examples
+Lijst met antwoorden op vraag 1 en 2.
 
 ## Details
 
