@@ -20,8 +20,7 @@ bestaat uit de volgende kolommen:
 \itemize{
 \item naam
 \item waarde_laag
-\item n_laag
-\item k_laag
+\item verwachte_foutfractie
 \item ihr
 \item ibr
 \item car
@@ -29,9 +28,6 @@ bestaat uit de volgende kolommen:
 \item fout_hoog
 \item goed_hoog
 \item n_hoog
-\item n_totaal
-\item waarde_hoog
-\item waarde_populatie
 }}
 
 \item{totale_materialiteit}{De maximaal toegestane foutfractie voor de gehele populatie.}
@@ -56,8 +52,18 @@ we willen trekken. Dit beschermt ook tegen een eventuele
 eindeloze lus.}
 }
 \value{
-Een verrijkte tibble met de berekende \code{n_basis}, \code{n_definitief},
-\code{k_laag}, \code{n_totaal} en de uiteindelijke \code{geplande_max_fout_totaal} als attribuut.
+De tibble steekproeven verrijkt met de berekende
+\code{waarde_hoog}, # <- fout_hoog + goed_hoog
+\code{waarde_populatie}, # <- waarde_laag + waarde_hoog
+\code{n_basis}, # De n nodig om per steekproef om onder de
+# materialiteit voor die steekproef te blijven.
+\code{n_definitief}, # n_basis plus de extra nodige steken voor
+# het lage stratum om onder de totale
+# materialiteit te blijven.
+\code{k_laag},
+\code{n_totaal} en
+met als attribuut de uiteindelijke
+\code{geplande_max_fout_totaal}.
 }
 \description{
 Deze functie berekent de optimale steekproefomvang (n) en verwachte fout (k)

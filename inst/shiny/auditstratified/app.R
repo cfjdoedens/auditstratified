@@ -405,28 +405,28 @@ server <- function(input, output, session) {
           filter(!is.na(naam) & naam != "") |>
           mutate(across(
             c(
-              waarde_laag,
-              n_laag,
-              k_laag,
-              fout_hoog,
-              goed_hoog,
-              n_hoog,
-              materialiteit
+              .data$waarde_laag,
+              .data$n_laag,
+              .data$k_laag,
+              .data$fout_hoog,
+              .data$goed_hoog,
+              .data$n_hoog,
+              .data$materialiteit
             ),
             parse_dutch_num
           )) |>
-          mutate(across(c(ihr, ibr, car), toupper)) |>
+          mutate(across(c(.data$ihr, .data$ibr, .data$car), toupper)) |>
           mutate(
-            waarde_hoog = fout_hoog + goed_hoog,
-            waarde_populatie = waarde_laag + waarde_hoog,
-            n_totaal = n_laag + n_hoog
+            waarde_hoog = .data$fout_hoog + .data$goed_hoog,
+            waarde_populatie = .data$waarde_laag + .data$waarde_hoog,
+            n_totaal = .data$n_laag + .data$n_hoog
           ) |>
           mutate(
             materialiteit = ifelse(
-              materialiteit > 1 &
-                waarde_populatie > 0,
-              materialiteit / waarde_populatie,
-              materialiteit
+              .data$materialiteit > 1 &
+                .data$waarde_populatie > 0,
+              .data$materialiteit / .data$waarde_populatie,
+              .data$materialiteit
             )
           )
       }
@@ -702,12 +702,12 @@ server <- function(input, output, session) {
       as_tibble() |>
       mutate(across(
         c(
-          waarde_laag,
-          verwachte_foutfractie,
-          fout_hoog,
-          goed_hoog,
-          n_hoog,
-          materialiteit
+          .data$waarde_laag,
+          .data$verwachte_foutfractie,
+          .data$fout_hoog,
+          .data$goed_hoog,
+          .data$n_hoog,
+          .data$materialiteit
         ),
         parse_dutch_num
       )) |>
@@ -717,10 +717,10 @@ server <- function(input, output, session) {
              waarde_populatie = waarde_laag + waarde_hoog) |>
       mutate(
         materialiteit = ifelse(
-          materialiteit > 1 &
-            waarde_populatie > 0,
-          materialiteit / waarde_populatie,
-          materialiteit
+          .data$materialiteit > 1 &
+            .data$waarde_populatie > 0,
+          .data$materialiteit / .data$waarde_populatie,
+          .data$materialiteit
         )
       )
 
@@ -752,10 +752,10 @@ server <- function(input, output, session) {
             max_iteraties = 1000
           )
           res_fmt <- res |> mutate(
-            n_l = n_basis,
-            n_l_e = n_definitief - n_basis,
-            n_l_t = n_definitief,
-            n_t = n_definitief + n_hoog
+            n_l = n_basis,                  # Basis.
+            n_l_e = n_definitief - n_basis, # Extra.
+            n_l_t = n_definitief,           # Definitief = basis + extra.
+            n_t = n_definitief + n_hoog     # Totaal = basis + extra + hoog.
           ) |>
             mutate(across(
               c(n_l, n_l_e, n_l_t, n_t),

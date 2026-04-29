@@ -6,6 +6,7 @@
 #' @importFrom tibble tibble as_tibble
 #' @importFrom htmlwidgets JS
 #' @importFrom rhandsontable rhandsontable hot_to_r hot_col renderRHandsontable rHandsontableOutput hot_table
+#' @importFrom rlang .data
 #' @export
 run_app <- function() {
   app_dir <- system.file("shiny", "auditstratified", package = "auditstratified")

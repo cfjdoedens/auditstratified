@@ -10,8 +10,7 @@ test_plan_stratified(
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
   methode = c("FFT", "MonteCarlo"),
-  granulariteit = 10000,
-  plan_result
+  granulariteit = 10000
 )
 }
 \arguments{
@@ -33,13 +32,9 @@ toevalsgenerator.}
 \item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
 Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
 Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.}
-
-\item{plan_result}{!!!!}
 }
 \value{
-List met antwoorden op vraag 1 en 2.
-
-examples
+Lijst met antwoorden op vraag 1 en 2.
 }
 \description{
 Test uitgaande van de invoervelden van plan_stratified plus

@@ -84,8 +84,8 @@ We gaan uit van de som van de foutfracties, de k-waarde, dus we kijken niet
 naar de foutfracties per post.
 
 De maximale fout wordt bepaald aan de hand van de resulterende kanskromme,
-op basis van de gewenste zekerheid. Visueel is de maximale fout, pm, te bepalen in een
-tweedimensionaal, haaks, assenstelsel.
+op basis van de gewenste zekerheid. Visueel is de maximale fout, pm, te
+bepalen in een tweedimensionaal, haaks, assenstelsel.
 De horizontale as, de p-as, loopt van 0 tot 1.
 De waarden langs die as geven de mogeljke foutfracties weer,
 lopend van 0 (geen fouten) tot 1 (alles fout).
@@ -93,8 +93,8 @@ De verticale as, de c-as, loopt van 0 to oneindig.
 Deze as geeft de kanswaarden van de foutfracties aan.
 In dit assenstelsel kunnen we de kanskromme afbeelden.
 Het oppervlak onder de kanskromme is 1.
-Hierbij praten we over het oppervlak begrenst door de p-as, aan de onderkant,
-en de verticale lijnen p = 0, en p = 1.
+Hierbij praten we over het oppervlak begrenst door de p-as, aan de
+onderkant, en de verticale lijnen p = 0, en p = 1.
 pm is het punt op de p-as waarbij de verticale lijn p = pm,
 het oppervlak onder de kanskromme begrenst zodat links van deze lijn
 het oppervlak gelijk is aan de zekerheid, bijvoorbeeld 0,95.
