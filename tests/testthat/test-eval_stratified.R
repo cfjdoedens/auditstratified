@@ -46,7 +46,7 @@ test_that("voorbeeld Paul van Batenburg", {
   r <- eval_stratified(
     steekproeven = vb_paul_van_batenburg,
     zekerheid = 0.95,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.03100)
@@ -103,7 +103,7 @@ test_that(
     r <- eval_stratified(
       steekproeven = example_in_description,
       zekerheid = 0.95,
-      methode = "MonteCarlo",
+      methode = "Monte Carlo",
       granulariteit = 1e5
     )
     expect_equal(round(r[["max_fout_convolutie"]], 4), 0.01840)
@@ -156,11 +156,11 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
     200
   )
 
-  # Evalueer x en y samen (MonteCarlo met originele brute rekenkracht).
+  # Evalueer x en y samen (Monte Carlo met originele brute rekenkracht).
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.95,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0136)
@@ -169,7 +169,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.90,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0108)
@@ -178,7 +178,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.85,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.009110)
@@ -187,7 +187,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.80,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00791)
@@ -196,7 +196,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.55,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.004510)
@@ -205,7 +205,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.51,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.004150)
@@ -214,7 +214,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.49,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.003980)
@@ -224,7 +224,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
   r <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.10,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 5), 0.00118)
@@ -294,7 +294,7 @@ test_that("Drie dezelfde steekproeven.", {
   r <- eval_stratified(
     steekproeven = dezelfde_drie,
     zekerheid = 0.60,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.088)
@@ -771,7 +771,7 @@ test_that("32 dezelfde steekproeven.", {
   r <- eval_stratified(
     steekproeven = dezelfde_32,
     zekerheid = 0.51,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.08300)
@@ -780,7 +780,7 @@ test_that("32 dezelfde steekproeven.", {
   r <- eval_stratified(
     steekproeven = dezelfde_32,
     zekerheid = 0.95,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.106)
@@ -789,7 +789,7 @@ test_that("32 dezelfde steekproeven.", {
   r <- eval_stratified(
     steekproeven = dezelfde_32,
     zekerheid = 0.70,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0899)
@@ -798,7 +798,7 @@ test_that("32 dezelfde steekproeven.", {
   r <- eval_stratified(
     steekproeven = dezelfde_32,
     zekerheid = 0.05,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 4), 0.0622)
@@ -868,7 +868,7 @@ test_that("LNV 2023 (Wim Slot)", {
   r <- eval_stratified(
     steekproeven = lnv_2023_art21,
     zekerheid = 0.95,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.139)
@@ -877,7 +877,7 @@ test_that("LNV 2023 (Wim Slot)", {
   r <- eval_stratified(
     steekproeven = lnv_2023_art21,
     zekerheid = 0.88,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
   expect_equal(round(r[["max_fout_convolutie"]], 3), 0.112)
@@ -919,7 +919,7 @@ test_that("Evaluatie met een 100%-getoetst topstratum inc. redundantie", {
   r_mc <- eval_stratified(
     steekproeven = test_topstratum,
     zekerheid = 0.95,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5
   )
 
@@ -988,7 +988,7 @@ test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
   r_mc <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.95,
-    methode = "MonteCarlo",
+    methode = "Monte Carlo",
     granulariteit = 1e5,
     start = 1
   )

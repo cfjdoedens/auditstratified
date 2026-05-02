@@ -2,7 +2,7 @@
 % Please edit documentation in R/eval_stratified.R
 \name{convolutie_fft}
 \alias{convolutie_fft}
-\title{Convolutie via Fast Fourier Transform.}
+\title{Convolutie via paarsgewijze Fast Fourier Transformatie.}
 \usage{
 convolutie_fft(
   t_uit,
@@ -33,5 +33,5 @@ convolutie_fft(
 Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
 }
 \description{
-Convolutie via Fast Fourier Transform.
+Convolutie via paarsgewijze Fast Fourier Transformatie.
 }

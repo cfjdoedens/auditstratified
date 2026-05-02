@@ -26,7 +26,7 @@ eval_stratified(
   steekproeven,
   model = c("binomiaal", "poisson"),
   zekerheid = 0.95,
-  methode = c("FFT", "MonteCarlo"),
+  methode = c("FFT", "Monte Carlo"),
   granulariteit = 10000,
   start = 1,
   vergelijk = TRUE

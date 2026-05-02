@@ -178,20 +178,70 @@ ui <- navbarPage(
       sidebar = sidebar(
         width = 270,
         h4("instellingen"),
-        textInput("strat_conf", "zekerheid:", value = "0,95"),
+        textInput(
+          "strat_conf",
+          label = info_label(
+            "zekerheid:",
+            "De gewenste betrouwbaarheid (bijv. 0,95 voor 95%)."
+          ),
+          value = "0,95"
+        ),
         radioButtons(
           "strat_model",
-          "model:",
+          label = info_label("model:", "De statistische verdeling gebruikt als model."),
           choices = c("binomiaal", "poisson"),
           inline = TRUE
         ),
         radioButtons(
           "strat_methode",
-          "methode:",
-          choices = c("FFT" = "FFT", "Monte Carlo" = "MonteCarlo"),
+          label = info_label(
+            "methode:",
+            paste0(
+              "De rekenmethode voor de convolutie (vermenigvuldiging van kanskrommen). ",
+              "Er worden vier verschillende methoden aangeboden. ",
+              "De methoden verschillen, het zijn verschillende algoritmes. ",
+              "Maar ze leveren ongeveer hetzelfde resultaat. ",
+              "1. direct: basismethode om convolutie te plegen. ",
+              "Kanskrommen worden paarsgewijs met elkaar vermenigvuldigd. ",
+              "2. FFT: wiskundige verbetering op direct, altijd sneller dan direct. ",
+              "Ook paarsgewijze vermenigvuldiging van de kanskrommen. ",
+              "3. FFT gelijktijdig: als FFT maar nu wordt de vermenigvuldiging in 1 keer uitgevoerd. ",
+              "Daarom weer sneller dan FFT. ",
+              "4. Monte Carlo: vermenigvuldiging wordt in 1 keer uitgevoerd. ",
+              "Gebaseerd op toevalstrekking van de krommen. ",
+              "Daardoor meestal snel, maar geeft ook een toevalsruis. ",
+              "Overigens is er voor alle 4 de methoden ruis door de ",
+              "grofheid van de gramulariteit."
+            )
+          ),
+          choices = c(
+            "direct" = "direct",
+            "FFT" = "FFT",
+            "FFT gelijktijdig" = "FFT gelijktijdig",
+            "Monte Carlo" = "Monte Carlo"
+          ),
+          selected = "FFT gelijktijdig",
           inline = TRUE
         ),
-        textInput("strat_gran", "granulariteit:", value = "10.000"),
+        textInput(
+          "strat_gran",
+          label = info_label(
+            "granulariteit:",
+            "Nauwkeurigheid van de berekening (hoger = preciezer maar trager)."
+          ),
+          value = "10.000"
+        ),
+        numericInput(
+          "eval_start",
+          label = info_label(
+            "startwaarde:",
+            "Voor toevalsgenerator (Monte Carlo). Waarde van 0 betekent: baseer op systeemklok, dus min of meer 'echt' bij toeval."
+          ),
+          value = 1,
+          min = 0,
+          step = 1
+        ),
+        hr(),
         hr(),
         actionButton(
           "run_strat",
@@ -226,24 +276,112 @@ ui <- navbarPage(
           "plan_totale_mat",
           label = info_label(
             "materialiteit:",
-            "Voer een fractie (0,01) of absoluut eurobedrag in"
+            "Voer een fractie (0,01) of absoluut eurobedrag in."
           ),
           value = "0,01"
         ),
-        textInput("plan_conf", "zekerheid:", value = "0,95"),
+        textInput(
+          "plan_conf",
+          label = info_label(
+            "zekerheid:",
+            "De gewenste betrouwbaarheid (bijv. 0,95 voor 95%)."
+          ),
+          value = "0,95"
+        ),
         radioButtons(
           "plan_model",
-          "model:",
+          label = info_label("model:", "De statistische verdeling gebruikt als model."),
           choices = c("binomiaal" = "binomiaal", "poisson" = "poisson"),
           inline = TRUE
         ),
         radioButtons(
-          "plan_methode",
-          "methode:",
-          choices = c("FFT" = "FFT", "Monte Carlo" = "MonteCarlo"),
+          "plan_klim_methode",
+          label = info_label(
+            "klimmethode:",
+            paste0(
+              "De rekenmethode voor de convolutie bij het klimmen. ",
+              "Er worden vier verschillende methoden aangeboden. ",
+              "De methoden verschillen, het zijn verschillende algoritmes. ",
+              "Maar ze leveren ongeveer hetzelfde resultaat. ",
+              "1. direct: basismethode om convolutie te plegen. ",
+              "Kanskrommen worden paarsgewijs met elkaar vermenigvuldigd. ",
+              "2. FFT: wiskundige verbetering op direct, altijd sneller dan direct. ",
+              "Ook paarsgewijze vermenigvuldiging van de kanskrommen. ",
+              "3. FFT gelijktijdig: als FFT maar nu wordt de vermenigvuldiging in 1 keer uitgevoerd. ",
+              "Daarom weer sneller dan FFT. ",
+              "4. Monte Carlo: vermenigvuldiging wordt in 1 keer uitgevoerd. ",
+              "Gebaseerd op toevalstrekking van de krommen. ",
+              "Daardoor meestal snel, maar geeft ook een toevalsruis. ",
+              "Overigens is er voor alle 4 de methoden ruis door de ",
+              "grofheid van de gramulariteit."
+            )
+          ),
+          choices = c(
+            "direct" = "direct",
+            "FFT" = "FFT",
+            "FFT gelijktijdig" = "FFT gelijktijdig",
+            "Monte Carlo" = "Monte Carlo"
+          ),
+          selected = "FFT gelijktijdig",
           inline = TRUE
         ),
-        textInput("plan_gran", "granulariteit:", value = "10.000"),
+        textInput(
+          "plan_klim_granulariteit",
+          label = info_label(
+            "granulariteit bij klimmen:",
+            "Nauwkeurigheid van het klimmen (hoger = preciezer maar trager)."
+          ),
+          value = "10.000"
+        ),
+        radioButtons(
+          "plan_validatie_methode",
+          label = info_label(
+            "validatiemethode:",
+            paste0(
+              "De rekenmethode voor de convolutie bij het valideren. ",
+              "Er worden vier verschillende methoden aangeboden. ",
+              "De methoden verschillen, het zijn verschillende algoritmes. ",
+              "Maar ze leveren ongeveer hetzelfde resultaat. ",
+              "1. direct: basismethode om convolutie te plegen. ",
+              "Kanskrommen worden paarsgewijs met elkaar vermenigvuldigd. ",
+              "2. FFT: wiskundige verbetering op direct, altijd sneller dan direct. ",
+              "Ook paarsgewijze vermenigvuldiging van de kanskrommen. ",
+              "3. FFT gelijktijdig: als FFT maar nu wordt de vermenigvuldiging in 1 keer uitgevoerd. ",
+              "Daarom weer sneller dan FFT. ",
+              "4. Monte Carlo: vermenigvuldiging wordt in 1 keer uitgevoerd. ",
+              "Gebaseerd op toevalstrekking van de krommen. ",
+              "Daardoor meestal snel, maar geeft ook een toevalsruis. ",
+              "Overigens is er voor alle 4 de methoden ruis door de ",
+              "grofheid van de gramulariteit."
+            )
+          ),
+          choices = c(
+            "direct" = "direct",
+            "FFT" = "FFT",
+            "FFT gelijktijdig" = "FFT gelijktijdig",
+            "Monte Carlo" = "Monte Carlo"
+          ),
+          selected = "Monte Carlo",
+          inline = TRUE
+        ),
+        textInput(
+          "plan_validatie_granulariteit",
+          label = info_label(
+            "granulariteit bij valideren:",
+            "Nauwkeurigheid van het valideren (hoger = preciezer maar trager)."
+          ),
+          value = "10.000"
+        ),
+        numericInput(
+          "plan_start",
+          label = info_label(
+            "startwaarde:",
+            "Voor toevalsgenerator (Monte Carlo). Waarde van 0 betekent: baseer op systeemklok, dus min of meer 'echt' bij toeval."
+          ),
+          value = 1,
+          min = 0,
+          step = 1
+        ),
         hr(),
         actionButton(
           "run_plan",
@@ -329,6 +467,15 @@ server <- function(input, output, session) {
       updateTabsetPanel(session, "hoofd_tabs", selected = "tab_grafiek")
     })
 
+    # Luister naar wijzigingen in de evaluatiemethode
+    observeEvent(input$strat_methode, {
+      # Bepaal de verstekwaarde op basis van de methode
+      nieuw_gran <- if (input$strat_methode == "Monte Carlo") "10.000.000" else "25.000"
+
+      # Werk het invoerveld op het scherm bij
+      updateTextInput(session, "strat_gran", value = nieuw_gran)
+    })
+
     # Voeg de onrender functie toe aan de invoertabel van de evaluatie om tooltips bij de kolomkoppen te tonen.
     output$hot_input <- renderRHandsontable({
       df <- data.frame(
@@ -405,17 +552,17 @@ server <- function(input, output, session) {
           filter(!is.na(naam) & naam != "") |>
           mutate(across(
             c(
-              .data$waarde_laag,
-              .data$n_laag,
-              .data$k_laag,
-              .data$fout_hoog,
-              .data$goed_hoog,
-              .data$n_hoog,
-              .data$materialiteit
+              "waarde_laag",
+              "n_laag",
+              "k_laag",
+              "fout_hoog",
+              "goed_hoog",
+              "n_hoog",
+              "materialiteit"
             ),
             parse_dutch_num
           )) |>
-          mutate(across(c(.data$ihr, .data$ibr, .data$car), toupper)) |>
+          mutate(across(c("ihr", "ibr", "car"), toupper)) |>
           mutate(
             waarde_hoog = .data$fout_hoog + .data$goed_hoog,
             waarde_populatie = .data$waarde_laag + .data$waarde_hoog,
@@ -444,7 +591,8 @@ server <- function(input, output, session) {
               model = input$strat_model,
               zekerheid = parse_dutch_num(input$strat_conf),
               methode = input$strat_methode,
-              granulariteit = parse_dutch_num(input$strat_gran)
+              granulariteit = parse_dutch_num(input$strat_gran),
+              start = input$eval_start
             )
           }, warning = function(w) {
             showNotification(
@@ -586,7 +734,7 @@ server <- function(input, output, session) {
             'Inherent Risico (H, M, L)',
             'Interne Beheersingsrisico (H, M, L)',
             'Cijferanalyserisico (H, M, L)',
-            'de toegestane afwijking als percentage van hoogstratum+laagstratum',
+            'de toegestane afwijking als percentage of als bedrag van hoogstratum+laagstratum',
             'het aantal posten dat getrokken moet worden uit het laagstratum om de maximale fout voor de afzonderlijke steekproef onder de materialiteit te houden',
             'het aantal extra posten dat getrokken moet worden uit het laagstratum om de maximale fout voor de steekproeven samen onder de gezamenlijke materialiteit te houden',
             'n_laag + n_laag_extra',
@@ -631,62 +779,83 @@ server <- function(input, output, session) {
         }
       }
 
-      # Verwerk granulariteit.
-      gran_val <- parse_dutch_num(input$plan_gran)
-      if (!is.na(gran_val)) {
-        fmt_gran <- format(
-          gran_val,
+      # Verwerk granulariteit klimmen.
+      klim_gran_val <- parse_dutch_num(input$plan_klim_granulariteit)
+      if (!is.na(klim_gran_val)) {
+        fmt_klim_gran <- format(
+          klim_gran_val,
           big.mark = ".",
           decimal.mark = ",",
           scientific = FALSE
         )
-        if (input$plan_gran != fmt_gran) {
-          updateTextInput(session, "plan_gran", value = fmt_gran)
+        if (input$plan_klim_granulariteit != fmt_klim_gran) {
+          updateTextInput(session, "plan_klim_granulariteit", value = fmt_klim_gran)
+        }
+      }
+
+      # Verwerk granulariteit valideren.
+      val_gran_val <- parse_dutch_num(input$plan_validatie_granulariteit)
+      if (!is.na(val_gran_val)) {
+        fmt_val_gran <- format(
+          val_gran_val,
+          big.mark = ".",
+          decimal.mark = ",",
+          scientific = FALSE
+        )
+        if (input$plan_validatie_granulariteit != fmt_val_gran) {
+          updateTextInput(session, "plan_validatie_granulariteit", value = fmt_val_gran)
         }
       }
     })
   }
 
+  # Luister naar wijzigingen in de klimmethode
+  observeEvent(input$plan_klim_methode, {
+    nieuw_klim_gran <- if (input$plan_klim_methode == "Monte Carlo") "1.000.000" else "10.000"
+    updateTextInput(session, "plan_klim_granulariteit", value = nieuw_klim_gran)
+  })
+
+  # Luister naar wijzigingen in de validatiemethode
+  observeEvent(input$plan_validatie_methode, {
+    nieuw_val_gran <- if (input$plan_validatie_methode == "Monte Carlo") "10.000.000" else "25.000"
+    updateTextInput(session, "plan_validatie_granulariteit", value = nieuw_val_gran)
+  })
+
   observeEvent(input$run_plan, {
     req(input$hot_plan_input)
+
     mat_val <- parse_dutch_num(input$plan_totale_mat)
     conf_val <- parse_dutch_num(input$plan_conf)
-    gran_val <- parse_dutch_num(input$plan_gran)
+    klim_gran_val <- parse_dutch_num(input$plan_klim_granulariteit)
+    val_gran_val <- parse_dutch_num(input$plan_validatie_granulariteit)
 
+    # Formatteer materialiteit
     if (!is.na(mat_val)) {
       fmt_mat <- if (mat_val > 1) {
-        paste0("€ ",
-               format(
-                 mat_val,
-                 big.mark = ".",
-                 decimal.mark = ",",
-                 scientific = FALSE
-               ))
+        paste0("€ ", format(mat_val, big.mark = ".", decimal.mark = ",", scientific = FALSE))
       } else {
-        format(mat_val,
-               decimal.mark = ",",
-               scientific = FALSE)
+        format(mat_val, decimal.mark = ",", scientific = FALSE)
       }
       updateTextInput(session, "plan_totale_mat", value = fmt_mat)
     }
 
-    if (!is.na(gran_val)) {
-      updateTextInput(
-        session,
-        "plan_gran",
-        value = format(
-          gran_val,
-          big.mark = ".",
-          decimal.mark = ",",
-          scientific = FALSE
-        )
-      )
+    # Formatteer granulariteiten
+    if (!is.na(klim_gran_val)) {
+      updateTextInput(session, "plan_klim_granulariteit",
+                      value = format(klim_gran_val, big.mark = ".", decimal.mark = ",", scientific = FALSE))
     }
 
-    if (is.na(mat_val) || is.na(conf_val) || is.na(gran_val)) {
+    if (!is.na(val_gran_val)) {
+      updateTextInput(session, "plan_validatie_granulariteit",
+                      value = format(val_gran_val, big.mark = ".", decimal.mark = ",", scientific = FALSE))
+    }
+
+    # Stop-check als 1 van de 4 velden ongeldig/leeg is
+    if (is.na(mat_val) || is.na(conf_val) || is.na(klim_gran_val) || is.na(val_gran_val)) {
       showNotification("Ongeldige instellingen.", type = "error")
       return()
     }
+
     raw_df <- hot_to_r(input$hot_plan_input)
 
     # Leegmaken van de resultaatkolommen voordat de berekening start.
@@ -701,17 +870,16 @@ server <- function(input, output, session) {
     final_df <- raw_df |>
       as_tibble() |>
       mutate(across(
-        c(
-          .data$waarde_laag,
-          .data$verwachte_foutfractie,
-          .data$fout_hoog,
-          .data$goed_hoog,
-          .data$n_hoog,
-          .data$materialiteit
+        c("waarde_laag",
+          "verwachte_foutfractie",
+          "fout_hoog",
+          "goed_hoog",
+          "n_hoog",
+          "materialiteit"
         ),
         parse_dutch_num
       )) |>
-      mutate(across(c(ihr, ibr, car), toupper)) |>
+      mutate(across(c("ihr", "ibr", "car"), toupper)) |>
       filter(!is.na(naam) & naam != "" & !is.na(waarde_laag)) |>
       mutate(waarde_hoog = fout_hoog + goed_hoog,
              waarde_populatie = waarde_laag + waarde_hoog) |>
@@ -747,14 +915,20 @@ server <- function(input, output, session) {
             reken_mat,
             conf_val,
             model = input$plan_model,
-            methode = input$plan_methode,
-            granulariteit = gran_val,
-            max_iteraties = 1000
+            klim_methode = input$plan_klim_methode,
+            klim_granulariteit = klim_gran_val,
+            validatie_methode = input$plan_validatie_methode,
+            validatie_granulariteit = val_gran_val,
+            max_iteraties = 1000,
+            start = input$plan_start
           )
           res_fmt <- res |> mutate(
-            n_l = n_basis,                  # Basis.
-            n_l_e = n_definitief - n_basis, # Extra.
-            n_l_t = n_definitief,           # Definitief = basis + extra.
+            n_l = n_basis,
+            # Basis.
+            n_l_e = n_definitief - n_basis,
+            # Extra.
+            n_l_t = n_definitief,
+            # Definitief = basis + extra.
             n_t = n_definitief + n_hoog     # Totaal = basis + extra + hoog.
           ) |>
             mutate(across(

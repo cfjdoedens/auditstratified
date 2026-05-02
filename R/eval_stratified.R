@@ -71,15 +71,31 @@
 #'   Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
 #' @param zekerheid Het zekerheidsniveau waarop we de maximale foutfractie berekenen.
 #' @param methode Methode voor de berekening.
-#'   Keuze uit \code{"FFT"} (standaard) of \code{"MonteCarlo"}.
-#'   \code{"FFT"} wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
-#'   omdat dat dezelfde resultatten geeft ongeacht de startwaarde van de
-#'   toevalsgenerator.
-#'    Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).
+#'   Keuze uit:
+#'   - \code{"direct"}
+#'   - \code{"FFT"}
+#'   - \code{"FFT gelijktijdig"} (standaard)
+#'   - \code{"Monte Carlo"}.
+#'
+#'   \code{"direct"},
+#'   \code{"FFT"} en
+#'   \code{"FFT gelijktijdig"} zijn deterministische algoritmen.
+#'   en zijn opvolgend meer
+#'   efficiente vormen van hetzelfde convolutie-algoritme.
+#'   \code{"Monte Carlo"} is niet-deterministisch, dus gebaseerd op toeval.
+#'   Dat betekent dat het resultaat ervan afhangt van de startwaarde van de
+#'   R toevalsgenerator, die je kunt opgeven via de parameter \code{start}.
 #' @param granulariteit Bepaalt de nauwkeurigheid van de berekening.
-#'   Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
-#'   Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.
-#' @param start Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).
+#'   Bij \code{"direct"}, \code{"FFT"} en \code{"FFT gelijktijdig"},
+#'   is dit het aantal stappen op de
+#'   kanskromme-as.
+#'   Als verstekwaarden geldt voor \code{"direct"}, \code{"FFT"}
+#'   en \code{"FFT gelijktijdig"} 25.000,
+#'   en voor \code{"Monte Carlo"} 10.000.000.
+#' @param start De vaste startwaarde voor de toevalsgenerator
+#'   (alleen voor MonteCarlo).
+#'   Een startwaarde van 0 betekent dat de startwaarde op de systeemklok,
+#'   is gebaseerd, dus min of meer 'echt' op toeval is gebaseerd.
 #' @param vergelijk TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd.
 #' @returns
 #'   Een lijst, bestaande uit de convolutie-uitkomsten (fracties en geld),
@@ -92,13 +108,17 @@ eval_stratified <-
   function(steekproeven,
            model = c("binomiaal", "poisson"),
            zekerheid = 0.95,
-           methode = c("FFT", "MonteCarlo"),
-           granulariteit = 10000,
+           methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
+           granulariteit = NULL, # Verstekwaarde bepalen we in functie zelf.
            start = 1,
            vergelijk = TRUE) {
-    # Valideer en bepaal de argumentkeuzes
+    # Valideer en bepaal de argumentkeuzes.
     model <- match.arg(model)
     methode <- match.arg(methode)
+
+    # Bepaal dynamische verstekwaarde granulariteit.
+    granulariteit <-
+      granulariteit %||% ifelse(methode == "Monte Carlo", 1e7, 25e3)
 
     # Controleer de invoer.
     {
@@ -246,25 +266,45 @@ eval_stratified <-
       }
     }
 
-    # Convolutie: MonteCarlo of FFT.
+    # Convolutie: FFT, FFT gelijktijdig, direct, of MonteCarlo.
     {
-      conv <- if (methode == "MonteCarlo")
+      conv <- if (methode == "FFT")
+        convolutie_fft(
+          t_uit,
+          model,
+          zekerheid,
+          granulariteit,
+          totaalgeld_laag,
+          totaalgeld_fout_hoog,
+          totaalgeld_algeheel
+        )
+      else if (methode == "FFT gelijktijdig")
+        convolutie_fft_gelijktijdig(
+          t_uit,
+          model,
+          zekerheid,
+          granulariteit,
+          totaalgeld_laag,
+          totaalgeld_fout_hoog,
+          totaalgeld_algeheel
+        )
+      else if (methode == "direct")
+        convolutie_direct(
+          t_uit,
+          model,
+          zekerheid,
+          granulariteit,
+          totaalgeld_laag,
+          totaalgeld_fout_hoog,
+          totaalgeld_algeheel
+        )
+      else
         convolutie_montecarlo(
           t_uit,
           model,
           zekerheid,
           granulariteit,
           start,
-          totaalgeld_laag,
-          totaalgeld_fout_hoog,
-          totaalgeld_algeheel
-        )
-      else
-        convolutie_fft(
-          t_uit,
-          model,
-          zekerheid,
-          granulariteit,
           totaalgeld_laag,
           totaalgeld_fout_hoog,
           totaalgeld_algeheel
@@ -347,7 +387,9 @@ eval_stratified <-
 #' @param model "binomiaal" of "poisson".
 #' @param zekerheid Zekerheidsniveau (0-1).
 #' @param granulariteit Aantal toevalsiteraties.
-#' @param start Startwaarde voor de toevalsgenerator.
+#' @param start Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).
+#'   Een startwaarde van 0 betekent dat de startwaarde op de systeemklok,
+#'   is gebaseerd, dus min of meer 'echt' op toeval is gebaseerd.
 #' @param totaalgeld_laag Totale geldswaarde van het laagstratum.
 #' @param totaalgeld_fout_hoog Totale fout in het hoogstratum.
 #' @param totaalgeld_algeheel Totale geldswaarde van de gehele populatie.
@@ -362,6 +404,9 @@ convolutie_montecarlo <- function(t_uit,
                                   totaalgeld_laag,
                                   totaalgeld_fout_hoog,
                                   totaalgeld_algeheel) {
+  if (start == 0) {
+    set.seed(NULL)
+  }
   n_steekproeven <- nrow(t_uit)
 
   # Simuleer foutfracties per stratum.
@@ -415,7 +460,7 @@ convolutie_montecarlo <- function(t_uit,
 
 
 #' @title
-#' Convolutie via Fast Fourier Transform.
+#' Convolutie via paarsgewijze Fast Fourier Transformatie.
 #'
 #' @inheritParams convolutie_montecarlo
 #' @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
@@ -516,6 +561,272 @@ convolutie_fft <- function(t_uit,
         x_totaal_fractie[length(x_totaal_fractie)]
       else
         x_totaal_fractie[idx_med]
+    }
+  }
+
+  list(
+    d = d,
+    max_fout = max_fout,
+    mediaan_fout = mediaan_fout,
+    modus_fout = x_totaal_fractie[which.max(p_totaal)],
+    gemiddelde_fout = sum(x_totaal_fractie * p_totaal)
+  )
+}
+
+#' @title
+#' Convolutie via gelijktijdige Fast Fourier Transform.
+#'
+#' @description
+#' Transformeert alle strata tegelijk naar het frequentiedomein,
+#' vermenigvuldigt ze, en transformeert in een keer terug.
+#' Dit vermijdt de paarsgewijze iteratielus.
+#'
+#' @inheritParams convolutie_montecarlo
+#' @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#'
+#' @importFrom stats dbeta dgamma qgamma fft nextn
+convolutie_fft_gelijktijdig <- function(t_uit,
+                                        model,
+                                        zekerheid,
+                                        granulariteit,
+                                        totaalgeld_laag,
+                                        totaalgeld_fout_hoog,
+                                        totaalgeld_algeheel) {
+  n_steekproeven <- nrow(t_uit)
+
+  if (totaalgeld_laag < 0.01) {
+    frac <- totaalgeld_fout_hoog / totaalgeld_algeheel
+    return(
+      list(
+        d = list(x = frac, y = 1),
+        max_fout = frac,
+        mediaan_fout = frac,
+        modus_fout = frac,
+        gemiddelde_fout = frac
+      )
+    )
+  }
+
+  # bouw kansmassavectoren per stratum.
+  {
+    dx <- totaalgeld_laag / granulariteit
+    p_strata <- list()
+
+    for (i in 1:n_steekproeven) {
+      w_laag <- t_uit$waarde_laag[[i]]
+      n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
+      k_calc <- t_uit$k_laag[[i]]
+
+      if (w_laag > 0) {
+        max_frac <- if (model == "binomiaal") {
+          1
+        } else {
+          qgamma(0.9999, shape = k_calc + 1, rate = n_calc)
+        }
+        x_grens <- max(w_laag, max_frac * w_laag)
+        x_as <- seq(0, x_grens, by = dx)
+
+        if (model == "binomiaal") {
+          p <- dbeta(x_as / w_laag,
+                     shape1 = k_calc + 1,
+                     shape2 = n_calc - k_calc + 1)
+        } else {
+          p <- dgamma(x_as / w_laag, shape = k_calc + 1, rate = n_calc)
+        }
+
+        p[is.na(p) | is.infinite(p)] <- 0
+        p <- p / sum(p)
+        p_strata[[length(p_strata) + 1]] <- p
+      }
+    }
+  }
+
+  # gelijktijdige convolutie via zero-padding en fft.
+  {
+    if (length(p_strata) > 0) {
+      if (length(p_strata) == 1) {
+        p_totaal <- p_strata[[1]]
+      } else {
+
+        # bepaal de benodigde rekentotaallengte en de geoptimaliseerde pad-lengte.
+        {
+          totale_lengte <- sum(sapply(p_strata, length)) - length(p_strata) + 1
+          pad_lengte <- nextn(totale_lengte)
+        }
+
+        # transformeer naar frequentiedomein en vermenigvuldig alle vectoren.
+        {
+          fft_product <- rep(1 + 0i, pad_lengte)
+          for (p in p_strata) {
+            p_padded <- c(p, rep(0, pad_lengte - length(p)))
+            fft_product <- fft_product * fft(p_padded)
+          }
+        }
+
+        # transformeer terug naar tijdsdomein en snijd de padding af.
+        {
+          p_totaal <- Re(fft(fft_product, inverse = TRUE)) / pad_lengte
+          p_totaal <- p_totaal[1:totale_lengte]
+        }
+
+        # verwijder afrondingsruis en normaliseer de kansmassa.
+        {
+          p_totaal[p_totaal < 0 & abs(p_totaal) < 1e-12] <- 0
+          p_totaal <- p_totaal / sum(p_totaal)
+        }
+      }
+
+      # bereken de totale assen en parameters.
+      {
+        x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
+        x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
+        x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
+
+        dx_fractie <- dx / totaalgeld_algeheel
+        d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
+
+        cum_p <- cumsum(p_totaal)
+      }
+
+      # bepaal de kwantielen voor maximale en mediane fout.
+      {
+        idx_max <- which(cum_p >= zekerheid)[1]
+        max_fout <- if (is.na(idx_max)) {
+          x_totaal_fractie[length(x_totaal_fractie)]
+        } else {
+          x_totaal_fractie[idx_max]
+        }
+
+        idx_med <- which(cum_p >= 0.5)[1]
+        mediaan_fout <- if (is.na(idx_med)) {
+          x_totaal_fractie[length(x_totaal_fractie)]
+        } else {
+          x_totaal_fractie[idx_med]
+        }
+      }
+    }
+  }
+
+  list(
+    d = d,
+    max_fout = max_fout,
+    mediaan_fout = mediaan_fout,
+    modus_fout = x_totaal_fractie[which.max(p_totaal)],
+    gemiddelde_fout = sum(x_totaal_fractie * p_totaal)
+  )
+}
+
+#' @title
+#' Convolutie via directe, lineaire vectorberekening.
+#'
+#' @description
+#' Dit is het tragere, iteratieve alternatief voor de Fast Fourier Transform methode.
+#'
+#' @inheritParams convolutie_montecarlo
+#' @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#'
+#' @importFrom stats dbeta dgamma qgamma
+convolutie_direct <- function(t_uit,
+                              model,
+                              zekerheid,
+                              granulariteit,
+                              totaalgeld_laag,
+                              totaalgeld_fout_hoog,
+                              totaalgeld_algeheel) {
+  n_steekproeven <- nrow(t_uit)
+
+  if (totaalgeld_laag < 0.01) {
+    frac <- totaalgeld_fout_hoog / totaalgeld_algeheel
+    return(
+      list(
+        d = list(x = frac, y = 1),
+        max_fout = frac,
+        mediaan_fout = frac,
+        modus_fout = frac,
+        gemiddelde_fout = frac
+      )
+    )
+  }
+
+  # Bouw kansmassavectoren per stratum.
+  {
+    dx <- totaalgeld_laag / granulariteit
+    p_strata <- list()
+
+    for (i in 1:n_steekproeven) {
+      w_laag <- t_uit$waarde_laag[[i]]
+      n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
+      k_calc <- t_uit$k_laag[[i]]
+
+      if (w_laag > 0) {
+        max_frac <- if (model == "binomiaal") {
+          1
+        } else {
+          qgamma(0.9999, shape = k_calc + 1, rate = n_calc)
+        }
+        x_grens <- max(w_laag, max_frac * w_laag)
+        x_as <- seq(0, x_grens, by = dx)
+
+        if (model == "binomiaal") {
+          p <- dbeta(x_as / w_laag, shape1 = k_calc + 1, shape2 = n_calc - k_calc + 1)
+        } else {
+          p <- dgamma(x_as / w_laag, shape = k_calc + 1, rate = n_calc)
+        }
+
+        p[is.na(p) | is.infinite(p)] <- 0
+        p <- p / sum(p)
+        p_strata[[length(p_strata) + 1]] <- p
+      }
+    }
+  }
+
+  # Paarsgewijze convolutie via de directe iteratieve methode.
+  {
+    if (length(p_strata) > 0) {
+      p_totaal <- p_strata[[1]]
+
+      if (length(p_strata) > 1) {
+        for (j in 2:length(p_strata)) {
+          p_next <- p_strata[[j]]
+          out <- numeric(length(p_totaal) + length(p_next) - 1)
+
+          for (i in seq_along(p_totaal)) {
+            out[i:(i + length(p_next) - 1)] <-
+              out[i:(i + length(p_next) - 1)] + p_totaal[i] * p_next
+          }
+
+          p_totaal <- out
+
+          # Afrondingsfouten netjes opruimen.
+          p_totaal[p_totaal < 0 & abs(p_totaal) < 1e-12] <- 0
+          p_totaal <- p_totaal / sum(p_totaal)
+        }
+      }
+
+      p_totaal <- p_totaal / sum(p_totaal)
+
+      x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
+      x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
+      x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
+
+      dx_fractie <- dx / totaalgeld_algeheel
+      d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
+
+      cum_p <- cumsum(p_totaal)
+
+      idx_max <- which(cum_p >= zekerheid)[1]
+      max_fout <- if (is.na(idx_max)) {
+        x_totaal_fractie[length(x_totaal_fractie)]
+      } else {
+        x_totaal_fractie[idx_max]
+      }
+
+      idx_med <- which(cum_p >= 0.5)[1]
+      mediaan_fout <- if (is.na(idx_med)) {
+        x_totaal_fractie[length(x_totaal_fractie)]
+      } else {
+        x_totaal_fractie[idx_med]
+      }
     }
   }
 

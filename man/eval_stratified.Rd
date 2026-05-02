@@ -8,8 +8,8 @@ eval_stratified(
   steekproeven,
   model = c("binomiaal", "poisson"),
   zekerheid = 0.95,
-  methode = c("FFT", "MonteCarlo"),
-  granulariteit = 10000,
+  methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
+  granulariteit = NULL,
   start = 1,
   vergelijk = TRUE
 )
@@ -40,17 +40,35 @@ Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 \item{zekerheid}{Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
 
 \item{methode}{Methode voor de berekening.
-Keuze uit \code{"FFT"} (standaard) of \code{"MonteCarlo"}.
-\code{"FFT"} wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
-omdat dat dezelfde resultatten geeft ongeacht de startwaarde van de
-toevalsgenerator.
-Keuze uit \code{"FFT"} (standaard, numerieke convolutie via Fast Fourier Transform) of \code{"MonteCarlo"} (stochastische benadering).}
+Keuze uit:
+\itemize{
+\item \code{"direct"}
+\item \code{"FFT"}
+\item \code{"FFT gelijktijdig"} (standaard)
+\item \code{"Monte Carlo"}.
+}
+
+\code{"direct"},
+\code{"FFT"} en
+\code{"FFT gelijktijdig"} zijn deterministische algoritmen.
+en zijn opvolgend meer
+efficiente vormen van hetzelfde convolutie-algoritme.
+\code{"Monte Carlo"} is niet-deterministisch, dus gebaseerd op toeval.
+Dat betekent dat het resultaat ervan afhangt van de startwaarde van de
+R toevalsgenerator, die je kunt opgeven via de parameter \code{start}.}
 
 \item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
-Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
-Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.}
+Bij \code{"direct"}, \code{"FFT"} en \code{"FFT gelijktijdig"},
+is dit het aantal stappen op de
+kanskromme-as.
+Als verstekwaarden geldt voor \code{"direct"}, \code{"FFT"}
+en \code{"FFT gelijktijdig"} 25.000,
+en voor \code{"Monte Carlo"} 10.000.000.}
 
-\item{start}{Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).}
+\item{start}{De vaste startwaarde voor de toevalsgenerator
+(alleen voor MonteCarlo).
+Een startwaarde van 0 betekent dat de startwaarde op de systeemklok,
+is gebaseerd, dus min of meer 'echt' op toeval is gebaseerd.}
 
 \item{vergelijk}{TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd.}
 }

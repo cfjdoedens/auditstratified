@@ -18,13 +18,13 @@
 #' @param model Het statistische model dat gebruikt wordt voor de extrapolatie.
 #'   Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
 #' @param methode Rekenmethode voor evaluatie.
-#'   Keuze uit \code{"FFT"} (standaard) of \code{"MonteCarlo"}.
+#'   Keuze uit \code{"FFT"} (standaard) of \code{"Monte Carlo"}.
 #'   \code{"FFT"} wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
 #'   omdat dat dezelfde resultaten geeft ongeacht de startwaarde van de
 #'   toevalsgenerator.
 #' @param granulariteit Bepaalt de nauwkeurigheid van de berekening.
 #'   Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
-#'   Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.
+#'   Bij \code{"Monte Carlo"} is dit het aantal toevalsiteraties.
 #'
 #' @returns Lijst met antwoorden op vraag 1 en 2.
 #' @importFrom dplyr left_join select
@@ -32,7 +32,7 @@ test_plan_stratified <- function(steekproeven,
                                  totale_materialiteit,
                                  totale_zekerheid = 0.95,
                                  model = c("binomiaal", "poisson"),
-                                 methode = c("FFT", "MonteCarlo"),
+                                 methode = c("FFT", "Monte Carlo"),
                                  granulariteit = 10000) {
   model <- match.arg(model)
   methode <- match.arg(methode)

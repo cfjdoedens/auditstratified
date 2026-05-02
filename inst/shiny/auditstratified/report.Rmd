@@ -26,7 +26,7 @@ Voor deze evaluatie zijn de volgende parameters en instellingen gebruikt:
 * **Granulariteit / Iteraties:** `r format(res$invoer$granulariteit, big.mark = ".", decimal.mark = ",")`
 
 ```{r, results='asis'}
-if (res$invoer$methode == "MonteCarlo") {
+if (res$invoer$methode == "Monte Carlo") {
   cat(paste("* **Startwaarde toevalsgenerator:**", res$invoer$start))
 }
 ```

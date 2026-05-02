@@ -9,8 +9,11 @@ plan_stratified(
   totale_materialiteit,
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
-  methode = c("FFT", "MonteCarlo"),
-  granulariteit = 10000,
+  klim_methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
+  klim_granulariteit = NULL,
+  validatie_methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
+  validatie_granulariteit = NULL,
+  start = 1,
   max_iteraties = 10000
 )
 }
@@ -37,15 +40,45 @@ bestaat uit de volgende kolommen:
 \item{model}{Het statistische model dat gebruikt wordt voor de extrapolatie.
 Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
-\item{methode}{Rekenmethode voor evaluatie.
-Keuze uit \code{"FFT"} (standaard) of \code{"MonteCarlo"}.
-\code{"FFT"} wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
-omdat dat dezelfde resultaten geeft ongeacht de startwaarde van de
-toevalsgenerator.}
+\item{klim_methode}{Methode voor klimdeel van de optimalisatie.
+Keuze uit:
+\itemize{
+\item \code{"direct"}
+\item \code{"FFT"}
+\item \code{"FFT gelijktijdig"} (standaard)
+\item \code{"Monte Carlo"}.
+}
 
-\item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
-Bij \code{"FFT"} is dit het aantal stappen op de kanskromme-as.
-Bij \code{"MonteCarlo"} is dit het aantal toevalsiteraties.}
+\code{"direct"},
+\code{"FFT"} en
+\code{"FFT gelijktijdig"} zijn deterministische algoritmen.
+en zijn opvolgend meer
+efficiente vormen van hetzelfde convolutie-algoritme.
+\code{"Monte Carlo"} is niet-deterministisch, dus gebaseerd op toeval.
+Dat betekent dat het resultaat ervan afhangt van de startwaarde van de
+R toevalsgenerator, die je kunt opgeven via de parameter \code{start}.}
+
+\item{klim_granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
+Bij \code{"direct"}, \code{"FFT"} en \code{"FFT gelijktijdig"},
+is dit het aantal stappen op de
+kanskromme-as.
+Alledrie hebben ze als verstekwaarde 10.000.
+Bij \code{"Monte Carlo"} is dit het aantal toevalsiteraties.
+De verstekwaarde hiervoor is 1.000.000.}
+
+\item{validatie_methode}{Methode voor validatie.
+Heeft dezelfde keuzes als bij klim_methode.}
+
+\item{validatie_granulariteit}{Granulariteit voor validatie.
+Heeft dezelfde keuzes als bij klim_granulariteit.
+Als verstekwaarden geldt voor \code{"direct"}, \code{"FFT"}
+en \code{"FFT gelijktijdig"} 25.000,
+en voor \code{"Monte Carlo"}  10.000.000.}
+
+\item{start}{De vaste startwaarde voor de toevalsgenerator
+(alleen voor Monte Carlo).
+Een startwaarde van 0 betekent dat de startwaarde op de systeemklok,
+is gebaseerd, dus min of meer 'echt' op toeval is gebaseerd.}
 
 \item{max_iteraties}{Limiet voor hoeveel extra steekproefposten
 we willen trekken. Dit beschermt ook tegen een eventuele
@@ -66,7 +99,49 @@ met als attribuut de uiteindelijke
 \code{geplande_max_fout_totaal}.
 }
 \description{
-Deze functie berekent de optimale steekproefomvang (n) en verwachte fout (k)
-voor afzonderlijke strata, zodat deze bij gezamenlijke evaluatie onder
+Deze functie tracht de optimale, dat wil zeggen minimale,
+steekproefomvang (n) en verwachte fout (k)
+voor afzonderlijke strata te berekenen, zodat deze bij gezamenlijke evaluatie onder
 de algehele materialiteit blijven.
+}
+\details{
+Dat optimaliseren gaat via een heuvelklimalgoritme. En wel in drie stappen.
+
+Stap 1.
+Construeren uitgangssituatie.
+We bepalen per stratum het minimum aantal steekproevenposten dat er nodig is
+om gezien de verwachte foutfractie van dat stratum
+onder de materialiteit voor dat stratum te komen.
+
+Stap 2.
+Het eigenlijke klimmen.
+We verhogen steeds voor elk van de strata de steekproefomvang met 1.
+We kijken dan welke verhoging de meeste winst oplevert in de vorm
+van verkleining van de maximale fout. Dat kijken doen we door
+de maximale fout te berekenen via een
+algoritme A. Die verhoging kiezen we dan.
+Daar gaan we mee door tot
+de maximale fout onder de materialiteit is.
+
+Stap 3.
+Valideren.
+We valideren tenslotte eventueel de zo gevonden verdeling van steken
+met een algoritme B.
+
+Voor A en B zijn verschillende keuzen en parameters
+beschikbaar.
+
+De gebruiker kan hier zijn voordeel mee doen door A zo te kiezen dat
+het optimaal (snel en betrouwbaar) is voor het eigenlijke heuvelklimmen en dat B
+optimaal (juist, maar mogelijk trager) is voor het bepalen dat bij de
+gekozen verdeling van steken we inderdaad onder de materialiteit
+uitkomen.
+
+Achtergrond van deze architectuur is dat gedurende het heuvelklimmen
+de verkeerde afslag genomen kan worden. Dat nemen van de
+verkeerde afslag komt dan door numerieke ruis. De kunst is om
+die kans zo klein mogelijk te houden terwijl de computationele kosten
+tegelijk niet de pan uit rijzen.
+
+Er is geprobeerd om redelijk bruikbare verstekwaarden voor A en B te kiezen.
 }
