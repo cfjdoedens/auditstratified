@@ -1,11 +1,12 @@
-# Convolutie via paarsgewijze Fast Fourier Transformatie.
+# Convolutie via directe, lineaire vectorberekening.
 
-Convolutie via paarsgewijze Fast Fourier Transformatie.
+Dit is het tragere, iteratieve alternatief voor de Fast Fourier
+Transform methode.
 
 ## Usage
 
 ``` r
-convolutie_fft(
+convolutie_direct(
   t_uit,
   model,
   zekerheid,

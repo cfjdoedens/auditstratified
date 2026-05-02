@@ -53,6 +53,7 @@ en car, maar ook "-". Dit komt voor in alle gevallen waar de gebruikte
 berekeningen tot een getalswaarde lager dan .55 leiden. Ik citeer uit
 B7.3.4:
 
+
     "Als in de tabel een "-" is opgenomen betekent dat niet dat er geen
      gegevensgerichte werkzaamheden nodig zijn, maar alleen dat de benodigde
      zekerheid niet effectief met een (statistische) steekproef
@@ -61,6 +62,7 @@ B7.3.4:
 Dat je die lagere zekerheden niet met een statistische steekproef kunt
 bereiken lijkt me onjuist. Bovendien eist bijvoorbeeld Standaard 330 van
 de NBA:
+
 
      "Ongeacht de inschatting van de risico's op een afwijking van
       materieel belang dient de accountant gegevensgerichte controles op

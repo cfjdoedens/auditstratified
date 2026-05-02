@@ -6,6 +6,7 @@ Je kunt de ontwikkelversie van auditstratified laden van
 [GitHub](https://github.com/):
 
 ``` r
+
 if (!requireNamespace("devtools", quietly = TRUE)) {
 install.packages("devtools")
 }
@@ -180,6 +181,7 @@ Hier is een voorbeeld van hoe je deze invoer-tibble opbouwt in R,
 gebaseerd op de twee eerder genoemde steekproeven:
 
 ``` r
+
 library(tibble)
 library(auditstratified)
 
@@ -246,6 +248,7 @@ statistische zekerheid volgens het HARo-model direct opvragen met de
 volgende functie:
 
 ``` r
+
 library(auditstratified)
 
 # Bereken de benodigde zekerheid voor IHR=L, IBR=M, CAR=H
@@ -264,6 +267,7 @@ wiskundig opgevuld door virtuele foutloze posten. Bij een materialiteit
 van bijvoorbeeld 2% (0.02) bereken je dit als volgt:
 
 ``` r
+
 
 # Bereken het equivalente aantal foutloze posten
 virtuele_posten <- foutloze_posten_equivalent(ihr = "L", ibr = "M", car = "H", materialiteit = 0.02)
@@ -399,8 +403,12 @@ meer Monte Carlo-simulatie en FFT.
 
 ## All functions
 
+- [`convolutie_direct()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_direct.md)
+  : Convolutie via directe, lineaire vectorberekening.
 - [`convolutie_fft()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_fft.md)
-  : Convolutie via Fast Fourier Transform.
+  : Convolutie via paarsgewijze Fast Fourier Transformatie.
+- [`convolutie_fft_gelijktijdig()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_fft_gelijktijdig.md)
+  : Convolutie via gelijktijdige Fast Fourier Transform.
 - [`convolutie_montecarlo()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_montecarlo.md)
   : Convolutie via Monte Carlo simulatie.
 - [`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md)

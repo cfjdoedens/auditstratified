@@ -1,11 +1,13 @@
-# Convolutie via paarsgewijze Fast Fourier Transformatie.
+# Convolutie via gelijktijdige Fast Fourier Transform.
 
-Convolutie via paarsgewijze Fast Fourier Transformatie.
+Transformeert alle strata tegelijk naar het frequentiedomein,
+vermenigvuldigt ze, en transformeert in een keer terug. Dit vermijdt de
+paarsgewijze iteratielus.
 
 ## Usage
 
 ``` r
-convolutie_fft(
+convolutie_fft_gelijktijdig(
   t_uit,
   model,
   zekerheid,

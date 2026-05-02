@@ -38,7 +38,9 @@ convolutie_montecarlo(
 
 - start:
 
-  Startwaarde voor de toevalsgenerator.
+  Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo). Een
+  startwaarde van 0 betekent dat de startwaarde op de systeemklok, is
+  gebaseerd, dus min of meer 'echt' op toeval is gebaseerd.
 
 - totaalgeld_laag:
 

@@ -13,6 +13,7 @@ Witregels tussen de blokken. Nesting is mogelijk.
 ### Voorbeeld
 
 ``` r
+
 # Valideer de argumentkeuzes
 model <- match.arg(model)
 methode <- match.arg(methode)

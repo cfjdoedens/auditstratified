@@ -2,8 +2,12 @@
 
 ## All functions
 
+- [`convolutie_direct()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_direct.md)
+  : Convolutie via directe, lineaire vectorberekening.
 - [`convolutie_fft()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_fft.md)
-  : Convolutie via Fast Fourier Transform.
+  : Convolutie via paarsgewijze Fast Fourier Transformatie.
+- [`convolutie_fft_gelijktijdig()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_fft_gelijktijdig.md)
+  : Convolutie via gelijktijdige Fast Fourier Transform.
 - [`convolutie_montecarlo()`](https://cfjdoedens.github.io/auditstratified/reference/convolutie_montecarlo.md)
   : Convolutie via Monte Carlo simulatie.
 - [`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md)

@@ -26,7 +26,7 @@ eval_stratified(
   steekproeven,
   model = c("binomiaal", "poisson"),
   zekerheid = 0.95,
-  methode = c("FFT", "MonteCarlo"),
+  methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
   granulariteit = 10000,
   start = 1,
   vergelijk = TRUE
@@ -79,22 +79,30 @@ eval_stratified(
 
 - methode:
 
-  Methode voor de berekening. Keuze uit `"FFT"` (standaard) of
-  `"MonteCarlo"`. `"FFT"` wordt aanbevolen. Deels omdat dat ietsje
-  sneller is, deels omdat dat dezelfde resultatten geeft ongeacht de
-  startwaarde van de toevalsgenerator. Keuze uit `"FFT"` (standaard,
-  numerieke convolutie via Fast Fourier Transform) of `"MonteCarlo"`
-  (stochastische benadering).
+  Methode voor de berekening. Keuze uit `"FFT"` (standaard) `"direct"`,
+  of `"Monte Carlo"`. `"Monte Carlo"` is bij grotere granulariteit (zeg
+  boven 10.000) (veel !) sneller dan `"FFT"`. `"FFT"` is altijd (veel)
+  sneller dan `"direct"` De resultaten van `"FFT"` em `"direct"`, zijn
+  niet afhankelijk van de startwaarde van de randomgenerator.
+  `"Monte Carlo"` is dat wel. Dit mogeljke verschil in uitkomst wordt
+  echter steeds kleiner bij grotere waarden van de `granulariteit`.
+  `"FFT"` wordt aanbevolen omdat dat resultaten geeft die niet
+  afhankelijk zijn van de startwaarde van de toevalsgenerator.
 
 - granulariteit:
 
-  Bepaalt de nauwkeurigheid van de berekening. Bij `"FFT"` is dit het
-  aantal stappen op de kanskromme-as. Bij `"MonteCarlo"` is dit het
-  aantal toevalsiteraties.
+  Bepaalt de nauwkeurigheid van de berekening. Bij `"FFT"` en `"direct"`
+  is dit het aantal stappen op de kanskromme-as. Een goede waarde voor
+  `"FFT"` en `"direct"` is 10.000. Bij `"Monte Carlo"` is dit het aantal
+  toevalsiteraties. Voor `"Monte Carlo"` kun je makkelijk 1.000.000
+  gebruiken.
 
 - start:
 
-  Startwaarde voor de toevalsgenerator (alleen voor MonteCarlo).
+  De vaste startwaarde voor de toevalsgenerator (alleen voor
+  MonteCarlo). Een startwaarde van 0 betekent dat de startwaarde op de
+  systeemklok, is gebaseerd, dus min of meer 'echt' op toeval is
+  gebaseerd.
 
 - vergelijk:
 
