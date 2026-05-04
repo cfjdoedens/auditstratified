@@ -27,7 +27,7 @@ eval_stratified(
   model = c("binomiaal", "poisson"),
   zekerheid = 0.95,
   methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
-  granulariteit = 10000,
+  granulariteit = NULL,
   start = 1,
   vergelijk = TRUE
 )
@@ -79,23 +79,29 @@ eval_stratified(
 
 - methode:
 
-  Methode voor de berekening. Keuze uit `"FFT"` (standaard) `"direct"`,
-  of `"Monte Carlo"`. `"Monte Carlo"` is bij grotere granulariteit (zeg
-  boven 10.000) (veel !) sneller dan `"FFT"`. `"FFT"` is altijd (veel)
-  sneller dan `"direct"` De resultaten van `"FFT"` em `"direct"`, zijn
-  niet afhankelijk van de startwaarde van de randomgenerator.
-  `"Monte Carlo"` is dat wel. Dit mogeljke verschil in uitkomst wordt
-  echter steeds kleiner bij grotere waarden van de `granulariteit`.
-  `"FFT"` wordt aanbevolen omdat dat resultaten geeft die niet
-  afhankelijk zijn van de startwaarde van de toevalsgenerator.
+  Methode voor de berekening. Keuze uit:
+
+  - `"direct"`
+
+  - `"FFT"`
+
+  - `"FFT gelijktijdig"` (standaard)
+
+  - `"Monte Carlo"`.
+
+  `"direct"`, `"FFT"` en `"FFT gelijktijdig"` zijn deterministische
+  algoritmen. en zijn opvolgend meer efficiente vormen van hetzelfde
+  convolutie-algoritme. `"Monte Carlo"` is niet-deterministisch, dus
+  gebaseerd op toeval. Dat betekent dat het resultaat ervan afhangt van
+  de startwaarde van de R toevalsgenerator, die je kunt opgeven via de
+  parameter `start`.
 
 - granulariteit:
 
-  Bepaalt de nauwkeurigheid van de berekening. Bij `"FFT"` en `"direct"`
-  is dit het aantal stappen op de kanskromme-as. Een goede waarde voor
-  `"FFT"` en `"direct"` is 10.000. Bij `"Monte Carlo"` is dit het aantal
-  toevalsiteraties. Voor `"Monte Carlo"` kun je makkelijk 1.000.000
-  gebruiken.
+  Bepaalt de nauwkeurigheid van de berekening. Bij `"direct"`, `"FFT"`
+  en `"FFT gelijktijdig"`, is dit het aantal stappen op de
+  kanskromme-as. Als verstekwaarden geldt voor `"direct"`, `"FFT"` en
+  `"FFT gelijktijdig"` 25.000, en voor `"Monte Carlo"` 10.000.000.
 
 - start:
 

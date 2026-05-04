@@ -14,9 +14,9 @@ plan_stratified(
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
   klim_methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
-  klim_granulariteit = 10000,
+  klim_granulariteit = NULL,
   validatie_methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
-  validatie_granulariteit = 10000,
+  validatie_granulariteit = NULL,
   start = 1,
   max_iteraties = 10000
 )
