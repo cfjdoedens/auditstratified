@@ -7,7 +7,9 @@ on:
 
 name: R-CMD-check
 
-permissions: read-all
+permissions:
+  contents: read
+  packages: read
 
 jobs:
   R-CMD-check:

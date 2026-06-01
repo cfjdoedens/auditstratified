@@ -6,8 +6,9 @@ utils::globalVariables(c("x_geld", "y_dichtheid", "gebied"))
 #' @returns Een ggplot2 object.
 #' @export
 #' @importFrom ggplot2 ggplot aes geom_area geom_line geom_vline annotate
-#'   scale_x_continuous scale_fill_manual scale_color_manual
-#'   labs theme_minimal theme_void theme element_text element_blank guide_legend
+#' @importFrom ggplot2 scale_x_continuous scale_fill_manual scale_color_manual
+#' @importFrom ggplot2 labs theme_minimal theme_void theme element_text
+#' @importFrom ggplot2 element_blank guide_legend
 #' @importFrom dplyr mutate case_when
 #' @importFrom stats setNames
 plot_kanskromme <- function(res) {

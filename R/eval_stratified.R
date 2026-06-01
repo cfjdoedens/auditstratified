@@ -112,7 +112,7 @@ eval_stratified <-
            granulariteit = NULL, # Verstekwaarde bepalen we in functie zelf.
            start = 1,
            vergelijk = TRUE) {
-    # Valideer en bepaal de argumentkeuzes.
+    # Bepaal en valideer de argumentkeuzes.
     model <- match.arg(model)
     methode <- match.arg(methode)
 
@@ -124,7 +124,7 @@ eval_stratified <-
     {
       stopifnot(is_tibble(steekproeven))
 
-      # Strikte controle op alle vereiste kolommen
+      # Strikte controle op alle vereiste kolommen.
       stopifnot("naam" %in% colnames(steekproeven))
       stopifnot("waarde_laag" %in% colnames(steekproeven))
       stopifnot("n_laag" %in% colnames(steekproeven))
@@ -140,7 +140,7 @@ eval_stratified <-
       stopifnot("waarde_hoog" %in% colnames(steekproeven))
       stopifnot("waarde_populatie" %in% colnames(steekproeven))
 
-      # Inlezen van de variabelen
+      # Inlezen van de variabelen.
       naam <- steekproeven |> pull("naam")
       waarde_laag <- steekproeven |> pull("waarde_laag")
       n_laag <- steekproeven |> pull("n_laag")
@@ -156,7 +156,7 @@ eval_stratified <-
       waarde_hoog <- steekproeven |> pull("waarde_hoog")
       waarde_populatie <- steekproeven |> pull("waarde_populatie")
 
-      # Basiscontroles
+      # Basiscontroles.
       {
         len_naam <- length(naam)
         stopifnot(len_naam > 0)
@@ -197,7 +197,7 @@ eval_stratified <-
           )
         )
       }
-    }
+      }
 
     # Bepaal totaal geldswaarde, inclusief het 100%-getoetste deel.
     totaalgeld_laag <- sum(waarde_laag)
@@ -226,6 +226,7 @@ eval_stratified <-
           ~ extra_foutloze_posten,
           ~ toch_fouten,
           ~ mw_fout,
+          ~ min_fout,
           ~ max_fout
         )
 
@@ -261,6 +262,7 @@ eval_stratified <-
             ) && steekproeven$k_laag[[i]] > 0
           ),
           mw_fout = NA,
+          min_fout = NA,
           max_fout = NA
         )
       }
@@ -311,6 +313,7 @@ eval_stratified <-
         )
 
       d <- conv$d
+      min_fout_convolutie <- conv$min_fout
       max_fout_convolutie <- conv$max_fout
       mediaan_fout_convolutie <- conv$mediaan_fout
       modus_fout_convolutie <- conv$modus_fout
@@ -320,8 +323,10 @@ eval_stratified <-
     # Ter vergelijking: los en als1.
     {
       mw_fout_los <- NA
+      min_fout_los <- NA
       max_fout_los <- NA
       mw_fout_als1 <- NA
+      min_fout_als1 <- NA
       max_fout_als1 <- NA
 
       if (vergelijk) {
@@ -335,48 +340,59 @@ eval_stratified <-
         )
         t_uit <- verg$t_uit
         mw_fout_los <- verg$mw_fout_los
+        min_fout_los <- verg$min_fout_los
         max_fout_los <- verg$max_fout_los
         mw_fout_als1 <- verg$mw_fout_als1
+        min_fout_als1 <- verg$min_fout_als1
         max_fout_als1 <- verg$max_fout_als1
       }
     }
 
-    invoer <- list(
-      steekproeven = steekproeven,
-      model = model,
-      zekerheid = zekerheid,
-      methode = methode,
-      granulariteit = granulariteit,
-      start = start,
-      vergelijk = vergelijk
-    )
+    # Resultaat opstellen.
+    {
+      invoer <- list(
+        steekproeven = steekproeven,
+        model = model,
+        zekerheid = zekerheid,
+        methode = methode,
+        granulariteit = granulariteit,
+        start = start,
+        vergelijk = vergelijk
+      )
 
-    list(
-      kanskromme = d,
-      populatie_totaal = totaalgeld_algeheel,
-      modus_fout_convolutie = modus_fout_convolutie,
-      modus_fout_convolutie_geld = modus_fout_convolutie * totaalgeld_algeheel,
-      mediaan_fout_convolutie = mediaan_fout_convolutie,
-      mediaan_fout_convolutie_geld = mediaan_fout_convolutie * totaalgeld_algeheel,
-      gemiddelde_fout_convolutie = gemiddelde_fout_convolutie,
-      gemiddelde_fout_convolutie_geld = gemiddelde_fout_convolutie * totaalgeld_algeheel,
-      mw_fout_convolutie = modus_fout_convolutie,
-      mw_fout_convolutie_geld = modus_fout_convolutie * totaalgeld_algeheel,
-      max_fout_convolutie = max_fout_convolutie,
-      max_fout_convolutie_geld = max_fout_convolutie * totaalgeld_algeheel,
-      vergelijk_met = list(
-        mw_fout_los = mw_fout_los,
-        mw_fout_los_geld = mw_fout_los * totaalgeld_algeheel,
-        max_fout_los = max_fout_los,
-        max_fout_los_geld = max_fout_los * totaalgeld_algeheel,
-        mw_fout_als1 = mw_fout_als1,
-        mw_fout_als1_geld = mw_fout_als1 * totaalgeld_algeheel,
-        max_fout_als1 = max_fout_als1,
-        max_fout_als1_geld = max_fout_als1 * totaalgeld_algeheel
-      ),
-      steekproeven = t_uit,
-      invoer = invoer
-    )
+      list(
+        kanskromme = d,
+        populatie_totaal = totaalgeld_algeheel,
+        modus_fout_convolutie = modus_fout_convolutie,
+        modus_fout_convolutie_geld = modus_fout_convolutie * totaalgeld_algeheel,
+        mediaan_fout_convolutie = mediaan_fout_convolutie,
+        mediaan_fout_convolutie_geld = mediaan_fout_convolutie * totaalgeld_algeheel,
+        gemiddelde_fout_convolutie = gemiddelde_fout_convolutie,
+        gemiddelde_fout_convolutie_geld = gemiddelde_fout_convolutie * totaalgeld_algeheel,
+        mw_fout_convolutie = modus_fout_convolutie,
+        mw_fout_convolutie_geld = modus_fout_convolutie * totaalgeld_algeheel,
+        min_fout_convolutie = min_fout_convolutie,
+        min_fout_convolutie_geld = min_fout_convolutie * totaalgeld_algeheel,
+        max_fout_convolutie = max_fout_convolutie,
+        max_fout_convolutie_geld = max_fout_convolutie * totaalgeld_algeheel,
+        vergelijk_met = list(
+          mw_fout_los = mw_fout_los,
+          mw_fout_los_geld = mw_fout_los * totaalgeld_algeheel,
+          min_fout_los = min_fout_los,
+          min_fout_los_geld = min_fout_los * totaalgeld_algeheel,
+          max_fout_los = max_fout_los,
+          max_fout_los_geld = max_fout_los * totaalgeld_algeheel,
+          mw_fout_als1 = mw_fout_als1,
+          mw_fout_als1_geld = mw_fout_als1 * totaalgeld_algeheel,
+          min_fout_als1 = min_fout_als1,
+          min_fout_als1_geld = min_fout_als1 * totaalgeld_algeheel,
+          max_fout_als1 = max_fout_als1,
+          max_fout_als1_geld = max_fout_als1 * totaalgeld_algeheel
+        ),
+        steekproeven = t_uit,
+        invoer = invoer
+      )
+    }
   }
 
 
@@ -393,7 +409,7 @@ eval_stratified <-
 #' @param totaalgeld_laag Totale geldswaarde van het laagstratum.
 #' @param totaalgeld_fout_hoog Totale fout in het hoogstratum.
 #' @param totaalgeld_algeheel Totale geldswaarde van de gehele populatie.
-#' @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#' @returns Een lijst met d, min_fout, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
 #'
 #' @importFrom stats rbeta rgamma density quantile
 convolutie_montecarlo <- function(t_uit,
@@ -444,13 +460,14 @@ convolutie_montecarlo <- function(t_uit,
                  from = 0,
                  to = bovengrens)
 
-    # Normaliseren
+    # Normaliseren.
     oppervlakte <- sum(d$y) * (d$x[2] - d$x[1])
     d$y <- d$y / oppervlakte
   }
 
   list(
     d = d,
+    min_fout = unname(quantile(convolutie, probs = 1 - zekerheid)),
     max_fout = unname(quantile(convolutie, probs = zekerheid)),
     mediaan_fout = unname(quantile(convolutie, probs = 0.5)),
     modus_fout = d$x[which.max(d$y)],
@@ -463,7 +480,7 @@ convolutie_montecarlo <- function(t_uit,
 #' Convolutie via paarsgewijze Fast Fourier Transformatie.
 #'
 #' @inheritParams convolutie_montecarlo
-#' @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#' @returns Een lijst met d, min_fout, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
 #'
 #' @importFrom stats dbeta dgamma qgamma convolve
 convolutie_fft <- function(t_uit,
@@ -481,6 +498,7 @@ convolutie_fft <- function(t_uit,
     return(
       list(
         d = list(x = frac, y = 1),
+        min_fout = frac,
         max_fout = frac,
         mediaan_fout = frac,
         modus_fout = frac,
@@ -502,7 +520,7 @@ convolutie_fft <- function(t_uit,
       if (w_laag > 0) {
         # Bepaal hoe ver de as moet doorlopen. Binomiaal is max w_laag.
         # Poisson kan daar theoretisch overheen gaan,
-        # dus nemen we een veilige grens via qgamma.
+        # Dus nemen we een veilige grens via qgamma.
         max_frac <- if (model == "binomiaal")
           1
         else
@@ -537,25 +555,32 @@ convolutie_fft <- function(t_uit,
 
       p_totaal <- p_totaal / sum(p_totaal)
 
-      # Bouw de totale assen op
+      # Bouw de totale assen op.
       x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
       x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
       x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
 
-      # Omzetten naar kansdichtheid t.o.v. de fractie-as
+      # Omzetten naar kansdichtheid t.o.v. de fractie-as.
       dx_fractie <- dx / totaalgeld_algeheel
       d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
 
       cum_p <- cumsum(p_totaal)
 
-      # Max fout (zekerheid)
+      # Bereken de minimale fout.
+      idx_min <- which(cum_p >= 1 - zekerheid)[1]
+      min_fout <- if (is.na(idx_min))
+        x_totaal_fractie[1]
+      else
+        x_totaal_fractie[idx_min]
+
+      # Bereken de maximale fout.
       idx_max <- which(cum_p >= zekerheid)[1]
       max_fout <- if (is.na(idx_max))
         x_totaal_fractie[length(x_totaal_fractie)]
       else
         x_totaal_fractie[idx_max]
 
-      # Mediaan
+      # Bereken de mediaan.
       idx_med <- which(cum_p >= 0.5)[1]
       mediaan_fout <- if (is.na(idx_med))
         x_totaal_fractie[length(x_totaal_fractie)]
@@ -566,6 +591,7 @@ convolutie_fft <- function(t_uit,
 
   list(
     d = d,
+    min_fout = min_fout,
     max_fout = max_fout,
     mediaan_fout = mediaan_fout,
     modus_fout = x_totaal_fractie[which.max(p_totaal)],
@@ -582,7 +608,7 @@ convolutie_fft <- function(t_uit,
 #' Dit vermijdt de paarsgewijze iteratielus.
 #'
 #' @inheritParams convolutie_montecarlo
-#' @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#' @returns Een lijst met d, min_fout, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
 #'
 #' @importFrom stats dbeta dgamma qgamma fft nextn
 convolutie_fft_gelijktijdig <- function(t_uit,
@@ -599,6 +625,7 @@ convolutie_fft_gelijktijdig <- function(t_uit,
     return(
       list(
         d = list(x = frac, y = 1),
+        min_fout = frac,
         max_fout = frac,
         mediaan_fout = frac,
         modus_fout = frac,
@@ -607,7 +634,7 @@ convolutie_fft_gelijktijdig <- function(t_uit,
     )
   }
 
-  # bouw kansmassavectoren per stratum.
+  # Bouw kansmassavectoren per stratum.
   {
     dx <- totaalgeld_laag / granulariteit
     p_strata <- list()
@@ -641,74 +668,70 @@ convolutie_fft_gelijktijdig <- function(t_uit,
     }
   }
 
-  # gelijktijdige convolutie via zero-padding en fft.
+  # Gelijktijdige convolutie via zero-padding en fft.
   {
     if (length(p_strata) > 0) {
       if (length(p_strata) == 1) {
         p_totaal <- p_strata[[1]]
       } else {
 
-        # bepaal de benodigde rekentotaallengte en de geoptimaliseerde pad-lengte.
-        {
-          totale_lengte <- sum(sapply(p_strata, length)) - length(p_strata) + 1
-          pad_lengte <- nextn(totale_lengte)
+        # Bepaal de benodigde rekentotaallengte en de geoptimaliseerde pad-lengte.
+        totale_lengte <- sum(sapply(p_strata, length)) - length(p_strata) + 1
+        pad_lengte <- nextn(totale_lengte)
+
+        # Transformeer naar frequentiedomein en vermenigvuldig alle vectoren.
+        fft_product <- rep(1 + 0i, pad_lengte)
+        for (p in p_strata) {
+          p_padded <- c(p, rep(0, pad_lengte - length(p)))
+          fft_product <- fft_product * fft(p_padded)
         }
 
-        # transformeer naar frequentiedomein en vermenigvuldig alle vectoren.
-        {
-          fft_product <- rep(1 + 0i, pad_lengte)
-          for (p in p_strata) {
-            p_padded <- c(p, rep(0, pad_lengte - length(p)))
-            fft_product <- fft_product * fft(p_padded)
-          }
-        }
+        # Transformeer terug naar tijdsdomein en snijd de padding af.
+        p_totaal <- Re(fft(fft_product, inverse = TRUE)) / pad_lengte
+        p_totaal <- p_totaal[1:totale_lengte]
 
-        # transformeer terug naar tijdsdomein en snijd de padding af.
-        {
-          p_totaal <- Re(fft(fft_product, inverse = TRUE)) / pad_lengte
-          p_totaal <- p_totaal[1:totale_lengte]
-        }
-
-        # verwijder afrondingsruis en normaliseer de kansmassa.
-        {
-          p_totaal[p_totaal < 0 & abs(p_totaal) < 1e-12] <- 0
-          p_totaal <- p_totaal / sum(p_totaal)
-        }
+        # Verwijder afrondingsruis en normaliseer de kansmassa.
+        p_totaal[p_totaal < 0 & abs(p_totaal) < 1e-12] <- 0
+        p_totaal <- p_totaal / sum(p_totaal)
       }
 
-      # bereken de totale assen en parameters.
-      {
-        x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
-        x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
-        x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
+      # Bereken de totale assen en parameters.
+      x_totaal_laag <- seq(0, by = dx, length.out = length(p_totaal))
+      x_totaal_geld <- x_totaal_laag + totaalgeld_fout_hoog
+      x_totaal_fractie <- x_totaal_geld / totaalgeld_algeheel
 
-        dx_fractie <- dx / totaalgeld_algeheel
-        d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
+      dx_fractie <- dx / totaalgeld_algeheel
+      d <- list(x = x_totaal_fractie, y = p_totaal / dx_fractie)
 
-        cum_p <- cumsum(p_totaal)
+      cum_p <- cumsum(p_totaal)
+
+      # Bepaal de kwantielen voor minimale, maximale en mediane fout.
+      idx_min <- which(cum_p >= 1 - zekerheid)[1]
+      min_fout <- if (is.na(idx_min)) {
+        x_totaal_fractie[1]
+      } else {
+        x_totaal_fractie[idx_min]
       }
 
-      # bepaal de kwantielen voor maximale en mediane fout.
-      {
-        idx_max <- which(cum_p >= zekerheid)[1]
-        max_fout <- if (is.na(idx_max)) {
-          x_totaal_fractie[length(x_totaal_fractie)]
-        } else {
-          x_totaal_fractie[idx_max]
-        }
+      idx_max <- which(cum_p >= zekerheid)[1]
+      max_fout <- if (is.na(idx_max)) {
+        x_totaal_fractie[length(x_totaal_fractie)]
+      } else {
+        x_totaal_fractie[idx_max]
+      }
 
-        idx_med <- which(cum_p >= 0.5)[1]
-        mediaan_fout <- if (is.na(idx_med)) {
-          x_totaal_fractie[length(x_totaal_fractie)]
-        } else {
-          x_totaal_fractie[idx_med]
-        }
+      idx_med <- which(cum_p >= 0.5)[1]
+      mediaan_fout <- if (is.na(idx_med)) {
+        x_totaal_fractie[length(x_totaal_fractie)]
+      } else {
+        x_totaal_fractie[idx_med]
       }
     }
   }
 
   list(
     d = d,
+    min_fout = min_fout,
     max_fout = max_fout,
     mediaan_fout = mediaan_fout,
     modus_fout = x_totaal_fractie[which.max(p_totaal)],
@@ -723,7 +746,7 @@ convolutie_fft_gelijktijdig <- function(t_uit,
 #' Dit is het tragere, iteratieve alternatief voor de Fast Fourier Transform methode.
 #'
 #' @inheritParams convolutie_montecarlo
-#' @returns Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+#' @returns Een lijst met d, min_fout, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
 #'
 #' @importFrom stats dbeta dgamma qgamma
 convolutie_direct <- function(t_uit,
@@ -740,6 +763,7 @@ convolutie_direct <- function(t_uit,
     return(
       list(
         d = list(x = frac, y = 1),
+        min_fout = frac,
         max_fout = frac,
         mediaan_fout = frac,
         modus_fout = frac,
@@ -814,6 +838,15 @@ convolutie_direct <- function(t_uit,
 
       cum_p <- cumsum(p_totaal)
 
+      # Bereken de minimale fout.
+      idx_min <- which(cum_p >= 1 - zekerheid)[1]
+      min_fout <- if (is.na(idx_min)) {
+        x_totaal_fractie[1]
+      } else {
+        x_totaal_fractie[idx_min]
+      }
+
+      # Bereken de maximale fout.
       idx_max <- which(cum_p >= zekerheid)[1]
       max_fout <- if (is.na(idx_max)) {
         x_totaal_fractie[length(x_totaal_fractie)]
@@ -821,6 +854,7 @@ convolutie_direct <- function(t_uit,
         x_totaal_fractie[idx_max]
       }
 
+      # Bereken de mediaan.
       idx_med <- which(cum_p >= 0.5)[1]
       mediaan_fout <- if (is.na(idx_med)) {
         x_totaal_fractie[length(x_totaal_fractie)]
@@ -832,6 +866,7 @@ convolutie_direct <- function(t_uit,
 
   list(
     d = d,
+    min_fout = min_fout,
     max_fout = max_fout,
     mediaan_fout = mediaan_fout,
     modus_fout = x_totaal_fractie[which.max(p_totaal)],
@@ -844,7 +879,7 @@ convolutie_direct <- function(t_uit,
 #' Vergelijkingsmethoden: los (per stratum) en als1 (alles samengevoegd).
 #'
 #' @details
-#' Vult ook de kolommen mw_fout en max_fout in t_uit per stratum.
+#' Vult ook de kolommen mw_fout, min_fout en max_fout in t_uit per stratum.
 #'
 #' @param t_uit Verrijkte steekproef-tibble.
 #' @param model "binomiaal" of "poisson".
@@ -852,7 +887,7 @@ convolutie_direct <- function(t_uit,
 #' @param totaalgeld_laag Totale geldswaarde van het laagstratum.
 #' @param totaalgeld_fout_hoog Totale fout in het hoogstratum.
 #' @param totaalgeld_algeheel Totale geldswaarde van de gehele populatie.
-#' @returns Een lijst met t_uit, mw_fout_los, max_fout_los, mw_fout_als1, max_fout_als1.
+#' @returns Een lijst met t_uit, mw_fout_los, min_fout_los, max_fout_los, mw_fout_als1, min_fout_als1, max_fout_als1.
 #
 #' @importFrom stats qbeta qgamma
 vergelijk_los_en_als1 <- function(t_uit,
@@ -863,7 +898,7 @@ vergelijk_los_en_als1 <- function(t_uit,
                                   totaalgeld_algeheel) {
   n_steekproeven <- nrow(t_uit)
 
-  # LOS: per stratum apart extrapoleren, dan gewogen optellen.
+  # Los: per stratum apart extrapoleren, dan gewogen optellen.
   {
     for (i in 1:n_steekproeven) {
       n_calc <- t_uit$n_laag[[i]] + t_uit$extra_foutloze_posten[[i]]
@@ -871,40 +906,49 @@ vergelijk_los_en_als1 <- function(t_uit,
 
       t_uit$mw_fout[[i]] <- k_calc / n_calc
       if (model == "binomiaal") {
+        t_uit$min_fout[[i]] <- qbeta(1 - zekerheid, k_calc + 1, n_calc - k_calc + 1)
         t_uit$max_fout[[i]] <- qbeta(zekerheid, k_calc + 1, n_calc - k_calc + 1)
       } else if (model == "poisson") {
+        t_uit$min_fout[[i]] <- qgamma(1 - zekerheid, shape = k_calc + 1, rate = n_calc)
         t_uit$max_fout[[i]] <- qgamma(zekerheid, shape = k_calc + 1, rate = n_calc)
       }
     }
 
     mw_fout_los_geld <- sum(t_uit$mw_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
+    min_fout_los_geld <- sum(t_uit$min_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
     max_fout_los_geld <- sum(t_uit$max_fout * t_uit$waarde_laag) + totaalgeld_fout_hoog
 
     mw_fout_los <- mw_fout_los_geld / totaalgeld_algeheel
+    min_fout_los <- min_fout_los_geld / totaalgeld_algeheel
     max_fout_los <- max_fout_los_geld / totaalgeld_algeheel
   }
 
-  # ALS1: alle strata samenvoegen alsof het 1 steekproef is.
+  # Als1: alle strata samenvoegen alsof het 1 steekproef is.
   {
     n_calc_als1 <- sum(t_uit$n_laag) + sum(t_uit$extra_foutloze_posten)
     k_calc_als1 <- sum(t_uit$k_laag)
 
     mw_fout_als1_laag <- k_calc_als1 / n_calc_als1
     if (model == "binomiaal") {
+      min_fout_als1_laag <- qbeta(1 - zekerheid, k_calc_als1 + 1, n_calc_als1 - k_calc_als1 + 1)
       max_fout_als1_laag <- qbeta(zekerheid, k_calc_als1 + 1, n_calc_als1 - k_calc_als1 + 1)
     } else if (model == "poisson") {
+      min_fout_als1_laag <- qgamma(1 - zekerheid, shape = k_calc_als1 + 1, rate = n_calc_als1)
       max_fout_als1_laag <- qgamma(zekerheid, shape = k_calc_als1 + 1, rate = n_calc_als1)
     }
 
     mw_fout_als1 <- (mw_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
+    min_fout_als1 <- (min_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
     max_fout_als1 <- (max_fout_als1_laag * totaalgeld_laag + totaalgeld_fout_hoog) / totaalgeld_algeheel
   }
 
   list(
     t_uit = t_uit,
     mw_fout_los = mw_fout_los,
+    min_fout_los = min_fout_los,
     max_fout_los = max_fout_los,
     mw_fout_als1 = mw_fout_als1,
+    min_fout_als1 = min_fout_als1,
     max_fout_als1 = max_fout_als1
   )
 }

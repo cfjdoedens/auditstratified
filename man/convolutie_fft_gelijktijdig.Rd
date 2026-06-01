@@ -30,7 +30,7 @@ convolutie_fft_gelijktijdig(
 \item{totaalgeld_algeheel}{Totale geldswaarde van de gehele populatie.}
 }
 \value{
-Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+Een lijst met d, min_fout, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
 }
 \description{
 Transformeert alle strata tegelijk naar het frequentiedomein,

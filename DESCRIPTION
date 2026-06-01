@@ -20,7 +20,6 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
     drawsneeded,
     dplyr,
@@ -36,3 +35,4 @@ Remotes:
     cfjdoedens/drawsneeded
 URL: https://github.com/cfjdoedens/auditstratified, https://cfjdoedens.github.io/auditstratified/
 BugReports: https://github.com/cfjdoedens/auditstratified/issues
+Config/roxygen2/version: 8.0.0
