@@ -50,4 +50,5 @@ convolutie_direct(
 
 ## Value
 
-Een lijst met d, max_fout, mediaan_fout, modus_fout, gemiddelde_fout.
+Een lijst met d, min_fout, max_fout, mediaan_fout, modus_fout,
+gemiddelde_fout.

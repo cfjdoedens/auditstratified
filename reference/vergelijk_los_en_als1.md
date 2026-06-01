@@ -43,9 +43,9 @@ vergelijk_los_en_als1(
 
 ## Value
 
-Een lijst met t_uit, mw_fout_los, max_fout_los, mw_fout_als1,
-max_fout_als1.
+Een lijst met t_uit, mw_fout_los, min_fout_los, max_fout_los,
+mw_fout_als1, min_fout_als1, max_fout_als1.
 
 ## Details
 
-Vult ook de kolommen mw_fout en max_fout in t_uit per stratum.
+Vult ook de kolommen mw_fout, min_fout en max_fout in t_uit per stratum.
