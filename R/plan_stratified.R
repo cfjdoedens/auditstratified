@@ -74,7 +74,7 @@
 #'   \code{"direct"},
 #'   \code{"FFT"} en
 #'   \code{"FFT gelijktijdig"} zijn deterministische algoritmen.
-#'   en zijn opvolgend meer
+#'   En zijn opvolgend meer
 #'   efficiente vormen van hetzelfde convolutie-algoritme.
 #'   \code{"Monte Carlo"} is niet-deterministisch, dus gebaseerd op toeval.
 #'   Dat betekent dat het resultaat ervan afhangt van de startwaarde van de
@@ -95,7 +95,7 @@
 #'   en voor \code{"Monte Carlo"}  10.000.000.
 #' @param start De vaste startwaarde voor de toevalsgenerator
 #'   (alleen voor Monte Carlo).
-#'   Een startwaarde van 0 betekent dat de startwaarde op de systeemklok,
+#'   Een startwaarde of 0 betekent dat de startwaarde op de systeemklok,
 #'   is gebaseerd, dus min of meer 'echt' op toeval is gebaseerd.
 #' @param max_iteraties Limiet voor hoeveel extra steekproefposten
 #'   we willen trekken. Dit beschermt ook tegen een eventuele
@@ -123,18 +123,18 @@ plan_stratified <- function(steekproeven,
                             model = c("binomiaal", "poisson"),
                             klim_methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
                             klim_granulariteit = NULL,
-                            # Verstekwaarde bepalen we in functie zelf.
                             validatie_methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
                             validatie_granulariteit = NULL,
-                            # Verstekwaarde bepalen we in functie zelf.
                             start = 1,
                             max_iteraties = 1e4) {
   # Valideer en bepaal de argumentkeuzes.
-  model <- match.arg(model)
-  klim_methode <- match.arg(klim_methode)
-  validatie_methode <- match.arg(validatie_methode)
+  {
+    model <- match.arg(model)
+    klim_methode <- match.arg(klim_methode)
+    validatie_methode <- match.arg(validatie_methode)
+  }
 
-  # Bepaal dynamische verstekwaarden.
+  # Bepaal dynamische verstekwaarden voor de granulariteit.
   {
     klim_granulariteit <-
       klim_granulariteit %||% ifelse(klim_methode == "Monte Carlo", 1e6, 1e4)
@@ -142,23 +142,25 @@ plan_stratified <- function(steekproeven,
       validatie_granulariteit %||% ifelse(klim_methode == "Monte Carlo", 1e7, 25e3)
   }
 
-  # Controle invoer.
-  stopifnot(is_tibble(steekproeven)) # Verdere controle komt nog.
-  stopifnot(is.numeric(totale_materialiteit))
-  stopifnot(0 < totale_materialiteit)
-  stopifnot(totale_materialiteit < 1)
-  stopifnot(is.numeric(totale_zekerheid))
-  stopifnot(0 < totale_zekerheid)
-  stopifnot(totale_zekerheid < 1)
-  stopifnot(is.numeric(klim_granulariteit))
-  stopifnot(0 < klim_granulariteit)
-  stopifnot(is.numeric(validatie_granulariteit))
-  stopifnot(0 < validatie_granulariteit)
-  stopifnot(is.numeric(start))
-  stopifnot(is.numeric(max_iteraties))
-  stopifnot(0 < max_iteraties)
+  # Valideer de basistypes en waarden van de algemene parameters.
+  {
+    stopifnot(is_tibble(steekproeven))
+    stopifnot(is.numeric(totale_materialiteit))
+    stopifnot(0 < totale_materialiteit)
+    stopifnot(totale_materialiteit < 1)
+    stopifnot(is.numeric(totale_zekerheid))
+    stopifnot(0 < totale_zekerheid)
+    stopifnot(totale_zekerheid < 1)
+    stopifnot(is.numeric(klim_granulariteit))
+    stopifnot(0 < klim_granulariteit)
+    stopifnot(is.numeric(validatie_granulariteit))
+    stopifnot(0 < validatie_granulariteit)
+    stopifnot(is.numeric(start))
+    stopifnot(is.numeric(max_iteraties))
+    stopifnot(0 < max_iteraties)
+  }
 
-  # Verdere controle steekproeven.
+  # Controleer op de aanwezigheid van alle verplichte kolommen in de invoertibble.
   {
     kols_steekproeven <- c(
       "naam",
@@ -179,7 +181,10 @@ plan_stratified <- function(steekproeven,
         paste(ontbrekend, collapse = ", ")
       ))
     }
+  }
 
+  # Controleer of de namen van de strata uniek zijn om verwarring te voorkomen.
+  {
     if (any(duplicated(steekproeven$naam))) {
       dubbele <- unique(steekproeven$naam[duplicated(steekproeven$naam)])
       stop(
@@ -189,201 +194,203 @@ plan_stratified <- function(steekproeven,
         )
       )
     }
+  }
 
-    # controle op datatypes en waarden-domeinen van de kolommen.
-    {
-      if (!is.character(steekproeven$naam)) {
-        stop("Planningsfout: 'naam' moet tekst (character) zijn.")
-      }
-
-      if (!is.numeric(steekproeven$waarde_laag) ||
-          any(steekproeven$waarde_laag < 0)) {
-        stop("Planningsfout: 'waarde_laag' moet numeriek en >= 0 zijn.")
-      }
-
-      if (!is.numeric(steekproeven$verwachte_foutfractie) ||
-          any(
-            steekproeven$verwachte_foutfractie < 0 |
-            steekproeven$verwachte_foutfractie >= 1
-          )) {
-        stop("Planningsfout: 'verwachte_foutfractie' moet numeriek, >= 0 en < 1 zijn.")
-      }
-
-      if (any(!steekproeven$ihr %in% c("H", "M", "L"))) {
-        stop("Planningsfout: 'ihr' mag alleen 'H', 'M' of 'L' bevatten.")
-      }
-
-      if (any(!steekproeven$ibr %in% c("H", "M", "L"))) {
-        stop("Planningsfout: 'ibr' mag alleen 'H', 'M' of 'L' bevatten.")
-      }
-
-      if (any(!steekproeven$car %in% c("H", "M", "L"))) {
-        stop("Planningsfout: 'car' mag alleen 'H', 'M' of 'L' bevatten.")
-      }
-
-      if (!is.numeric(steekproeven$materialiteit) ||
-          any(steekproeven$materialiteit <= 0 |
-              steekproeven$materialiteit >= 1)) {
-        stop("Planningsfout: 'materialiteit' per stratum moet numeriek, > 0 en < 1 zijn.")
-      }
-
-      if (!is.numeric(steekproeven$fout_hoog) ||
-          any(steekproeven$fout_hoog < 0)) {
-        stop("Planningsfout: 'fout_hoog' moet numeriek en >= 0 zijn.")
-      }
-
-      if (!is.numeric(steekproeven$goed_hoog) ||
-          any(steekproeven$goed_hoog < 0)) {
-        stop("Planningsfout: 'goed_hoog' moet numeriek en >= 0 zijn.")
-      }
-
-      if (!is.numeric(steekproeven$n_hoog) ||
-          any(steekproeven$n_hoog < 0)) {
-        stop("Planningsfout: 'n_hoog' moet numeriek en >= 0 zijn.")
-      }
+  # Controleer de datatypes en toegestane domeinen per afzonderlijke kolom.
+  {
+    if (!is.character(steekproeven$naam)) {
+      stop("Planningsfout: 'naam' moet tekst (character) zijn.")
     }
 
+    if (!is.numeric(steekproeven$waarde_laag) ||
+        any(steekproeven$waarde_laag < 0)) {
+      stop("Planningsfout: 'waarde_laag' moet numeriek en >= 0 zijn.")
+    }
 
-    # Vooraf validatie van onmogelijke situaties.
-    {
-      totale_populatie <- sum(steekproeven$waarde_laag + steekproeven$fout_hoog + steekproeven$goed_hoog)
+    if (!is.numeric(steekproeven$verwachte_foutfractie) ||
+        any(
+          steekproeven$verwachte_foutfractie < 0 |
+          steekproeven$verwachte_foutfractie >= 1
+        )) {
+      stop("Planningsfout: 'verwachte_foutfractie' moet numeriek, >= 0 en < 1 zijn.")
+    }
 
-      if (totale_populatie <= 0)
-        stop("Planningsfout: De totale populatiewaarde is 0 of negatief.")
+    if (any(!steekproeven$ihr %in% c("H", "M", "L"))) {
+      stop("Planningsfout: 'ihr' mag alleen 'H', 'M' of 'L' bevatten.")
+    }
 
-      bekende_foutfractie <- sum(steekproeven$fout_hoog) / totale_populatie
-      if (bekende_foutfractie >= totale_materialiteit) {
-        stop(
-          sprintf(
-            "Planningsfout: De reeds bekende fout in de hoogstrata (%.4f) is al groter dan of gelijk aan de totale materialiteit (%.4f).",
-            bekende_foutfractie,
-            totale_materialiteit
-          )
-        )
-      }
+    if (any(!steekproeven$ibr %in% c("H", "M", "L"))) {
+      stop("Planningsfout: 'ibr' mag alleen 'H', 'M' of 'L' bevatten.")
+    }
 
-      # Voor nu verbieden we dat in enig strata
-      # de verwachte fout >= de stratum-materialiteit
-      # Toestaan vereist dat we ergens teruggeven in welke strata dit voorkomt.
-      # Die complicatie laten we nu even weg.
-      # In de toekomst gaan we dit wel toestaan.
-      # Je kunt je namelijk voorstellen dat je toch wilt weten als gebruiker
-      # of het mogelijk is om onder de totale materialiteit te blijven, en voor lief
-      # neemt dat sommige steekproeven qua maximale foutfractie boven de materialiteit
-      # uitkomen.
-      if (any(steekproeven$verwachte_foutfractie >= steekproeven$materialiteit)) {
-        foute_strata <- steekproeven$naam[steekproeven$verwachte_foutfractie >= steekproeven$materialiteit]
-        stop(
-          paste(
-            "Planningsfout: In de volgende strata is de verwachte foutfractie groter dan of gelijk aan de stratum-materialiteit:",
-            paste(foute_strata, collapse = ", ")
-          )
-        )
-      }
+    if (any(!steekproeven$car %in% c("H", "M", "L"))) {
+      stop("Planningsfout: 'car' mag alleen 'H', 'M' of 'L' bevatten.")
+    }
 
-      totale_verwachte_fout_geld <- sum(steekproeven$waarde_laag * steekproeven$verwachte_foutfractie) + sum(steekproeven$fout_hoog)
-      algehele_verwachte_foutfractie <- totale_verwachte_fout_geld / totale_populatie
+    if (!is.numeric(steekproeven$materialiteit) ||
+        any(steekproeven$materialiteit <= 0 |
+            steekproeven$materialiteit >= 1)) {
+      stop("Planningsfout: 'materialiteit' per stratum moet numeriek, > 0 en < 1 zijn.")
+    }
 
-      if (algehele_verwachte_foutfractie >= totale_materialiteit) {
-        stop(
-          sprintf(
-            "Planningsfout: De algehele verwachte foutfractie (%.4f) is al groter dan of gelijk aan de totale materialiteit (%.4f). Meer posten trekken zal dit niet oplossen.",
-            algehele_verwachte_foutfractie,
-            totale_materialiteit
-          )
-        )
-      }
+    if (!is.numeric(steekproeven$fout_hoog) ||
+        any(steekproeven$fout_hoog < 0)) {
+      stop("Planningsfout: 'fout_hoog' moet numeriek en >= 0 zijn.")
+    }
+
+    if (!is.numeric(steekproeven$goed_hoog) ||
+        any(steekproeven$goed_hoog < 0)) {
+      stop("Planningsfout: 'goed_hoog' moet numeriek en >= 0 zijn.")
+    }
+
+    if (!is.numeric(steekproeven$n_hoog) ||
+        any(steekproeven$n_hoog < 0)) {
+      stop("Planningsfout: 'n_hoog' moet numeriek en >= 0 zijn.")
     }
   }
 
-  # Eerste hulpfunctie voor hybride optimalisatie.
-  # De klimfunctie.
-  calc_max_error_klim <- function(s_data) {
-    res <- eval_stratified(
-      steekproeven = s_data,
-      model = model,
-      zekerheid = totale_zekerheid,
-      methode = klim_methode,
-      granulariteit = klim_granulariteit,
-      vergelijk = FALSE
-    )
-    return(res$max_fout_convolutie)
+  # Controleer op mathematisch onmogelijke uitgangssituaties in de data.
+  {
+    totale_populatie <- sum(steekproeven$waarde_laag + steekproeven$fout_hoog + steekproeven$goed_hoog)
+
+    if (totale_populatie <= 0) {
+      stop("Planningsfout: De totale populatiewaarde is 0 of negatief.")
+    }
+
+    text_bekende_foutfractie <- sum(steekproeven$fout_hoog) / totale_populatie
+    if (text_bekende_foutfractie >= totale_materialiteit) {
+      stop(
+        sprintf(
+          "Planningsfout: De reeds bekende fout in de hoogstrata (%.4f) is al groter dan of gelijk aan de totale materialiteit (%.4f).",
+          text_bekende_foutfractie,
+          totale_materialiteit
+        )
+      )
+    }
+
+    if (any(steekproeven$verwachte_foutfractie >= steekproeven$materialiteit)) {
+      foute_strata <- steekproeven$naam[steekproeven$verwachte_foutfractie >= steekproeven$materialiteit]
+      stop(
+        paste(
+          "Planningsfout: In de volgende strata is de verwachte foutfractie groter dan of gelijk aan de stratum-materialiteit:",
+          paste(foute_strata, collapse = ", ")
+        )
+      )
+    }
+
+    totale_verwachte_fout_geld <- sum(steekproeven$waarde_laag * steekproeven$verwachte_foutfractie) + sum(steekproeven$fout_hoog)
+    algehele_verwachte_foutfractie <- totale_verwachte_fout_geld / totale_populatie
+
+    if (algehele_verwachte_foutfractie >= totale_materialiteit) {
+      stop(
+        sprintf(
+          "Planningsfout: De algehele verwachte foutfractie (%.4f) is al groter dan of gelijk aan de totale materialiteit (%.4f). Meer posten trekken zal dit niet oplossen.",
+          algehele_verwachte_foutfractie,
+          totale_materialiteit
+        )
+      )
+    }
   }
 
-  # Tweede hulpfunctie voor hybride optimalisatie.
-  # De definitieve toets.
-  calc_max_error_validatie <- function(s_data) {
-    res <- eval_stratified(
-      steekproeven = s_data,
-      model = model,
-      zekerheid = totale_zekerheid,
-      methode = validatie_methode,
-      granulariteit = validatie_granulariteit,
-      start = start,
-      vergelijk = FALSE
-    )
-    return(res$max_fout_convolutie)
+  # Definieer de interne aanroep naar de snellere klim-evaluatie.
+  {
+    calc_max_error_klim <- function(s_data) {
+      res <- eval_stratified(
+        steekproeven = s_data,
+        model = model,
+        zekerheid = totale_zekerheid,
+        methode = klim_methode,
+        granulariteit = klim_granulariteit,
+        vergelijk = FALSE
+      )
+      return(res$max_fout_convolutie)
+    }
   }
 
-  # Derde hulpfunctie voor hybride optimalsatie.
-  # De zoekmachine:
-  # Vindt het beste stratum om op te hogen, varend op de klimfunctie.
-  vind_beste_stratum <- function(huidige_strata) {
-    huidige_fout_klim <- calc_max_error_klim(huidige_strata)
-    beste_stratum <- NA
-    beste_verbetering <- -Inf
+  # Definieer de interne aanroep naar de definitieve validatie-toets.
+  {
+    calc_max_error_validatie <- function(s_data) {
+      res <- eval_stratified(
+        steekproeven = s_data,
+        model = model,
+        zekerheid = totale_zekerheid,
+        methode = validatie_methode,
+        granulariteit = validatie_granulariteit,
+        start = start,
+        vergelijk = FALSE
+      )
+      return(res$max_fout_convolutie)
+    }
+  }
 
-    for (i in 1:nrow(huidige_strata)) {
-      # We maken een kopie van strata: test_strata.
-      test_strata <- huidige_strata
-
-      # Voor die kopie verhogen we de i-de n_laag met 1.
-      test_strata$n_laag[i] <- test_strata$n_laag[i] + 1
-
-      # We passen de i-de k_laag navenant aan.
-      test_strata$k_laag[i] <- test_strata$n_laag[i] * test_strata$verwachte_foutfractie[i]
-
-      # We passen de i-de n_totaal navenant aan.
-      test_strata$n_totaal[i] <- test_strata$n_laag[i] + test_strata$n_hoog[i]
-
-      # We berekenen nu over het gehele zo gemaakte test_strata wat de maximale fout zou worden.
-      test_max_fout <- calc_max_error_klim(test_strata)
-
-      # We kijken wat dit oplevert aan verbetering: hoeveel wordt de huidige max fout kleiner.
-      verbetering <- huidige_fout_klim - test_max_fout
-
-      # We kijken wat dit oplevert aan verbetering: hoeveel wordt de huidige max fout kleiner.
-      is_ex_aequo <- abs(verbetering - beste_verbetering) < 1e-9
-
-      # We noteren dit stratum als de strikt beste verbetering heeft.
-      # ALS het een ex aequo is (verbetering is praktisch gelijk), dan checken we
-      # welk stratum tot nu toe het minst is opgehoogd t.o.v. de basisplanning.
-      if (verbetering > (beste_verbetering + 1e-9)) {
-        beste_verbetering <- verbetering
-        beste_stratum <- i
-      } else if (is_ex_aequo) {
-        # Bereken voor zowel de huidige koploper als dit nieuwe (test) stratum
-        # hoeveel ze al zijn opgehoogd ten opzichte van hun n_basis.
-        ophoging_beste <- huidige_strata$n_laag[beste_stratum] - huidige_strata$n_basis[beste_stratum]
-        ophoging_huidig <- test_strata$n_laag[i] - huidige_strata$n_basis[i]
-
-        # Als het huidige stratum minder vaak is opgehoogd, neemt deze de koppositie over.
-        if (ophoging_huidig < ophoging_beste) {
+  # Definieer de interne zoekmachine die het beste stratum selecteert om op te hogen.
+  {
+    vind_beste_stratum <- function(huidige_strata) {
+      huidige_fout_klim <- calc_max_error_klim(huidige_strata)
+      beste_stratum <- NA
+      beste_verbetering <- -Inf
+      beste_proxy_verbetering <- -Inf
+      z_val <- qnorm(totale_zekerheid)
+      tot_geld <- sum(huidige_strata$waarde_laag + huidige_strata$fout_hoog + huidige_strata$goed_hoog)
+      fout_hi <- sum(huidige_strata$fout_hoog)
+      # Definieer een continue proxy-functie op basis van de totale weging van de s-strata.
+      calc_proxy <- function(data_strata) {
+        m_sum <- 0
+        v_sum <- 0
+        for (j in 1:nrow(data_strata)) {
+          w <- data_strata$waarde_laag[j]
+          n <- data_strata$n_laag[j]
+          ef <- data_strata$verwachte_foutfractie[j]
+          k <- n * ef
+          if (model == "binomiaal") {
+            a <- 1 + k
+            b_p <- 1 + n - k
+            m_j <- a / (a + b_p)
+            v_j <- (a * b_p) / ((a + b_p)^2 * (a + b_p + 1))
+          } else {
+            shape <- 1 + k
+            rate <- n
+            m_j <- shape / rate
+            v_j <- shape / (rate^2)
+          }
+          m_sum <- m_sum + w * m_j
+          v_sum <- v_sum + (w^2) * v_j
+        }
+        return(((m_sum + fout_hi) / tot_geld) + z_val * sqrt(v_sum / (tot_geld^2)))
+      }
+      huidige_proxy <- calc_proxy(huidige_strata)
+      for (i in 1:nrow(huidige_strata)) {
+        test_strata <- huidige_strata
+        test_strata$n_laag[i] <- test_strata$n_laag[i] + 1
+        test_strata$k_laag[i] <- test_strata$n_laag[i] * test_strata$verwachte_foutfractie[i]
+        test_strata$n_totaal[i] <- test_strata$n_laag[i] + test_strata$n_hoog[i]
+        test_max_fout <- calc_max_error_klim(test_strata)
+        verbetering <- huidige_fout_klim - test_max_fout
+        proxy_verbetering <- huidige_proxy - calc_proxy(test_strata)
+        is_ex_aequo <- abs(verbetering - beste_verbetering) < 1e-9
+        # Evalueer de verbetering en breek een ex aequo met de oneindig nauwkeurige analytische proxy.
+        if (verbetering > (beste_verbetering + 1e-9)) {
+          beste_verbetering <- verbetering
+          beste_proxy_verbetering <- proxy_verbetering
           beste_stratum <- i
+        } else if (is_ex_aequo) {
+          if (proxy_verbetering > beste_proxy_verbetering) {
+            beste_proxy_verbetering <- proxy_verbetering
+            beste_stratum <- i
+          }
         }
       }
+      return(beste_stratum)
     }
-    return(beste_stratum)
   }
 
-  # Basisplanning (de minimale n per stratum).
-  # Bereken deze met behulp van drawsneeded().
+  # Bereken de minimale basisplanning per stratum met drawsneeded.
   {
-    # Vertaal de Nederlandse modelnaam naar de Engelse voor drawsneeded.
-    dist_eng <- if (model == "binomiaal")
+    dist_eng <- if (model == "binomiaal") {
       "binomial"
-    else
+    } else {
       "Poisson"
+    }
 
     strata <- steekproeven |>
       mutate(
@@ -412,16 +419,11 @@ plan_stratified <- function(steekproeven,
       )
   }
 
-  # Hybride maximale marginale verbeteringslus,
-  # of ook wel, steilste-helling optimalisatie:
-  # we verhogen steeds n_laag met 1,
-  # van dat stratum waarvoor we het beste resultaat krijgen.
-  # Zeg maar: we nemen steeds het lekkerste snoepje uit de schaal; dat werkt
-  # niet altijd goed in het echte leven, maar hier wel.
+  # Voer de optimalisatielussen uit tot de totale materialiteit is bereikt.
   {
     iteratie <- 0
 
-    # Fase 1: Iteratie met klim_functie tot we onder de grens zitten.
+    # Verhoog de steekproefomvang stapsgewijs op basis van de snelle klimmethode.
     huidige_fout_klim <- calc_max_error_klim(strata)
     while (huidige_fout_klim > totale_materialiteit &&
            iteratie < max_iteraties) {
@@ -436,8 +438,7 @@ plan_stratified <- function(steekproeven,
       huidige_fout_klim <- calc_max_error_klim(strata)
     }
 
-    # Fase 2: Valideer met de validatie methode (bijv. MC met 1.000.000).
-    # Liggen we er toch nog net boven? Neem dan nog een paar extra stappen (weer via het FFT kompas).
+    # Controleer en corrigeer de uitkomst aan de hand van de zwaardere validatiemethode.
     huidige_fout_validatie <- calc_max_error_validatie(strata)
     while (huidige_fout_validatie > totale_materialiteit &&
            iteratie < max_iteraties) {
@@ -463,16 +464,11 @@ plan_stratified <- function(steekproeven,
     }
   }
 
-  # Afronding en output.
+  # Rond de tabel netjes af en retourneer het resultaat met het fout-attribuut.
   {
-    # Verwijder cert uit strata.
     strata$cert <- NULL
-
-    # Hernoem in strata n_laag naar n_definitief
     strata <- dplyr::rename(strata, n_definitief = .data$n_laag)
-
     attr(strata, "geplande_max_fout_totaal") <- huidige_fout_validatie
-
     return(strata)
   }
 }
