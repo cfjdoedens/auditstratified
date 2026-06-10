@@ -1,8 +1,48 @@
 # auditstratified
 
+- [auditstratified](#auditstratified)
+  - [Installatie](#installatie)
+  - [Planning en Evaluatie van gestratificeerde monetaire
+    steekproeven](#planning-en-evaluatie-van-gestratificeerde-monetaire-steekproeven)
+  - [Twee statistische modellen: binomiaal en
+    Poisson](#twee-statistische-modellen-binomiaal-en-poisson)
+  - [Keuze voor convolutie](#keuze-voor-convolutie)
+  - [Vier rekenmethoden voor
+    convolutie](#vier-rekenmethoden-voor-convolutie)
+  - [`eval_stratified()`: Evaluatie van meerdere
+    steekproeven](#eval_stratified-evaluatie-van-meerdere-steekproeven)
+    - [Verfijning: Hoogstratum en
+      Laagstratum](#verfijning-hoogstratum-en-laagstratum)
+    - [Voorbeelden van verschillende
+      evaluatie-scenario’s](#voorbeelden-van-verschillende-evaluatie-scenarios)
+    - [De rol van risicofactoren, materialiteit en “virtuele”
+      posten](#de-rol-van-risicofactoren-materialiteit-en-virtuele-posten)
+    - [De data-input: Het opbouwen van de
+      steekproeven-tibble](#de-data-input-het-opbouwen-van-de-steekproeven-tibble)
+    - [Verklaring van de verplichte
+      kolommen](#verklaring-van-de-verplichte-kolommen)
+    - [In de praktijk: Rekenen met risico’s en virtuele
+      posten](#in-de-praktijk-rekenen-met-risicos-en-virtuele-posten)
+  - [`plan_stratified()`: Plannen van meerdere
+    steekproeven](#plan_stratified-plannen-van-meerdere-steekproeven)
+    - [Algoritme](#algoritme)
+  - [Webversie](#webversie)
+  - [Referenties](#referenties)
+    - [Wikipedia: convolutie](#wikipedia-convolutie)
+    - [JCGM 101:2008. Propagation of distributions using a Monte Carlo
+      method.](#jcgm-1012008-propagation-of-distributions-using-a-monte-carlo-method)
+    - [Wikipedia: Monte Carlo methode](#wikipedia-monte-carlo-methode)
+    - [Stevens 2024](#stevens-2024)
+    - [MathWorks: Fast Fourier Transform
+      (FFT)](#mathworks-fast-fourier-transform-fft)
+    - [Abate & Whitt 1992](#abate--whitt-1992)
+    - [Wang 1988](#wang-1988)
+  - [Ideeën voor verdere
+    ontwikkeling](#idee%C3%ABn-voor-verdere-ontwikkeling)
+
 ## Installatie
 
-Je kunt de ontwikkelversie van auditstratified laden van
+Je kunt de ontwikkelversie van `auditstratified` laden van
 [GitHub](https://github.com/):
 
 ``` r
@@ -13,11 +53,108 @@ install.packages("devtools")
 devtools::install_github("cfjdoedens/auditstratified")
 ```
 
-## De basis: meerdere steekproeven combineren
+## Planning en Evaluatie van gestratificeerde monetaire steekproeven
 
-De functie van `auditstratified` is het statistisch samenvoegen van de
-evaluaties van meerdere, afzonderlijke steekproeven. Dit is nodig in de
-auditpraktijk wanneer een totale populatie bestaat uit verschillende
+Dit R-pakket ondersteunt een audit waarbij meerdere steekproeven in
+combinatie worden gebruikt. We noemen zo’n combinatie van meerdere
+steekproeven ook wel een gestratificeerde steekproef. Het idee is dat er
+een aantal afzonderlijke monetaire massa’s zijn die we om wat voor reden
+dan ook ieder afzonderlijk controleren door middel van een monetaire
+steekproef. De aanname is dat de er geen samenhang in foutkans is tussen
+de afzonderlijke steekproeven. Elke afzonderlijk gecontroleerde massa
+noemen we een stratum. Bij elkaar gaat het dan om meerdere strata.
+
+Voor het plannen van de steekproeven is er de functie
+`plan_stratified()`. Voor het evalueren is er de functie
+[`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md).
+
+Hoewel in de auditpraktijk je in het ideale scenario eerst plant, en dan
+pas evalueert, zullen we hieronder eerst
+[`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md)
+bespreken, en daarna `plan_stratified()`. Dit omdat `plan_stratified()`
+het best uitgelegd kan worden in termen van
+[`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md).
+
+## Twee statistische modellen: binomiaal en Poisson
+
+`auditstratified` biedt de mogelijkheid om twee verschillende
+statistische modellen toe te passen. De keuze is tussen:
+
+- binomiaal: Dit is het meest nauwkeurige model.
+- Poisson: Dit wordt traditioneel veel gebruikt in de audit. Maar het is
+  minder nauwkeurig, en bij grote foutfracties, wordt het erg
+  onnauwkeurig.
+
+## Keuze voor convolutie
+
+Voor het samen evalueren van meerdere steekproeven bestaan diverse
+methoden. De meeste exacte daarvan is convolutie van de kanskromme
+gevolgd door het bepalen van de maximale fout daarvan. Daarom gebruikt
+dit pakket convolutie.
+
+In de literatuur zijn verschillende algoritmen voor convolutie
+beschreven. Vier van deze algoritmen zijn geimplementeerd in
+`auditstratified`.
+
+## Vier rekenmethoden voor convolutie
+
+`auditstratified` biedt vier verschillende numerieke benaderingen om de
+convolutie (het wiskundig samenvoegen van de kanskrommes van de
+afzonderlijke steekproeven) uit te voeren.
+
+Waarom worden er verschillende methoden aangeboden? Dit is vooral om
+meer vetrouwen te geven in het resultaat van de convolutie: elk van de
+methode levert - afgezien van kleine rekenkundige verschillen, en
+statistische ruis bij de Monte Carlo methode (zie hieronder) - hetzelfde
+resultaat op, alleen de snelheid van de berekening is verschillend.
+
+- **direct** Een numerieke benadering die de as met mogelijke fouten in
+  euro’s opdeelt in een eindig, discreet raster (grid). De kanskrommen
+  worden vervolgens via de stappen op dit raster met elkaar
+  gecombineerd. Dit gebeurt in paren van kanskrommen. De methode is een
+  directe implementatie van wat convolutie wiskundig betekent. Zie
+  <https://nl.wikipedia.org/wiki/Convolutie>.
+- **Fast Fourier Transformatie (FFT) paarsgewijs** Ook een numerieke
+  benadering die de as met mogelijke fouten in euro’s opdeelt in een
+  eindig, discreet raster (grid). De kanskrommen worden hierbij omgezet
+  in een frequentieverdeling. Dit gebeurt in paren van kanskrommen,
+  totdat alle kanskrommen zijn samengenomen. Zie
+  <https://nl.wikipedia.org/wiki/Fast_Fourier_transform>.
+- **Fast Fourier Transformatie (FFT) samen** Zelfde als vorige methode,
+  maar nu worden alle kanskrommen achter elkaar op 1 raster geplaatst,
+  en als 1 geheel gecombineerd. Dit is meer efficient en betrouwbaarder.
+- **Monte Carlo:** Een numerieke benadering die de resulterende
+  verdeling opbouwt door het trekken van een groot aantal
+  (pseudo-)willekeurige waarden uit de kanskrommen. Dit gaat niet
+  paarsgewijs, maar samen over alle kanskrommen. Zie
+  <https://nl.wikipedia.org/wiki/Monte-Carlosimulatie>.
+
+De parameter **granulariteit** slaat bij de eerste drie methoden op het
+aantal elementen in het raster: een hogere granulariteit betekent een
+fijner raster. Bij de vierde methode staat de granulariteit voor het
+aantal getrokken toevalsgetallen.
+
+**Vergelijking:** De eerste drie methoden kunnen beschouwd worden als
+opvolgend steeds efficientere algortmen. Dus FFT samen is hiervan het
+meest efficient. De Monet Carlo methode is heel grofweg gesproken even
+efficient. Echter, omdat deze methode gebaseerd is op generatie van
+toevalsgetallen, en de uitkomst er van dus statistische ruis bevat, is
+FFT samen de beste keuze.
+
+**Toepassing:**
+[`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md)
+biedt deze keuze tussen de vier verschillende convolutieberekeningen.
+Nogmaals, dit is vooral om het vertrouwen te bevorderen in de convolutie
+zoals berekend door het pakket auditstratified.
+
+Bij `plan-startified()` is er geen keuze. Daar wordt altijd de meest
+efficiente en stabiele methode, namelijk FFT samen gebruikt.
+
+## `eval_stratified()`: Evaluatie van meerdere steekproeven
+
+[`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md)
+evalueert samen meerdere, afzonderlijke, steekproeven. Dit is nodig in
+de auditpraktijk wanneer een totale populatie bestaat uit verschillende
 deelpopulaties (bijvoorbeeld verschillende locaties, systemen of
 processen) waaruit separate steekproeven zijn getrokken.
 
@@ -29,11 +166,11 @@ integraal (100%) gecontroleerd hoeven te worden; de zogenaamde
 
 Wanneer je de resultaten van deze losse steekproeven simpelweg bij
 elkaar op zou tellen, zou je de statistische onzekerheid verkeerd
-inschatten. `auditstratified` lost dit op door de afzonderlijke
-kansverdelingen van de verschillende steekproeven wiskundig te
-combineren door middel van **convolutie**. Het resultaat is één zuivere,
-gecombineerde kanskromme met één correct berekende maximale
-fout(fractie) en precisie voor de totale organisatie.
+inschatten. `eval_stratified` lost dit op door de afzonderlijke
+kansverdelingen van de verschillende steekproeven te combineren door
+middel van **convolutie**. Het resultaat is één gecombineerde
+kanskromme. Hieruit kan een minimale en een maximale fout(fractie)
+worden berekend.
 
 ### Verfijning: Hoogstratum en Laagstratum
 
@@ -97,7 +234,7 @@ convolutie voor bestand 2 over, en voegt de omvang én de exacte fout van
 € 12.500 van bestand 2 direct toe aan de breuk voor de algehele
 eindevaluatie.
 
-## De rol van risicofactoren, materialiteit en “virtuele” posten
+### De rol van risicofactoren, materialiteit en “virtuele” posten
 
 Wanneer bestanden uit verschillende bedrijfsonderdelen of processen
 komen, worden ze zelden met exact hetzelfde risicoprofiel gecontroleerd.
@@ -164,9 +301,9 @@ gebracht, past het package de convolutie toe. Hierdoor weegt de vooraf
 verkregen zekerheid per bestand zuiver en proportioneel mee in de
 berekende maximale fout voor de gehele populatie.
 
-## De data-input: Het opbouwen van de steekproeven-tibble
+### De data-input: Het opbouwen van de steekproeven-tibble
 
-Om de hoofdfunctie
+Om de functie
 [`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md)
 te kunnen gebruiken, moet je de resultaten van je steekproeven
 aanleveren in een specifieke dataframe, een zogenaamde `tibble`. Elke
@@ -198,7 +335,7 @@ mijn_audit_data <- tribble(
 resultaat <- eval_stratified(steekproeven = mijn_audit_data, zekerheid = 0.95)
 ```
 
-### Verklaring van de verplichte kolommen:
+### Verklaring van de verplichte kolommen
 
 - naam: Een herkenbare naam voor het bestand of de steekproef.
 
@@ -235,8 +372,8 @@ resultaat <- eval_stratified(steekproeven = mijn_audit_data, zekerheid = 0.95)
 
 ### In de praktijk: Rekenen met risico’s en virtuele posten
 
-`auditstratified` bevat twee ingebouwde hulpfuncties waarmee je deze
-theoretische stappen zelf inzichtelijk kunt maken en kunt narekenen:
+`auditstratified` bevat twee hulpfuncties waarmee je deze theoretische
+stappen zelf inzichtelijk kunt maken en kunt narekenen:
 [`haro_nog_nodige_zekerheid()`](https://cfjdoedens.github.io/auditstratified/reference/haro_nog_nodige_zekerheid.md)
 en
 [`foutloze_posten_equivalent()`](https://cfjdoedens.github.io/auditstratified/reference/foutloze_posten_equivalent.md).
@@ -285,51 +422,41 @@ achtergrond per geüploade steekproefregel automatisch aan. Zo wordt elke
 steekproef feilloos en transparant geharmoniseerd voordat de convolutie
 (het samenvoegen) plaatsvindt.
 
-## Keuze tussen twee statistische modellen
+## `plan_stratified()`: Plannen van meerdere steekproeven
 
-`auditstratified` biedt de mogelijkheid om twee verschillende
-statistische modellen toe te passen. De keuze is tussen:
+Deze functie berekent de optimale, dit wil zeggen minimale
+steekproefomvang (n) voor elk van de afzonderlijke strata zodat bij
+gezamenlijke evaluatie de maximale fout onder de algehele materialiteit
+blijft.
 
-- binomiaal: Dit is het meest nauwkeurige model.
-- Poisson: Dit wordt traditioneel veel gebruikt in de audit. Maar het is
-  minder nauwkeurig, en bij grote foutfracties, wordt het erg
-  onnauwkeurig.
+### Algoritme
 
-## Keuze tussen twee rekenmethoden voor de convolutie
+Doel van het planningsalgoritme is het vinden van een optimale verdeling
+van zo min mogelijk steekproefposten over de strata. Optimaal: zodanig
+dat gegeven het verwachte aantal fouten voor elk afzonderlijk stratum de
+maximale fout van alle strata samen net onder de materialiteit ligt.
 
-`auditstratified` biedt twee verschillende numerieke benaderingen om de
-convolutie (het wiskundig samenvoegen van de kanskrommes van de
-afzonderlijke steekproeven) uit te voeren.
+We baseren het planningsalgoritme op het evaluatie-algoritme. Met andere
+woorden we baseren plan_stratified() op eval_stratified().
 
-De keuze is tussen:
+We gebruiken een heuvelklimalgoritme, dat stap voor stap
+steekproefposten toevoegd aan de strata, waarbij steeds koers wordt
+gehouden door het aanroepen van eval_stratified(). In pseudocode
+uitgedrukt: while eval_stratified(strata) \> totale_materialiteit {
+bepaal voor welk stratum de maximale fout het meest afneemt, als we de n
+voor dat stratum ophogen; hoog de n1 voor dat stratum 1 op }
 
-- **Fast Fourier Transformatie (FFT):** Een numerieke benadering die de
-  as met mogelijke fouten in euro’s opdeelt in een eindig, discreet
-  raster (grid). De kanskrommen worden vervolgens via de stappen op dit
-  raster met elkaar gecombineerd.
-- **Monte Carlo:** Een numerieke benadering die de resulterende
-  verdeling opbouwt door het algoritmisch trekken van een groot aantal
-  (pseudo-)willekeurige waarden uit de theoretische kansverdelingen van
-  de afzonderlijke steekproeven.
+Mogelijk probleem: als we de n van alle strata met 1 ophogen dan heeft
+dat geen invloed op de maximale fout. Dus de maximale fout neemt
+helemaal niet af daardoor! Oplossing: we moeten met hogere aantallen n
+verhogen.
 
-**Overeenkomsten en verschillen:** Beide methoden berekenen een
-numerieke benadering van de theoretisch exacte kanskromme en de daarbij
-behorende maximale en meest waarschijnlijke fout. De nauwkeurigheid van
-beide methoden neemt toe naarmate de parameter **granulariteit** wordt
-verhoogd:
+Afgeleid probleem: met hoeveel moeten we de n dan verhogen? Oplossing:
+We verhogen met de ruimte die we nog hebben gezien het maximaal aantal
+steken dat we ueberhaupt willen trekken.
 
-- Bij FFT betekent een hogere granulariteit een fijner raster (kleinere
-  stapjes in euro’s).
-- Bij Monte Carlo betekent een hogere granulariteit een groter aantal
-  iteraties (trekkingen).
-
-Beide methoden zijn grofweg even efficiënt, althans voor deze
-toepassing. Omdat het allebei numerieke benaderingen zijn, is de ultieme
-nauwkeurigheid van de uitkomst afhankelijk van de gekozen granulariteit
-en de interne machineprecisie (floating-point nauwkeurigheid) van de
-computer. Tot slot leveren beide methoden in dit package altijd exact
-reproduceerbare (deterministische) resultaten op, bij de Monte
-Carlo-methode hangt dit mede af van de gekozen startwaarde.
+Mogelijke probleem: 2 of meer strata blijken ex equo te zijn. Oplossing:
+we verhogen de n voor ieder van die strata.
 
 ## Webversie
 
@@ -419,9 +546,8 @@ meer Monte Carlo-simulatie en FFT.
   risicoschattingen.
 - [`haro_nog_nodige_zekerheid()`](https://cfjdoedens.github.io/auditstratified/reference/haro_nog_nodige_zekerheid.md)
   : Bereken de nog benodigde zekerheid te verkrijgen uit detailcontrole
-- [`plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified.md)
-  : Plan de steekproefomvang voor meerdere strata (gestratificeerde
-  steekproef)
+- [`plan_stratified_basis()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified_basis.md)
+  : Plan de initiële basissteekproefomvang (Stap 1)
 - [`plot_kanskromme()`](https://cfjdoedens.github.io/auditstratified/reference/plot_kanskromme.md)
   : Teken de kanskromme van de evaluatie
 - [`run_app()`](https://cfjdoedens.github.io/auditstratified/reference/run_app.md)
@@ -431,4 +557,7 @@ meer Monte Carlo-simulatie en FFT.
 - [`vergelijk_los_en_als1()`](https://cfjdoedens.github.io/auditstratified/reference/vergelijk_los_en_als1.md)
   : Vergelijkingsmethoden: los (per stratum) en als1 (alles
   samengevoegd).
+- [`vind_beste_strata_groep()`](https://cfjdoedens.github.io/auditstratified/reference/vind_beste_strata_groep.md)
+  : Evalueer en selecteer de optimale strata voor de volgende parallelle
+  klimstap
 

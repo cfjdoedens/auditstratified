@@ -48,7 +48,7 @@ de uitvoervelden of plan_stratified() juist heeft gewerkt.</p>
 <span>  <span class="va">totale_materialiteit</span>,</span>
 <span>  totale_zekerheid <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"binomiaal"</span>, <span class="st">"poisson"</span><span class="op">)</span>,</span>
-<span>  methode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FFT"</span>, <span class="st">"Monte Carlo"</span><span class="op">)</span>,</span>
+<span>  methode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FFT paarsgewijs"</span>, <span class="st">"Monte Carlo"</span><span class="op">)</span>,</span>
 <span>  granulariteit <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -76,15 +76,15 @@ Keuze uit <code>"binomiaal"</code> (standaard) of <code>"poisson"</code>.</p></d
 
 <dt id="arg-methode">methode<a class="anchor" aria-label="anchor" href="#arg-methode"></a></dt>
 <dd><p>Rekenmethode voor evaluatie.
-Keuze uit <code>"FFT"</code> (standaard) of <code>"Monte Carlo"</code>.
-<code>"FFT"</code> wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
+Keuze uit <code>"FFT paarsgewijs"</code> (standaard) of <code>"Monte Carlo"</code>.
+<code>"FFT paarsgewijs"</code> wordt aanbevolen. Deels omdat dat ietsje sneller is, deels
 omdat dat dezelfde resultaten geeft ongeacht de startwaarde van de
 toevalsgenerator.</p></dd>
 
 
 <dt id="arg-granulariteit">granulariteit<a class="anchor" aria-label="anchor" href="#arg-granulariteit"></a></dt>
 <dd><p>Bepaalt de nauwkeurigheid van de berekening.
-Bij <code>"FFT"</code> is dit het aantal stappen op de kanskromme-as.
+Bij <code>"FFT paarsgewijs"</code> is dit het aantal stappen op de kanskromme-as.
 Bij <code>"Monte Carlo"</code> is dit het aantal toevalsiteraties.</p></dd>
 
 </dl></div>

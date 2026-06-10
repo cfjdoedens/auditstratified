@@ -18,9 +18,8 @@
   risicoschattingen.
 - [`haro_nog_nodige_zekerheid()`](https://cfjdoedens.github.io/auditstratified/reference/haro_nog_nodige_zekerheid.md)
   : Bereken de nog benodigde zekerheid te verkrijgen uit detailcontrole
-- [`plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified.md)
-  : Plan de steekproefomvang voor meerdere strata (gestratificeerde
-  steekproef)
+- [`plan_stratified_basis()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified_basis.md)
+  : Plan de initiële basissteekproefomvang (Stap 1)
 - [`plot_kanskromme()`](https://cfjdoedens.github.io/auditstratified/reference/plot_kanskromme.md)
   : Teken de kanskromme van de evaluatie
 - [`run_app()`](https://cfjdoedens.github.io/auditstratified/reference/run_app.md)
@@ -30,3 +29,6 @@
 - [`vergelijk_los_en_als1()`](https://cfjdoedens.github.io/auditstratified/reference/vergelijk_los_en_als1.md)
   : Vergelijkingsmethoden: los (per stratum) en als1 (alles
   samengevoegd).
+- [`vind_beste_strata_groep()`](https://cfjdoedens.github.io/auditstratified/reference/vind_beste_strata_groep.md)
+  : Evalueer en selecteer de optimale strata voor de volgende parallelle
+  klimstap

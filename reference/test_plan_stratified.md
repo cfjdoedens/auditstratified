@@ -11,7 +11,7 @@ test_plan_stratified(
   totale_materialiteit,
   totale_zekerheid = 0.95,
   model = c("binomiaal", "poisson"),
-  methode = c("FFT", "Monte Carlo"),
+  methode = c("FFT paarsgewijs", "Monte Carlo"),
   granulariteit = 10000
 )
 ```
@@ -37,16 +37,16 @@ test_plan_stratified(
 
 - methode:
 
-  Rekenmethode voor evaluatie. Keuze uit `"FFT"` (standaard) of
-  `"Monte Carlo"`. `"FFT"` wordt aanbevolen. Deels omdat dat ietsje
-  sneller is, deels omdat dat dezelfde resultaten geeft ongeacht de
-  startwaarde van de toevalsgenerator.
+  Rekenmethode voor evaluatie. Keuze uit `"FFT paarsgewijs"` (standaard)
+  of `"Monte Carlo"`. `"FFT paarsgewijs"` wordt aanbevolen. Deels omdat
+  dat ietsje sneller is, deels omdat dat dezelfde resultaten geeft
+  ongeacht de startwaarde van de toevalsgenerator.
 
 - granulariteit:
 
-  Bepaalt de nauwkeurigheid van de berekening. Bij `"FFT"` is dit het
-  aantal stappen op de kanskromme-as. Bij `"Monte Carlo"` is dit het
-  aantal toevalsiteraties.
+  Bepaalt de nauwkeurigheid van de berekening. Bij `"FFT paarsgewijs"`
+  is dit het aantal stappen op de kanskromme-as. Bij `"Monte Carlo"` is
+  dit het aantal toevalsiteraties.
 
 ## Value
 
