@@ -87,9 +87,9 @@ ui <- navbarPage(
       column(
         width = 3,
         h4("risico-inschatting"),
-        selectInput("haro_ihr", info_label("IHR:", "Inherent risico (Inherent Risk)."), choices = risk_choices),
-        selectInput("haro_ibr", info_label("IBR:", "Interne beheersingsrisico (Internal Control Risk)."), choices = risk_choices),
-        selectInput("haro_car", info_label("CAR:", "CPA analytisch risico (Control Analytical Risk)."), choices = risk_choices)
+        selectInput("haro_ihr", info_label("IHR:", "InHerent Risico"), choices = risk_choices),
+        selectInput("haro_ibr", info_label("IBR:", "Interne BeheersingsRisico"), choices = risk_choices),
+        selectInput("haro_car", info_label("CAR:", "CijferAnalyseRisico"), choices = risk_choices)
       ),
       column(
         width = 9,
@@ -107,10 +107,10 @@ ui <- navbarPage(
       column(
         width = 3,
         h4("risico-inschatting"),
-        selectInput("fpe_ihr", info_label("IHR:", "Inherent risico (Inherent Risk)."), choices = risk_choices),
-        selectInput("fpe_ibr", info_label("IBR:", "Interne beheersingsrisico (Internal Control Risk)."), choices = risk_choices),
-        selectInput("fpe_car", info_label("CAR:", "CPA analytisch risico (Control Analytical Risk)."), choices = risk_choices),
-        textInput("fpe_mat", info_label("Materialiteit:", "De materialiteitsgrens als fractie (bijv. 0,01) of als bedrag in euro's."), value = "0,01")
+        selectInput("fpe_ihr", info_label("IHR:", "InHerent Risico"), choices = risk_choices),
+        selectInput("fpe_ibr", info_label("IBR:", "Interne BeheersingsRisico"), choices = risk_choices),
+        selectInput("fpe_car", info_label("CAR:", "CijferAnalyseRisico"), choices = risk_choices),
+        textInput("fpe_mat", info_label("Materialiteit:", "De materialiteitsgrens als fractie (bijv. 0,01)."), value = "0,01")
       ),
       column(
         width = 9,
@@ -130,7 +130,7 @@ ui <- navbarPage(
         h4("instellingen"),
         textInput("strat_conf", info_label("zekerheid:", "De gewenste statistische zekerheid (bijv. 0,95 = 95%)."), value = "0,95"),
         radioButtons("strat_model", "model:", choices = c("binomiaal", "poisson"), inline = TRUE),
-        textInput("strat_gran", info_label("granulariteit:", "De stapgrootte voor de FFT-berekening. Kleiner = nauwkeuriger maar trager."), value = "10.000"),
+        textInput("strat_gran", info_label("granulariteit:", "Aantal stappen gebruikt in de FFT-berekening voor de convolutie van de kanskrommen behorend bij de strata. Meer stappen is nauwkeuriger maar trager."), value = "10.000"),
         hr(),
         actionButton("run_strat", "bereken evaluatie", class = "btn-success w-100")
       ),
@@ -161,7 +161,7 @@ ui <- navbarPage(
         textInput("plan_totale_mat", info_label("materialiteit:", "De totale materialiteitsgrens als fractie (bijv. 0,01) of als bedrag in euro's."), "0,01"),
         textInput("plan_conf", info_label("zekerheid:", "De gewenste statistische zekerheid (bijv. 0,95 = 95%)."), "0,95"),
         radioButtons("plan_model", "model:", choices = c("binomiaal", "poisson"), inline = TRUE),
-        textInput("plan_klim_granulariteit", info_label("granulariteit bij klimmen:", "De stapgrootte voor de FFT-berekening. Kleiner = nauwkeuriger maar trager."), "10.000"),
+        textInput("plan_klim_granulariteit", info_label("granulariteit:", "Aantal stappen gebruikt in de FFT-berekeningen voor de convolutie van de kanskrommen behorend bij de strata. Meer stappen is nauwkeuriger maar trager."), "10.000"),
 
         # Bepaal de live-vertraging via een schuifknop met een bereik van nul tot twee seconden.
         sliderInput("plan_vertraging", "Live-vertraging (sec per stap):", min = 0, max = 2.0, value = 0.3, step = 0.05, sep = ""),
@@ -213,13 +213,18 @@ server <- function(input, output, session) {
     live_huidige_fout <- reactiveVal(1.0)
   }
 
-  # Server logica voor Tab 1 & Tab 2.
+  # Verzorg de serverlogica voor het tabblad over nog nodige zekerheid.
   output$res_haro <- renderText({
+    req(input$haro_ihr, input$haro_ibr, input$haro_car)
+
+    # Bereken de nog nodige zekerheid.
     val <- haro_nog_nodige_zekerheid(input$haro_ihr, input$haro_ibr, input$haro_car)
     paste("nog nodige zekerheid:", format(round(val, 4), decimal.mark = ","))
   })
 
+  # Verzorg de serverlogica voor het tabblad over het foutlozepostenequivalent.
   output$res_fpe <- renderText({
+    req(input$fpe_ihr, input$fpe_ibr, input$fpe_car, input$fpe_mat)
     mat_val <- parse_dutch_num(input$fpe_mat)
     if (is.na(mat_val)) return("Ongeldige materialiteit")
     val <- foutloze_posten_equivalent(input$fpe_ihr, input$fpe_ibr, input$fpe_car, mat_val)
@@ -253,16 +258,16 @@ server <- function(input, output, session) {
 
       hulpteksten_eval <- c(
         "De unieke naam van het stratum.",
-        "De totale geldwaarde van de posten in de laagste risicoklasse.",
-        "De gerealiseerde steekproefomvang in de laagste klasse.",
-        "Het aantal geconstateerde fouten (of de foutfractie) in de laagste klasse.",
-        "Het totale foutbedrag binnen de hoogste risicoklasse.",
-        "Het totale goedgekeurde bedrag binnen de hoogste risicoklasse.",
-        "De steekproefomvang binnen de hoogste risicoklasse.",
-        "Inherent risico (Inherent Risk) voor dit specifieke stratum.",
-        "Interne beheersingsrisico (Internal Control Risk) voor dit stratum.",
-        "CPA analytisch risico (Control Analytical Risk) voor dit stratum.",
-        "De specifieke materialiteit die geldt voor dit individuele stratum."
+        "De totale geldswaarde van de posten in het laagstratum.",
+        "Het aantal posten getrokken uit het laagstratum.",
+        "De som van de foutfracties van de uit het laagstratum getrokken posten.",
+        "Het totale foutbedrag van het hoogstratum.",
+        "Het totale goedbedrag van het hoogstratum.",
+        "Het aantal posten in het hoogstratum.",
+        "Inherent risico voor het laagstratum.",
+        "Interne beheersingsrisico voor het laagstratum.",
+        "Cijferanalyserisico voor het laagstratum.",
+        "De materialiteit voor dit hele stratum (dus laagstratum + hoogstratum samen)."
       )
 
       # Bouw de afterGetColHeader-hook die tooltips op de kolomkoppen zet.
@@ -345,19 +350,19 @@ server <- function(input, output, session) {
 
       hulpteksten_plan <- c(
         "De unieke naam van het stratum.",
-        "De totale geldwaarde van de posten in de laagste risicoklasse.",
-        "De verwachte foutfractie binnen dit specifieke stratum.",
-        "Het totale foutbedrag binnen de hoogste risicoklasse.",
-        "Het totale goedgekeurde bedrag binnen de hoogste risicoklasse.",
-        "De steekproefomvang binnen de hoogste risicoklasse.",
-        "Inherent risico (Inherent Risk) voor de basisomvang.",
-        "Interne beheersingsrisico (Internal Control Risk) voor de basisomvang.",
-        "CPA analytisch risico (Control Analytical Risk) voor de basisomvang.",
-        "De specifieke materialiteit die geldt voor dit individuele stratum.",
-        "De minimale basissteekproefomvang om afzonderlijk onder de stratum-materialiteit te blijven.",
-        "De extra posten die de live-klimmer parallel heeft toegevoegd voor foutreductie.",
-        "De totale samengestelde steekproefomvang voor de laagste klasse (basis + extra).",
-        "De algehele totale steekproefomvang voor dit stratum (laag tot + hoog)."
+        "De totale geldswaarde van de posten in het laagstratum.",
+        "De verwachte foutfractie binnen dit stratum.",
+        "Het totale foutbedrag van het hoogstratum.",
+        "Het totale goedbedrag van het hoogstratum.",
+        "Het aantal posten in het hoogstratum.",
+        "Inherent risico voor het laagstratum.",
+        "Interne beheersingsrisico voor het laagstratum.",
+        "Cijferanalyserisico voor het laagstratum.",
+        "De materialiteit voor dit hele stratum (dus laagstratum + hoogstratum samen).",
+        "Het aantal steken uit het laagstratum om onder de materialiteit van dit hele stratum te blijven.",
+        "De extra posten om te steken uit dit stratum die de planner heeft toegevoegd voor verlagen van de totale foutfractie (van alle strata samen dus) om onder de totale materialiteit (van alle strata samen dus) te komen.",
+        "n_laag + n_laag_extra",
+        "n_laag_tot + n_hoog"
       )
 
       renderer_readonly <- JS(
