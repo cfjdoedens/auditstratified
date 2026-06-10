@@ -18,14 +18,15 @@
   risicoschattingen.
 - [`haro_nog_nodige_zekerheid()`](https://cfjdoedens.github.io/auditstratified/reference/haro_nog_nodige_zekerheid.md)
   : Bereken de nog benodigde zekerheid te verkrijgen uit detailcontrole
+- [`plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified.md)
+  : Plan de volledige optimale steekproefverdeling via parallelle
+  convolutie-optimalisatie
 - [`plan_stratified_basis()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified_basis.md)
   : Plan de initiële basissteekproefomvang (Stap 1)
 - [`plot_kanskromme()`](https://cfjdoedens.github.io/auditstratified/reference/plot_kanskromme.md)
   : Teken de kanskromme van de evaluatie
 - [`run_app()`](https://cfjdoedens.github.io/auditstratified/reference/run_app.md)
   : Launch the Shiny App
-- [`test_plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/test_plan_stratified.md)
-  : test plan_stratified()
 - [`vergelijk_los_en_als1()`](https://cfjdoedens.github.io/auditstratified/reference/vergelijk_los_en_als1.md)
   : Vergelijkingsmethoden: los (per stratum) en als1 (alles
   samengevoegd).

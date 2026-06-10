@@ -9,8 +9,8 @@ grootste foutreductie opleveren.
 vind_beste_strata_groep(
   huidige_strata,
   model,
-  klim_granulariteit,
-  totale_zekerheid
+  klim_granulariteit = 10000,
+  totale_zekerheid = 0.95
 )
 ```
 

@@ -65,13 +65,17 @@ de afzonderlijke steekproeven. Elke afzonderlijk gecontroleerde massa
 noemen we een stratum. Bij elkaar gaat het dan om meerdere strata.
 
 Voor het plannen van de steekproeven is er de functie
-`plan_stratified()`. Voor het evalueren is er de functie
+[`plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified.md).
+Voor het evalueren is er de functie
 [`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md).
 
 Hoewel in de auditpraktijk je in het ideale scenario eerst plant, en dan
 pas evalueert, zullen we hieronder eerst
 [`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md)
-bespreken, en daarna `plan_stratified()`. Dit omdat `plan_stratified()`
+bespreken, en daarna
+[`plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified.md).
+Dit omdat
+[`plan_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/plan_stratified.md)
 het best uitgelegd kan worden in termen van
 [`eval_stratified()`](https://cfjdoedens.github.io/auditstratified/reference/eval_stratified.md).
 
