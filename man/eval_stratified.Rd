@@ -8,7 +8,7 @@ eval_stratified(
   steekproeven,
   model = c("binomiaal", "poisson"),
   zekerheid = 0.95,
-  methode = c("FFT", "FFT gelijktijdig", "direct", "Monte Carlo"),
+  methode = c("FFT paarsgewijs", "FFT samen", "direct", "Monte Carlo"),
   granulariteit = NULL,
   start = 1,
   vergelijk = TRUE
@@ -37,20 +37,21 @@ bestaat uit de volgende kolommen:
 \item{model}{Het statistische model dat gebruikt wordt.
 Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.}
 
-\item{zekerheid}{Het zekerheidsniveau waarop we de maximale foutfractie berekenen.}
+\item{zekerheid}{Het zekerheidsniveau waarop we de
+maximale foutfractie berekenen.}
 
 \item{methode}{Methode voor de berekening.
 Keuze uit:
 \itemize{
 \item \code{"direct"}
-\item \code{"FFT"}
-\item \code{"FFT gelijktijdig"} (standaard)
+\item \code{"FFT paarsgewijs"}
+\item \code{"FFT samen"} (standaard)
 \item \code{"Monte Carlo"}.
 }
 
 \code{"direct"},
-\code{"FFT"} en
-\code{"FFT gelijktijdig"} zijn deterministische algoritmen.
+\code{"FFT paarsgewijs"} en
+\code{"FFT samen"} zijn deterministische algoritmen.
 en zijn opvolgend meer
 efficiente vormen van hetzelfde convolutie-algoritme.
 \code{"Monte Carlo"} is niet-deterministisch, dus gebaseerd op toeval.
@@ -58,11 +59,11 @@ Dat betekent dat het resultaat ervan afhangt van de startwaarde van de
 R toevalsgenerator, die je kunt opgeven via de parameter \code{start}.}
 
 \item{granulariteit}{Bepaalt de nauwkeurigheid van de berekening.
-Bij \code{"direct"}, \code{"FFT"} en \code{"FFT gelijktijdig"},
+Bij \code{"direct"}, \code{"FFT paarsgewijs"} en \code{"FFT samen"},
 is dit het aantal stappen op de
 kanskromme-as.
-Als verstekwaarden geldt voor \code{"direct"}, \code{"FFT"}
-en \code{"FFT gelijktijdig"} 25.000,
+Als verstekwaarden geldt voor \code{"direct"}, \code{"FFT paarsgewijs"}
+en \code{"FFT samen"} 25.000,
 en voor \code{"Monte Carlo"} 10.000.000.}
 
 \item{start}{De vaste startwaarde voor de toevalsgenerator
@@ -70,7 +71,8 @@ en voor \code{"Monte Carlo"} 10.000.000.}
 Een startwaarde van 0 betekent dat de startwaarde op de systeemklok,
 is gebaseerd, dus min of meer 'echt' op toeval is gebaseerd.}
 
-\item{vergelijk}{TRUE of FALSE, als TRUE dan worden wat vergelijkende berekeningen uitgevoerd.}
+\item{vergelijk}{TRUE of FALSE, als TRUE dan worden wat vergelijkende
+berekeningen uitgevoerd.}
 }
 \value{
 Een lijst, bestaande uit de convolutie-uitkomsten (fracties en geld),
@@ -85,24 +87,29 @@ Waar van toepassing worden 100\%-getoetste posten (het hoogstratum of
 topstratum) als deterministische factoren opgeteld bij de resulterende
 statistische verdeling.
 
-We berekenen de meest waarschijnlijke en de maximale fout als fractie
-en in geld.
+We berekenen de meest waarschijnlijke en de minimale en
+maximale fout als fractie en in geld.
 
 De meest waarschijnlijke fout is de modus van de kanskromme.
-De maximale fout is afhankelijk van de gevraagde zekerheid, en
-is de fout bij een cumulatieve kans gelijk aan deze zekerheid.
+De minimale en maximale fout zijn afhankelijk van de gevraagde zekerheid.
+De minimale fout is de fout bij een cumulatieve kans gelijk
+aan 1 - deze zekerheid.
+De maximale fout is de fout bij een cumulatieve kans gelijk
+aan deze zekerheid.
 
 De statistische interpretatie van de risico waarden
-hoog, midden en laag voor IHR, IBR en CAR, die deze module hanteert is volgens
-het HARO, het Handboek Auditing Rijksoverheid.
+hoog, midden en laag voor IHR, IBR en CAR, die deze module hanteert is
+volgens het HARO, het Handboek Auditing Rijksoverheid.
 Het HARo wordt beheerd door Auditdienst Rijk, de ADR.
 }
 \details{
 We gaan uit van de som van de foutfracties, de k-waarde, dus we kijken niet
 naar de foutfracties per post.
 
-De maximale fout wordt bepaald aan de hand van de resulterende kanskromme,
-op basis van de gewenste zekerheid. Visueel is de maximale fout, pm, te
+De minimale en maximale fout worden bepaald aan de hand van de
+resulterende kanskromme,
+op basis van de gewenste zekerheid. Visueel zijn de
+minimale fout, pmin, en de maximale fout, pmax, te
 bepalen in een tweedimensionaal, haaks, assenstelsel.
 De horizontale as, de p-as, loopt van 0 tot 1.
 De waarden langs die as geven de mogeljke foutfracties weer,
@@ -113,8 +120,11 @@ In dit assenstelsel kunnen we de kanskromme afbeelden.
 Het oppervlak onder de kanskromme is 1.
 Hierbij praten we over het oppervlak begrenst door de p-as, aan de
 onderkant, en de verticale lijnen p = 0, en p = 1.
-pm is het punt op de p-as waarbij de verticale lijn p = pm,
-het oppervlak onder de kanskromme begrenst zodat links van deze lijn
+pmin is het punt op de p-as waarbij de verticale lijn p = pmin,
+het oppervlak onder de kanskromme begrenst zodat \emph{rechts} van deze lijn
+het oppervlak gelijk is aan de zekerheid, bijvoorbeeld 0,95.
+pmax is het punt op de p-as waarbij de verticale lijn p = pmax,
+het oppervlak onder de kanskromme begrenst zodat \emph{links} van deze lijn
 het oppervlak gelijk is aan de zekerheid, bijvoorbeeld 0,95.
 
 Aggregatie is puur op statistische

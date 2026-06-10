@@ -1,82 +1,96 @@
 source("global.R")
 
+# Definieer de gebruikersinterface van de applicatie.
 ui <- navbarPage(
   "auditstratified",
   theme = bs_theme(version = 5),
 
-  # css en scripts voor de tabel-opmaak.
-  header = tags$head(tags$style(
-    HTML(
-      "
-      /* Toon de zandloper alleen als de berekening langer dan 200ms duurt. */
-      html.rekenen-bezig, html.rekenen-bezig * {
-        cursor: wait !important;
-      }
-      .handsontable, .handsontable * {
-        box-sizing: content-box;
-      }
-      .handsontable td {
-        background-color: #ffffff;
-        color: #000000;
-      }
-      .handsontable .readonly-cell {
-        background-color: #eeeeee !important;
-        color: #555555 !important;
-        font-weight: bold;
-      }
-      .handsontable td.current { background-color: #e6f2ff !important; }
-      .handsontable .htRight { text-align: right; }
-    "
+  # CSS en scripts voor de tabel-opmaak en vraagteken-cursors bij de tabelkoppen.
+  header = tags$head(
+    shinyjs::useShinyjs(),
+    tags$style(
+      HTML(
+        "
+        /* Toon de zandloper alleen als de berekening langer dan 200ms duurt. */
+        html.rekenen-bezig, html.rekenen-bezig * {
+          cursor: wait !important;
+        }
+        .handsontable, .handsontable * {
+          box-sizing: content-box;
+        }
+        .handsontable td {
+          background-color: #ffffff;
+          color: #000000;
+        }
+        .handsontable th {
+          cursor: help !important;
+        }
+        .handsontable .readonly-cell {
+          background-color: #eeeeee !important;
+          color: #555555 !important;
+          font-weight: bold;
+        }
+        .handsontable td.current { background-color: #e6f2ff !important; }
+        .handsontable .htRight { text-align: right; }
+        .voortgang-tekst-container {
+          padding: 10px;
+          background-color: #f8f9fa;
+          border-left: 4px solid #198754;
+          margin-bottom: 15px;
+          font-weight: 500;
+        }
+        "
+      )
+    ),
+    tags$script(
+      HTML(
+        "
+        $(document).on('shiny:tabshown', function(e) {
+          setTimeout(function() {
+            $('.html-widget').each(function() {
+              var widget = HTMLWidgets.getInstance(this);
+              if (widget && widget.hot) { widget.hot.render(); }
+            });
+            window.dispatchEvent(new Event('resize'));
+          }, 150);
+        });
+
+        /* Trigger de formattering pas als de gebruiker het veld verlaat (focusout). */
+        $(document).on('focusout', '#plan_totale_mat, #plan_conf, #plan_klim_granulariteit', function() {
+          Shiny.setInputValue('format_plan_sidebar', Math.random(), {priority: 'event'});
+        });
+
+        /* Europese notatie op de vertraging-slider via MutationObserver. */
+        $(function() {
+          var parent = document.querySelector('#plan_vertraging');
+          if (!parent) parent = document.querySelector('[id$=\"plan_vertraging\"]');
+          if (!parent) return;
+          var container = parent.closest('.shiny-input-container') || parent.parentElement;
+          function kommafix() {
+            container.querySelectorAll('.irs-min, .irs-max, .irs-single, .irs-from, .irs-to, .irs-grid-text').forEach(function(el) {
+              var t = el.textContent;
+              if (t && t.indexOf('.') !== -1) el.textContent = t.replace(/[.]/g, ',');
+            });
+          }
+          new MutationObserver(kommafix).observe(container, { childList: true, subtree: true, characterData: true });
+        });
+        "
+      )
     )
-  ), tags$script(
-    HTML(
-      "
-      $(document).on('shiny:tabshown', function(e) {
-        setTimeout(function() {
-          $('.html-widget').each(function() {
-            var widget = HTMLWidgets.getInstance(this);
-            if (widget && widget.hot) { widget.hot.render(); }
-          });
-          window.dispatchEvent(new Event('resize'));
-        }, 150);
-      });
+  ),
 
-      /* Trigger de formattering pas als de gebruiker het veld verlaat (focusout). */
-      $(document).on('focusout', '#plan_totale_mat, #plan_conf, #plan_klim_granulariteit, #plan_validatie_granulariteit', function() {
-        Shiny.setInputValue('format_plan_sidebar', Math.random(), {priority: 'event'});
-      });
-
-      /* Slimme zandloper-logica om geflikker bij kleine updates te voorkomen. */
-      var busyTimer;
-      $(document).on('shiny:busy', function() {
-        busyTimer = setTimeout(function() {
-          $('html').addClass('rekenen-bezig');
-        }, 200);
-      });
-      $(document).on('shiny:idle', function() {
-        clearTimeout(busyTimer);
-        $('html').removeClass('rekenen-bezig');
-      });
-    "
-    )
-  )),
-
-  # Tab 1 voor de berekening van de benodigde zekerheid.
+  # Tab 1: Nog nodige zekerheid
   tabPanel(
     "nog nodige zekerheid",
-    br(), # Zorgt voor een beetje nette witruimte bovenaan
-
+    br(),
     fluidRow(
-      # De linker kolom (breedte 3 van de 12) voor de inputs.
       column(
         width = 3,
         h4("risico-inschatting"),
-        selectInput("haro_ihr", "IHR:", choices = risk_choices),
-        selectInput("haro_ibr", "IBR:", choices = risk_choices),
-        selectInput("haro_car", "CAR:", choices = risk_choices)
+        selectInput("haro_ihr", info_label("IHR:", "Inherent risico (Inherent Risk)."), choices = risk_choices),
+        selectInput("haro_ibr", info_label("IBR:", "Interne beheersingsrisico (Internal Control Risk)."), choices = risk_choices),
+        selectInput("haro_car", info_label("CAR:", "CPA analytisch risico (Control Analytical Risk)."), choices = risk_choices)
       ),
-
-      # De rechter kolom (breedte 9 van de 12) voor je resultaat
       column(
         width = 9,
         h4("Resultaat"),
@@ -85,23 +99,19 @@ ui <- navbarPage(
     )
   ),
 
-  # Tab 2 voor de berekening van het postenequivalent.
+  # Tab 2: Foutlozepostenequivalent
   tabPanel(
     "foutlozepostenequivalent",
-    br(), # Zorgt voor een beetje nette witruimte bovenaan.
-
+    br(),
     fluidRow(
-      # De linker kolom voor de inputs (let op: 'fpe_' variabelen en materialiteit).
       column(
         width = 3,
         h4("risico-inschatting"),
-        selectInput("fpe_ihr", "IHR:", choices = risk_choices),
-        selectInput("fpe_ibr", "IBR:", choices = risk_choices),
-        selectInput("fpe_car", "CAR:", choices = risk_choices),
-        textInput("fpe_mat", "Materialiteit:", value = "0,01")
+        selectInput("fpe_ihr", info_label("IHR:", "Inherent risico (Inherent Risk)."), choices = risk_choices),
+        selectInput("fpe_ibr", info_label("IBR:", "Interne beheersingsrisico (Internal Control Risk)."), choices = risk_choices),
+        selectInput("fpe_car", info_label("CAR:", "CPA analytisch risico (Control Analytical Risk)."), choices = risk_choices),
+        textInput("fpe_mat", info_label("Materialiteit:", "De materialiteitsgrens als fractie (bijv. 0,01) of als bedrag in euro's."), value = "0,01")
       ),
-
-      # De rechter kolom voor je resultaat.
       column(
         width = 9,
         h4("Resultaat"),
@@ -111,465 +121,68 @@ ui <- navbarPage(
     )
   ),
 
-  # Tab 3 voor de evaluatie van de resultaten.
+  # Tab 3: Evaluatie gestratificeerd
   tabPanel(
     "evaluatie gestratificeerd",
-    layout_sidebar(
-      sidebar = sidebar(
-        width = 270,
+    sidebarLayout(
+      sidebar = sidebarPanel(
+        width = 3,
         h4("instellingen"),
-        textInput(
-          "strat_conf",
-          label = info_label(
-            "zekerheid:",
-            "De gewenste betrouwbaarheid (bijv. 0,95 voor 95%)."
-          ),
-          value = "0,95"
-        ),
-        radioButtons(
-          "strat_model",
-          label = info_label("model:", "De statistische verdeling gebruikt als model."),
-          choices = c("binomiaal", "poisson"),
-          inline = TRUE
-        ),
-        radioButtons(
-          "strat_methode",
-          label = info_label(
-            "methode:",
-            paste0(
-              "De rekenmethode voor de convolutie (vermenigvuldiging van kanskrommen). ",
-              "Er worden vier verschillende methoden aangeboden. ",
-              "De methoden verschillen, het zijn verschillende algoritmes. ",
-              "Maar ze leveren ongeveer hetzelfde resultaat. ",
-              "1. direct: basismethode om convolutie te plegen. ",
-              "Kanskrommen worden paarsgewijs met elkaar vermenigvuldigd. ",
-              "2. FFT: wiskundige verbetering op direct, altijd sneller dan direct. ",
-              "Ook paarsgewijze vermenigvuldiging van de kanskrommen. ",
-              "3. FFT gelijktijdig: als FFT maar nu wordt de vermenigvuldiging in 1 keer uitgevoerd. ",
-              "Daarom weer sneller dan FFT. ",
-              "4. Monte Carlo: vermenigvuldiging wordt in 1 keer uitgevoerd. ",
-              "Gebaseerd op toevalstrekking van de krommen. ",
-              "Daardoor meestal snel, maar geeft ook een toevalsruis. ",
-              "Overigens is er voor alle 4 de methoden ruis door de ",
-              "grofheid van de gramulariteit."
-            )
-          ),
-          choices = c(
-            "direct" = "direct",
-            "FFT" = "FFT",
-            "FFT gelijktijdig" = "FFT gelijktijdig",
-            "Monte Carlo" = "Monte Carlo"
-          ),
-          selected = "FFT gelijktijdig",
-          inline = TRUE
-        ),
-        textInput(
-          "strat_gran",
-          label = info_label(
-            "granulariteit:",
-            "Nauwkeurigheid van de berekening (hoger = preciezer maar trager)."
-          ),
-          value = "10.000"
-        ),
-        numericInput(
-          "eval_start",
-          label = info_label(
-            "startwaarde:",
-            "Voor toevalsgenerator (Monte Carlo). Waarde van 0 betekent: baseer op systeemklok, dus min of meer 'echt' bij toeval."
-          ),
-          value = 1,
-          min = 0,
-          step = 1
-        ),
+        textInput("strat_conf", info_label("zekerheid:", "De gewenste statistische zekerheid (bijv. 0,95 = 95%)."), value = "0,95"),
+        radioButtons("strat_model", "model:", choices = c("binomiaal", "poisson"), inline = TRUE),
+        textInput("strat_gran", info_label("granulariteit:", "De stapgrootte voor de FFT-berekening. Kleiner = nauwkeuriger maar trager."), value = "10.000"),
         hr(),
-        hr(),
-        actionButton(
-          "run_strat",
-          "bereken evaluatie",
-          class = "btn-success",
-          width = "100%"
-        )
+        actionButton("run_strat", "bereken evaluatie", class = "btn-success w-100")
       ),
-      tabsetPanel(
-        id = "hoofd_tabs",
-        tabPanel("1. invoertabel", br(), rHandsontableOutput("hot_input")),
-        tabPanel(
-          "2. resultaten",
-          value = "tab_grafiek",
-          br(),
-          plotOutput("plot_strat_main"),
-          br(),
-          tableOutput("table_strat_main")
+      mainPanel(
+        tabsetPanel(
+          id = "hoofd_tabs",
+          tabPanel("1. invoertabel", br(), rHandsontableOutput("hot_input")),
+          tabPanel(
+            "2. resultaten",
+            value = "tab_grafiek",
+            br(),
+            plotOutput("plot_strat_main"),
+            br(),
+            tableOutput("table_strat_main")
+          )
         )
       )
     )
   ),
 
-  # Tab 4: Planning gestratificeerd met granulariteit onderaan de zijbalk.
+  # Tab 4: Planning gestratificeerd
   tabPanel(
     "planning gestratificeerd",
-    layout_sidebar(
-      sidebar = sidebar(
-        width = 270,
+    sidebarLayout(
+      sidebar = sidebarPanel(
+        width = 3,
         h4("instellingen"),
-        textInput(
-          "plan_totale_mat",
-          label = info_label(
-            "materialiteit:",
-            "Voer een fractie (0,01) of absoluut eurobedrag in."
-          ),
-          value = "0,01"
-        ),
-        textInput(
-          "plan_conf",
-          label = info_label(
-            "zekerheid:",
-            "De gewenste betrouwbaarheid (bijv. 0,95 voor 95%)."
-          ),
-          value = "0,95"
-        ),
-        radioButtons(
-          "plan_model",
-          label = info_label("model:", "De statistische verdeling gebruikt als model."),
-          choices = c("binomiaal" = "binomiaal", "poisson" = "poisson"),
-          inline = TRUE
-        ),
-        radioButtons(
-          "plan_klim_methode",
-          label = info_label(
-            "klimmethode:",
-            paste0(
-              "De rekenmethode voor de convolutie bij het klimmen. ",
-              "Er worden vier verschillende methoden aangeboden. ",
-              "De methoden verschillen, het zijn verschillende algoritmes. ",
-              "Maar ze leveren ongeveer hetzelfde resultaat. ",
-              "1. direct: basismethode om convolutie te plegen. ",
-              "Kanskrommen worden paarsgewijs met elkaar vermenigvuldigd. ",
-              "2. FFT: wiskundige verbetering op direct, altijd sneller dan direct. ",
-              "Ook paarsgewijze vermenigvuldiging van de kanskrommen. ",
-              "3. FFT gelijktijdig: als FFT maar nu wordt de vermenigvuldiging in 1 keer uitgevoerd. ",
-              "Daarom weer sneller dan FFT. ",
-              "4. Monte Carlo: vermenigvuldiging wordt in 1 keer uitgevoerd. ",
-              "Gebaseerd op toevalstrekking van de krommen. ",
-              "Daardoor meestal snel, maar geeft ook een toevalsruis. ",
-              "Overigens is er voor alle 4 de methoden ruis door de ",
-              "grofheid van de gramulariteit."
-            )
-          ),
-          choices = c(
-            "direct" = "direct",
-            "FFT" = "FFT",
-            "FFT gelijktijdig" = "FFT gelijktijdig",
-            "Monte Carlo" = "Monte Carlo"
-          ),
-          selected = "FFT gelijktijdig",
-          inline = TRUE
-        ),
-        textInput(
-          "plan_klim_granulariteit",
-          label = info_label(
-            "granulariteit bij klimmen:",
-            "Nauwkeurigheid van het klimmen (hoger = preciezer maar trager)."
-          ),
-          value = "10.000"
-        ),
-        radioButtons(
-          "plan_validatie_methode",
-          label = info_label(
-            "validatiemethode:",
-            paste0(
-              "De rekenmethode voor de convolutie bij het valideren. ",
-              "Er worden vier verschillende methoden aangeboden. ",
-              "De methoden verschillen, het zijn verschillende algoritmes. ",
-              "Maar ze leveren ongeveer hetzelfde resultaat. ",
-              "1. direct: basismethode om convolutie te plegen. ",
-              "Kanskrommen worden paarsgewijs met elkaar vermenigvuldigd. ",
-              "2. FFT: wiskundige verbetering op direct, altijd sneller dan direct. ",
-              "Ook paarsgewijze vermenigvuldiging van de kanskrommen. ",
-              "3. FFT gelijktijdig: als FFT maar nu wordt de vermenigvuldiging in 1 keer uitgevoerd. ",
-              "Daarom weer sneller dan FFT. ",
-              "4. Monte Carlo: vermenigvuldiging wordt in 1 keer uitgevoerd. ",
-              "Gebaseerd op toevalstrekking van de krommen. ",
-              "Daardoor meestal snel, maar geeft ook een toevalsruis. ",
-              "Overigens is er voor alle 4 de methoden ruis door de ",
-              "grofheid van de gramulariteit."
-            )
-          ),
-          choices = c(
-            "direct" = "direct",
-            "FFT" = "FFT",
-            "FFT gelijktijdig" = "FFT gelijktijdig",
-            "Monte Carlo" = "Monte Carlo"
-          ),
-          selected = "Monte Carlo",
-          inline = TRUE
-        ),
-        textInput(
-          "plan_validatie_granulariteit",
-          label = info_label(
-            "granulariteit bij valideren:",
-            "Nauwkeurigheid van het valideren (hoger = preciezer maar trager)."
-          ),
-          value = "10.000"
-        ),
-        numericInput(
-          "plan_start",
-          label = info_label(
-            "startwaarde:",
-            "Voor toevalsgenerator (Monte Carlo). Waarde van 0 betekent: baseer op systeemklok, dus min of meer 'echt' bij toeval."
-          ),
-          value = 1,
-          min = 0,
-          step = 1
-        ),
-        hr(),
-        actionButton(
-          "run_plan",
-          "bereken planning",
-          class = "btn-success",
-          width = "100%"
-        )
+        textInput("plan_totale_mat", info_label("materialiteit:", "De totale materialiteitsgrens als fractie (bijv. 0,01) of als bedrag in euro's."), "0,01"),
+        textInput("plan_conf", info_label("zekerheid:", "De gewenste statistische zekerheid (bijv. 0,95 = 95%)."), "0,95"),
+        radioButtons("plan_model", "model:", choices = c("binomiaal", "poisson"), inline = TRUE),
+        textInput("plan_klim_granulariteit", info_label("granulariteit bij klimmen:", "De stapgrootte voor de FFT-berekening. Kleiner = nauwkeuriger maar trager."), "10.000"),
+
+        # Bepaal de live-vertraging via een schuifknop met een bereik van nul tot twee seconden.
+        sliderInput("plan_vertraging", "Live-vertraging (sec per stap):", min = 0, max = 2.0, value = 0.3, step = 0.05, sep = ""),
+        actionButton("run_plan", "bereken planning", class = "btn-success w-100")
       ),
-      h3("planning"),
-      helpText(
-        "Vul de witte velden (links) in en klik op 'bereken planning'. De grijze velden (rechts) worden dan berekend."
-      ),
-      rHandsontableOutput("hot_plan_input")
+      mainPanel(
+        h3("planning"),
+        uiOutput("plan_live_status"),
+        helpText("Vul de witte velden (links) in en klik op 'bereken planning'. De grijze velden (rechts) tikken live omhoog."),
+        rHandsontableOutput("hot_plan_input")
+      )
     )
   )
 )
 
+# Definieer de serverlogica van de applicatie.
 server <- function(input, output, session) {
-  # Laad de JavaScript renderers in voor de tabellen
+  # Laad de JavaScript renderers in voor de tabellen.
   source("js_renderers.R", local = TRUE)
 
-  # berekening voor de eerste twee tabbladen.
-  {
-    output$res_haro <- renderText({
-      val <- haro_nog_nodige_zekerheid(input$haro_ihr, input$haro_ibr, input$haro_car)
-
-      paste("nog nodige zekerheid:",
-            format(round(val, 4), decimal.mark = ","))
-    })
-
-    output$res_fpe <- renderText({
-      mat_val <- parse_dutch_num(input$fpe_mat)
-      if (is.na(mat_val))
-        return("Ongeldige materialiteit")
-
-      val <- foutloze_posten_equivalent(input$fpe_ihr, input$fpe_ibr, input$fpe_car, mat_val)
-      paste("foutlozepostenequivalent:", round(val, 0))
-    })
-  }
-
-  # Evaluatie logica voor tabblad 3.
-  {
-    # Werk de tekst van de granulariteit bij met
-    # duizendtalscheidingstekens en verspring naar de resultaten.
-    observeEvent(input$run_strat, {
-      gran_val <- parse_dutch_num(input$strat_gran)
-
-      if (!is.na(gran_val)) {
-        opgemaakt_getal <- format(
-          gran_val,
-          big.mark = ".",
-          decimal.mark = ",",
-          scientific = FALSE
-        )
-        updateTextInput(session, "strat_gran", value = opgemaakt_getal)
-      }
-
-      updateTabsetPanel(session, "hoofd_tabs", selected = "tab_grafiek")
-    })
-
-    # Luister naar wijzigingen in de evaluatiemethode
-    observeEvent(input$strat_methode, {
-      # Bepaal de verstekwaarde op basis van de methode
-      nieuw_gran <- if (input$strat_methode == "Monte Carlo")
-        "10.000.000"
-      else
-        "25.000"
-
-      # Werk het invoerveld op het scherm bij
-      updateTextInput(session, "strat_gran", value = nieuw_gran)
-    })
-
-    # Voeg de onrender functie toe aan de invoertabel van de evaluatie om tooltips bij de kolomkoppen te tonen.
-    output$hot_input <- renderRHandsontable({
-      df <- data.frame(
-        naam = rep(NA_character_, 8),
-        waarde_laag = rep(NA_character_, 8),
-        n_laag = rep(NA_character_, 8),
-        k_laag = rep(NA_character_, 8),
-        fout_hoog = rep("0", 8),
-        goed_hoog = rep("0", 8),
-        n_hoog = rep("0", 8),
-        ihr = rep("H", 8),
-        ibr = rep("H", 8),
-        car = rep("H", 8),
-        materialiteit = rep("0,01", 8),
-        stringsAsFactors = FALSE
-      )
-
-      rhandsontable(df, stretchH = "all") |>
-        hot_col("waarde_laag", renderer = renderer_nl_money) |>
-        hot_col("n_laag", renderer = renderer_nl_general) |>
-        hot_col("k_laag", renderer = renderer_nl_general) |>
-        hot_col("fout_hoog", renderer = renderer_nl_money) |>
-        hot_col("goed_hoog", renderer = renderer_nl_money) |>
-        hot_col("n_hoog", renderer = renderer_nl_general) |>
-        hot_col("ihr",
-                type = "dropdown",
-                source = risk_vec_ui,
-                strict = TRUE) |>
-        hot_col("ibr",
-                type = "dropdown",
-                source = risk_vec_ui,
-                strict = TRUE) |>
-        hot_col("car",
-                type = "dropdown",
-                source = risk_vec_ui,
-                strict = TRUE) |>
-        hot_col("materialiteit", renderer = renderer_nl_percent) |>
-        onRender(
-          "function(el, x) {
-        var hot = this.hot;
-        hot.updateSettings({
-          afterGetColHeader: function(col, TH) {
-            var tooltips = [
-              'naam van het stratum',
-              'boekwaarde in euro\\'s van het totale laagstratum',
-              'aantal gecontroleerde posten in het laagstratum',
-              'som van de foutfracties in de steekproef van het laagstratum',
-              'de totale som van de foute euro\\'s van de 100%-gecontroleerde posten',
-              'de totale som van de goede euro\\'s van de 100%-gecontroleerde posten',
-              'aantal posten in het hoogstratum',
-              'Inherent Risico (H, M, L)',
-              'Interne Beheersingsrisico (H, M, L)',
-              'Cijferanalyserisico (H, M, L)',
-              'de toegestane afwijking als percentage of absoluut bedrag'
-            ];
-            if (col >= 0 && col < tooltips.length) {
-              TH.setAttribute('title', tooltips[col]);
-              TH.style.cursor = 'help';
-            }
-          }
-        });
-      }"
-        )
-    })
-
-    strat_results <- eventReactive(input$run_strat, {
-      req(input$hot_input)
-      raw_df <- hot_to_r(input$hot_input)
-
-      # Parsen en afgeleide kolommen berekenen.
-      {
-        final_df <- raw_df |>
-          as_tibble() |>
-          filter(!is.na(naam) & naam != "") |>
-          mutate(across(
-            c(
-              "waarde_laag",
-              "n_laag",
-              "k_laag",
-              "fout_hoog",
-              "goed_hoog",
-              "n_hoog",
-              "materialiteit"
-            ),
-            parse_dutch_num
-          )) |>
-          mutate(across(c("ihr", "ibr", "car"), toupper)) |>
-          mutate(
-            waarde_hoog = .data$fout_hoog + .data$goed_hoog,
-            waarde_populatie = .data$waarde_laag + .data$waarde_hoog,
-            n_totaal = .data$n_laag + .data$n_hoog
-          ) |>
-          mutate(
-            materialiteit = ifelse(
-              .data$materialiteit > 1 &
-                .data$waarde_populatie > 0,
-              .data$materialiteit / .data$waarde_populatie,
-              .data$materialiteit
-            )
-          )
-      }
-
-      validate(need(nrow(final_df) > 0, "Vul data in."))
-
-      # toon een zandlopertje tijdens de evaluatieberekening.
-      withProgress(message = 'Berekening wordt uitgevoerd...', value = 0, {
-        Sys.sleep(0.1)
-
-        tryCatch(
-          withCallingHandlers({
-            eval_stratified(
-              final_df,
-              model = input$strat_model,
-              zekerheid = parse_dutch_num(input$strat_conf),
-              methode = input$strat_methode,
-              granulariteit = parse_dutch_num(input$strat_gran),
-              start = input$eval_start
-            )
-          }, warning = function(w) {
-            showNotification(
-              paste("Waarschuwing:", conditionMessage(w)),
-              type = "warning",
-              duration = 10
-            )
-            invokeRestart("muffleWarning")
-          }),
-          error = function(e) {
-            showNotification(paste("Fout:", conditionMessage(e)),
-                             type = "error",
-                             duration = 10)
-            NULL
-          }
-        )
-      })
-    })
-
-    output$plot_strat_main <- renderPlot({
-      req(strat_results())
-      plot_kanskromme(strat_results())
-    })
-
-    # Maak de waarden in de resultatentabel op als eurobedragen in
-    # de Nederlandse stijl.
-    {
-      output$table_strat_main <- renderTable({
-        res <- strat_results()
-        req(res)
-
-        tibble(
-          metriek = c("mw fout", "max fout"),
-          waarde = c(paste0(
-            "€ ",
-            format(
-              round(res$mw_fout_convolutie_geld, 2),
-              big.mark = ".",
-              decimal.mark = ",",
-              nsmall = 2,
-              scientific = FALSE
-            )
-          ), paste0(
-            "€ ",
-            format(
-              round(res$max_fout_convolutie_geld, 2),
-              big.mark = ".",
-              decimal.mark = ",",
-              nsmall = 2,
-              scientific = FALSE
-            )
-          ))
-        )
-
-      }, align = "lr")
-    }
-  }
-
-  # Planning logica voor tabblad 4.
+  # Initialiseer de reactieve data en statusvariabelen voor de live-planning.
   {
     plan_table_data <- reactiveVal({
       data.frame(
@@ -591,330 +204,342 @@ server <- function(input, output, session) {
       )
     })
 
-    output$hot_plan_input <- renderRHandsontable({
+    live_status_tekst <- reactiveVal("Systeem is gereed voor berekening.")
+    live_berekening_actief <- reactiveVal(FALSE)
+    live_strata_data <- reactiveVal(NULL)
+    live_ruwe_tabel <- reactiveVal(NULL)
+    live_iteratie <- reactiveVal(0)
+    live_reken_mat <- reactiveVal(0)
+    live_huidige_fout <- reactiveVal(1.0)
+  }
+
+  # Server logica voor Tab 1 & Tab 2.
+  output$res_haro <- renderText({
+    val <- haro_nog_nodige_zekerheid(input$haro_ihr, input$haro_ibr, input$haro_car)
+    paste("nog nodige zekerheid:", format(round(val, 4), decimal.mark = ","))
+  })
+
+  output$res_fpe <- renderText({
+    mat_val <- parse_dutch_num(input$fpe_mat)
+    if (is.na(mat_val)) return("Ongeldige materialiteit")
+    val <- foutloze_posten_equivalent(input$fpe_ihr, input$fpe_ibr, input$fpe_car, mat_val)
+    paste("foutlozepostenequivalent:", round(val, 0))
+  })
+
+  # Server logica voor Tab 3: evaluatie gestratificeerd.
+  output$hot_input <- renderRHandsontable({
+    # Definieer de structuur van de invoertabel voor de evaluatie met zuivere kolomnamen en tooltips.
+    {
+      df <- data.frame(
+        naam = rep(NA_character_, 8),
+        waarde_laag = rep(NA_character_, 8),
+        n_laag = rep(NA_character_, 8),
+        k_laag = rep(NA_character_, 8),
+        fout_hoog = rep("0", 8),
+        goed_hoog = rep("0", 8),
+        n_hoog = rep("0", 8),
+        ihr = rep("H", 8),
+        ibr = rep("H", 8),
+        car = rep("H", 8),
+        materialiteit = rep("0,01", 8),
+        stringsAsFactors = FALSE
+      )
+
+      koppen_eval <- c(
+        "naam", "waarde_laag", "n_laag", "k_laag",
+        "fout_hoog", "goed_hoog", "n_hoog",
+        "ihr", "ibr", "car", "materialiteit"
+      )
+
+      hulpteksten_eval <- c(
+        "De unieke naam van het stratum.",
+        "De totale geldwaarde van de posten in de laagste risicoklasse.",
+        "De gerealiseerde steekproefomvang in de laagste klasse.",
+        "Het aantal geconstateerde fouten (of de foutfractie) in de laagste klasse.",
+        "Het totale foutbedrag binnen de hoogste risicoklasse.",
+        "Het totale goedgekeurde bedrag binnen de hoogste risicoklasse.",
+        "De steekproefomvang binnen de hoogste risicoklasse.",
+        "Inherent risico (Inherent Risk) voor dit specifieke stratum.",
+        "Interne beheersingsrisico (Internal Control Risk) voor dit stratum.",
+        "CPA analytisch risico (Control Analytical Risk) voor dit stratum.",
+        "De specifieke materialiteit die geldt voor dit individuele stratum."
+      )
+
+      # Bouw de afterGetColHeader-hook die tooltips op de kolomkoppen zet.
+      tooltip_json_eval <- paste0("[", paste0('"', hulpteksten_eval, '"', collapse = ","), "]")
+      hook_tooltips_eval <- JS(sprintf(
+        "function(col, TH) { var tips = %s; if (tips[col]) TH.title = tips[col]; }",
+        tooltip_json_eval
+      ))
+    }
+
+    # Bouw de widget op met tooltip-hulpteksten op de kolomkoppen.
+    rhandsontable(df, stretchH = "all", colHeaders = koppen_eval) |>
+      hot_table(stretchH = "all", afterGetColHeader = hook_tooltips_eval) |>
+      hot_col(col = 2, renderer = renderer_nl_money) |>
+      hot_col(col = 3, renderer = renderer_nl_general) |>
+      hot_col(col = 4, renderer = renderer_nl_general) |>
+      hot_col(col = 5, renderer = renderer_nl_money) |>
+      hot_col(col = 6, renderer = renderer_nl_money) |>
+      hot_col(col = 7, renderer = renderer_nl_general) |>
+      hot_col(col = 8, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
+      hot_col(col = 9, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
+      hot_col(col = 10, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
+      hot_col(col = 11, renderer = renderer_nl_percent)
+  })
+
+  strat_results <- eventReactive(input$run_strat, {
+    req(input$hot_input)
+    raw_df <- hot_to_r(input$hot_input)
+
+    final_df <- raw_df |>
+      as_tibble() |>
+      filter(!is.na(naam) & naam != "") |>
+      mutate(across(c("waarde_laag", "n_laag", "k_laag", "fout_hoog", "goed_hoog", "n_hoog", "materialiteit"), parse_dutch_num)) |>
+      mutate(across(c("ihr", "ibr", "car"), toupper)) |>
+      mutate(waarde_hoog = fout_hoog + goed_hoog, waarde_populatie = waarde_laag + waarde_hoog, n_totaal = n_laag + n_hoog)
+
+    validate(need(nrow(final_df) > 0, "Vul data in."))
+
+    eval_stratified(
+      final_df,
+      model = input$strat_model,
+      zekerheid = parse_dutch_num(input$strat_conf),
+      methode = "FFT samen",
+      granulariteit = parse_dutch_num(input$strat_gran)
+    )
+  })
+
+  observeEvent(input$run_strat, {
+    updateTabsetPanel(session, "hoofd_tabs", selected = "tab_grafiek")
+  })
+
+  output$plot_strat_main <- renderPlot({
+    req(strat_results())
+    plot_kanskromme(strat_results())
+  })
+
+  output$table_strat_main <- renderTable({
+    res <- strat_results()
+    req(res)
+    data.frame(
+      metriek = c("mw fout", "max fout"),
+      waarde = c(
+        paste0("€ ", format(round(res$mw_fout_convolutie_geld, 2), big.mark = ".", decimal.mark = ",", nsmall = 2, scientific = FALSE)),
+        paste0("€ ", format(round(res$max_fout_convolutie_geld, 2), big.mark = ".", decimal.mark = ",", nsmall = 2, scientific = FALSE))
+      )
+    )
+  })
+
+  # Server logica voor Tab 4: planning gestratificeerd (Live-klimmer).
+  output$hot_plan_input <- renderRHandsontable({
+    # Definieer de 14 exacte kolomkoppen en hulpteksten synchroon met de datastructuur.
+    {
       df <- plan_table_data()
-      koppen <- c(
-        "naam <span>&#9432;</span>",
-        "waarde_laag <span>&#9432;</span>",
-        "verwacht_fout% <span>&#9432;</span>",
-        "fout_hoog <span>&#9432;</span>",
-        "goed_hoog <span>&#9432;</span>",
-        "n_hoog <span>&#9432;</span>",
-        "ihr <span>&#9432;</span>",
-        "ibr <span>&#9432;</span>",
-        "car <span>&#9432;</span>",
-        "materialiteit <span>&#9432;</span>",
-        "n_laag <span>&#9432;</span>",
-        "n_laag_extra <span>&#9432;</span>",
-        "n_laag_tot <span>&#9432;</span>",
-        "n_totaal <span>&#9432;</span>"
+
+      koppen_plan <- c(
+        "naam", "waarde_laag", "verwacht_fout%", "fout_hoog",
+        "goed_hoog", "n_hoog", "ihr", "ibr", "car",
+        "materialiteit", "n_laag", "n_laag_extra", "n_laag_tot", "n_totaal"
+      )
+
+      hulpteksten_plan <- c(
+        "De unieke naam van het stratum.",
+        "De totale geldwaarde van de posten in de laagste risicoklasse.",
+        "De verwachte foutfractie binnen dit specifieke stratum.",
+        "Het totale foutbedrag binnen de hoogste risicoklasse.",
+        "Het totale goedgekeurde bedrag binnen de hoogste risicoklasse.",
+        "De steekproefomvang binnen de hoogste risicoklasse.",
+        "Inherent risico (Inherent Risk) voor de basisomvang.",
+        "Interne beheersingsrisico (Internal Control Risk) voor de basisomvang.",
+        "CPA analytisch risico (Control Analytical Risk) voor de basisomvang.",
+        "De specifieke materialiteit die geldt voor dit individuele stratum.",
+        "De minimale basissteekproefomvang om afzonderlijk onder de stratum-materialiteit te blijven.",
+        "De extra posten die de live-klimmer parallel heeft toegevoegd voor foutreductie.",
+        "De totale samengestelde steekproefomvang voor de laagste klasse (basis + extra).",
+        "De algehele totale steekproefomvang voor dit stratum (laag tot + hoog)."
       )
 
       renderer_readonly <- JS(
         "function(instance, td, row, col, prop, value, cellProperties) { Handsontable.renderers.TextRenderer.apply(this, arguments); td.className = 'readonly-cell htRight'; }"
       )
 
-      rhandsontable(df, stretchH = "all") |>
-        hot_col("waarde_laag", renderer = renderer_nl_money) |>
-        hot_col("verwachte_foutfractie", renderer = renderer_nl_percent) |>
-        hot_col("fout_hoog", renderer = renderer_nl_money) |>
-        hot_col("goed_hoog", renderer = renderer_nl_money) |>
-        hot_col("n_hoog", renderer = renderer_nl_general) |>
-        hot_col("ihr",
-                type = "dropdown",
-                source = risk_vec_ui,
-                strict = TRUE) |>
-        hot_col("ibr",
-                type = "dropdown",
-                source = risk_vec_ui,
-                strict = TRUE) |>
-        hot_col("car",
-                type = "dropdown",
-                source = risk_vec_ui,
-                strict = TRUE) |>
-        hot_col("materialiteit", renderer = renderer_nl_percent) |>
-        hot_col("n_laag", readOnly = TRUE, renderer = renderer_readonly) |>
-        hot_col("n_laag_extra",
-                readOnly = TRUE,
-                renderer = renderer_readonly) |>
-        hot_col("n_laag_tot", readOnly = TRUE, renderer = renderer_readonly) |>
-        hot_col("n_totaal", readOnly = TRUE, renderer = renderer_readonly) |>
-        hot_cols(colHeaders = koppen) |>
-        onRender(
-          "function(el, x) { var hot = this.hot; hot.updateSettings({ afterGetColHeader: function(col, TH) {
-            var tooltips = [
-              'naam van het stratum',
-              'boekwaarde in euro\\'s van het totale laagstratum',
-              'de foutfractie die u verwacht aan te treffen in het laagstratum',
-              'de totale (verwachte en/of al gevonden) som van de foute euro\\'s van het hoogstratum',
-              'de totale (verwachte en/of al gevonden) som van de goede euro\\'s van het hoogstratum',
-              'aantal posten in het hoogstratum',
-              'Inherent Risico (H, M, L)',
-              'Interne Beheersingsrisico (H, M, L)',
-              'Cijferanalyserisico (H, M, L)',
-              'de toegestane afwijking als percentage of als bedrag van hoogstratum+laagstratum',
-              'het aantal posten dat getrokken moet worden uit het laagstratum om de maximale fout voor de afzonderlijke steekproef onder de materialiteit te houden',
-              'het aantal extra posten dat getrokken moet worden uit het laagstratum om de maximale fout voor de steekproeven samen onder de gezamenlijke materialiteit te houden',
-              'n_laag + n_laag_extra',
-              'n_laag_tot + n_hoog'
-            ];
-            if (col >= 0 && col < tooltips.length) { TH.setAttribute('title', tooltips[col]); TH.style.cursor = 'help'; }
-          } }); }"
-        )
-    })
+      # Bouw de naadloze afterGetColHeader-hook die de tooltips op de TH-elementen injecteert.
+      tooltip_json <- paste0("[", paste0('"', hulpteksten_plan, '"', collapse = ","), "]")
+      hook_tooltips <- JS(sprintf(
+        "function(col, TH) { var tips = %s; if (tips[col]) TH.title = tips[col]; }",
+        tooltip_json
+      ))
+    }
 
-    # Formatteer de zijbalkvelden alleen als de nieuwe waarde echt afwijkt van de huidige invoer.
-    observeEvent(input$format_plan_sidebar, {
-      # Verwerk materialiteit.
-      mat_val <- parse_dutch_num(input$plan_totale_mat)
-      if (!is.na(mat_val)) {
-        fmt_mat <- if (mat_val > 1) {
-          paste0("€ ",
-                 format(
-                   mat_val,
-                   big.mark = ".",
-                   decimal.mark = ",",
-                   scientific = FALSE
-                 ))
-        } else {
-          format(mat_val,
-                 decimal.mark = ",",
-                 scientific = FALSE)
-        }
-        if (input$plan_totale_mat != fmt_mat) {
-          updateTextInput(session, "plan_totale_mat", value = fmt_mat)
-        }
+    # Koppel de complete set titels via colHeaders en reactiveer de interactieve hovers.
+    rhandsontable(df, stretchH = "all", colHeaders = koppen_plan) |>
+      hot_table(stretchH = "all", afterGetColHeader = hook_tooltips) |>
+      hot_col(col = 2, renderer = renderer_nl_money) |>
+      hot_col(col = 3, renderer = renderer_nl_percent) |>
+      hot_col(col = 4, renderer = renderer_nl_money) |>
+      hot_col(col = 5, renderer = renderer_nl_money) |>
+      hot_col(col = 6, renderer = renderer_nl_general) |>
+      hot_col(col = 7, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
+      hot_col(col = 8, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
+      hot_col(col = 9, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
+      hot_col(col = 10, renderer = renderer_nl_percent) |>
+      hot_col(col = 11, readOnly = TRUE, renderer = renderer_readonly) |>
+      hot_col(col = 12, readOnly = TRUE, renderer = renderer_readonly) |>
+      hot_col(col = 13, readOnly = TRUE, renderer = renderer_readonly) |>
+      hot_col(col = 14, readOnly = TRUE, renderer = renderer_readonly)
+  })
+
+  observeEvent(input$format_plan_sidebar, {
+    mat_val <- parse_dutch_num(input$plan_totale_mat)
+    if (!is.na(mat_val)) {
+      fmt_mat <- if (mat_val > 1) paste0("€ ", format(mat_val, big.mark = ".", decimal.mark = ",", scientific = FALSE)) else format(mat_val, decimal.mark = ",", scientific = FALSE)
+      if (input$plan_totale_mat != fmt_mat) updateTextInput(session, "plan_totale_mat", value = fmt_mat)
+    }
+    conf_val <- parse_dutch_num(input$plan_conf)
+    if (!is.na(conf_val)) {
+      fmt_conf <- format(conf_val, decimal.mark = ",", scientific = FALSE)
+      if (input$plan_conf != fmt_conf) updateTextInput(session, "plan_conf", value = fmt_conf)
+    }
+    klim_gran_val <- parse_dutch_num(input$plan_klim_granulariteit)
+    if (!is.na(klim_gran_val)) {
+      fmt_klim_gran <- format(klim_gran_val, big.mark = ".", decimal.mark = ",", scientific = FALSE)
+      if (input$plan_klim_granulariteit != fmt_klim_gran) updateTextInput(session, "plan_klim_granulariteit", value = fmt_klim_gran)
+    }
+  })
+
+  observeEvent(input$run_plan, {
+    req(input$hot_plan_input)
+    raw_df <- hot_to_r(input$hot_plan_input)
+
+    final_df <- raw_df |>
+      as_tibble() |>
+      mutate(across(c("waarde_laag", "verwachte_foutfractie", "fout_hoog", "goed_hoog", "n_hoog", "materialiteit"), parse_dutch_num)) |>
+      mutate(across(c("ihr", "ibr", "car"), toupper)) |>
+      filter(!is.na(naam) & naam != "" & !is.na(waarde_laag)) |>
+      mutate(waarde_hoog = fout_hoog + goed_hoog, waarde_populatie = waarde_laag + waarde_hoog) |>
+      mutate(materialiteit = ifelse(.data$materialiteit > 1 & .data$waarde_populatie > 0, .data$materialiteit / .data$waarde_populatie, .data$materialiteit))
+
+    if (nrow(final_df) == 0) {
+      showNotification("Vul data in.", type = "warning")
+      return()
+    }
+
+    # Parseer de sidebar-invoer voor gebruik in de berekening.
+    mat_val <- parse_dutch_num(input$plan_totale_mat)
+    conf_val <- parse_dutch_num(input$plan_conf)
+    klim_gran_val <- parse_dutch_num(input$plan_klim_granulariteit)
+
+    totale_pop_waarde <- sum(final_df$waarde_populatie, na.rm = TRUE)
+    reken_mat <- ifelse(mat_val > 1 && totale_pop_waarde > 0, mat_val / totale_pop_waarde, mat_val)
+
+    strata_init <- plan_stratified_basis(final_df, model = input$plan_model)
+
+    init_fout <- eval_stratified(
+      strata_init, model = input$plan_model, zekerheid = conf_val,
+      methode = "FFT samen", granulariteit = klim_gran_val, vergelijk = FALSE
+    )$max_fout_convolutie
+
+    for (i in 1:nrow(strata_init)) {
+      t_idx <- which(raw_df$naam == strata_init$naam[i])
+      if (length(t_idx) > 0) {
+        raw_df$n_laag[t_idx] <- format(strata_init$n_basis[i], big.mark = ".", decimal.mark = ",")
+        raw_df$n_laag_extra[t_idx] <- "0"
+        raw_df$n_laag_tot[t_idx] <- format(strata_init$n_basis[i], big.mark = ".", decimal.mark = ",")
+        raw_df$n_totaal[t_idx] <- format(strata_init$n_basis[i] + strata_init$n_hoog[i], big.mark = ".", decimal.mark = ",")
       }
+    }
 
-      # Verwerk zekerheid.
-      conf_val <- parse_dutch_num(input$plan_conf)
-      if (!is.na(conf_val)) {
-        fmt_conf <- format(conf_val,
-                           decimal.mark = ",",
-                           scientific = FALSE)
-        if (input$plan_conf != fmt_conf) {
-          updateTextInput(session, "plan_conf", value = fmt_conf)
-        }
-      }
+    plan_table_data(raw_df)
+    live_status_tekst(sprintf("Basisplanning berekend. Initiële algehele fout: %.4f. Live optimalisatie start...", init_fout))
 
-      # Verwerk granulariteit klimmen.
-      klim_gran_val <- parse_dutch_num(input$plan_klim_granulariteit)
-      if (!is.na(klim_gran_val)) {
-        fmt_klim_gran <- format(
-          klim_gran_val,
-          big.mark = ".",
-          decimal.mark = ",",
-          scientific = FALSE
-        )
-        if (input$plan_klim_granulariteit != fmt_klim_gran) {
-          updateTextInput(session, "plan_klim_granulariteit", value = fmt_klim_gran)
-        }
-      }
+    shinyjs::runjs("$('#hot_plan_input').data('handsontable').render();")
 
-      # Verwerk granulariteit valideren.
-      val_gran_val <- parse_dutch_num(input$plan_validatie_granulariteit)
-      if (!is.na(val_gran_val)) {
-        fmt_val_gran <- format(
-          val_gran_val,
-          big.mark = ".",
-          decimal.mark = ",",
-          scientific = FALSE
-        )
-        if (input$plan_validatie_granulariteit != fmt_val_gran) {
-          updateTextInput(session, "plan_validatie_granulariteit", value = fmt_val_gran)
-        }
-      }
-    })
+    live_strata_data(strata_init)
+    live_ruwe_tabel(raw_df)
+    live_reken_mat(reken_mat)
+    live_huidige_fout(init_fout)
+    live_iteratie(0)
+    live_berekening_actief(TRUE)
+  })
 
+  observe({
+    req(live_berekening_actief())
 
-    # Luister naar wijzigingen in de klimmethode
-    observeEvent(input$plan_klim_methode, {
-      nieuw_klim_gran <- if (input$plan_klim_methode == "Monte Carlo")
-        "1.000.000"
-      else
-        "10.000"
-      updateTextInput(session, "plan_klim_granulariteit", value = nieuw_klim_gran)
-    })
+    vertraging_ms <- if (!is.null(input$plan_vertraging)) input$plan_vertraging * 1000 else 300
+    invalidateLater(max(10, vertraging_ms), session)
 
-    # Luister naar wijzigingen in de validatiemethode
-    observeEvent(input$plan_validatie_methode, {
-      nieuw_val_gran <- if (input$plan_validatie_methode == "Monte Carlo")
-        "10.000.000"
-      else
-        "25.000"
-      updateTextInput(session, "plan_validatie_granulariteit", value = nieuw_val_gran)
-    })
-
-    observeEvent(input$run_plan, {
-      req(input$hot_plan_input)
-
-      mat_val <- parse_dutch_num(input$plan_totale_mat)
+    isolate({
+      strata <- live_strata_data()
+      raw_df <- live_ruwe_tabel()
+      reken_mat <- live_reken_mat()
+      huidige_fout <- live_huidige_fout()
+      iteratie <- live_iteratie()
       conf_val <- parse_dutch_num(input$plan_conf)
       klim_gran_val <- parse_dutch_num(input$plan_klim_granulariteit)
-      val_gran_val <- parse_dutch_num(input$plan_validatie_granulariteit)
 
-      # Formatteer materialiteit
-      if (!is.na(mat_val)) {
-        fmt_mat <- if (mat_val > 1) {
-          paste0("€ ",
-                 format(
-                   mat_val,
-                   big.mark = ".",
-                   decimal.mark = ",",
-                   scientific = FALSE
-                 ))
-        } else {
-          format(mat_val,
-                 decimal.mark = ",",
-                 scientific = FALSE)
+      if (huidige_fout > reken_mat && iteratie < 1000) {
+        iteratie <- iteratie + 1
+
+        beste_strata_indices <- vind_beste_strata_groep(
+          strata, model = input$plan_model, klim_granulariteit = klim_gran_val, totale_zekerheid = conf_val
+        )
+        aantal_parallel <- length(beste_strata_indices)
+
+        info_strata <- character(aantal_parallel)
+        for (idx in seq_along(beste_strata_indices)) {
+          s_idx <- beste_strata_indices[idx]
+          info_strata[idx] = sprintf("%s; n = %d", strata$naam[s_idx], strata$n_laag[s_idx] + 1)
         }
-        updateTextInput(session, "plan_totale_mat", value = fmt_mat)
-      }
+        strata_info_tekst <- paste(info_strata, collapse = ", ")
 
-      # Formatteer granulariteiten
-      if (!is.na(klim_gran_val)) {
-        updateTextInput(
-          session,
-          "plan_klim_granulariteit",
-          value = format(
-            klim_gran_val,
-            big.mark = ".",
-            decimal.mark = ",",
-            scientific = FALSE
-          )
-        )
-      }
+        for (beste_stratum in beste_strata_indices) {
+          strata$n_laag[beste_stratum] <- strata$n_laag[beste_stratum] + 1
+          strata$k_laag[beste_stratum] <- strata$n_laag[beste_stratum] * strata$verwachte_foutfractie[beste_stratum]
+          strata$n_totaal[beste_stratum] <- strata$n_laag[beste_stratum] + strata$n_hoog[beste_stratum]
+        }
 
-      if (!is.na(val_gran_val)) {
-        updateTextInput(
-          session,
-          "plan_validatie_granulariteit",
-          value = format(
-            val_gran_val,
-            big.mark = ".",
-            decimal.mark = ",",
-            scientific = FALSE
-          )
-        )
-      }
+        huidige_fout <- eval_stratified(
+          strata, model = input$plan_model, zekerheid = conf_val,
+          methode = "FFT samen", granulariteit = klim_gran_val, vergelijk = FALSE
+        )$max_fout_convolutie
 
-      # Stop-check als 1 van de 4 velden ongeldig/leeg is
-      if (is.na(mat_val) ||
-          is.na(conf_val) || is.na(klim_gran_val) || is.na(val_gran_val)) {
-        showNotification("Ongeldige instellingen.", type = "error")
-        return()
-      }
+        for (i in 1:nrow(strata)) {
+          t_idx <- which(raw_df$naam == strata$naam[i])
+          if (length(t_idx) > 0) {
+            n_b <- strata$n_basis[i]
+            n_l_t <- strata$n_laag[i]
+            n_h <- strata$n_hoog[i]
 
-      raw_df <- hot_to_r(input$hot_plan_input)
+            raw_df$n_laag[t_idx] <- format(n_b, big.mark = ".", decimal.mark = ",")
+            raw_df$n_laag_extra[t_idx] <- format(n_l_t - n_b, big.mark = ".", decimal.mark = ",")
+            raw_df$n_laag_tot[t_idx] <- format(n_l_t, big.mark = ".", decimal.mark = ",")
+            raw_df$n_totaal[t_idx] <- format(n_l_t + n_h, big.mark = ".", decimal.mark = ",")
+          }
+        }
 
-      # Leegmaken van de resultaatkolommen voordat de berekening start.
-      {
-        raw_df$n_laag <- ""
-        raw_df$n_laag_extra <- ""
+        fmt_huidige_fout <- format(round(huidige_fout, 4), decimal.mark = ",")
+        fmt_reken_mat <- format(round(reken_mat, 4), decimal.mark = ",")
 
-        raw_df$n_laag_tot <- ""
-        raw_df$n_totaal <- ""
-      }
+        live_status_tekst(sprintf("Stap %d | Opgehoogd naar: %s | Resterende fout: %s (doel: %s)", iteratie, strata_info_tekst, fmt_huidige_fout, fmt_reken_mat))
 
-      final_df <- raw_df |>
-        as_tibble() |>
-        mutate(across(
-          c(
-            "waarde_laag",
-            "verwachte_foutfractie",
-            "fout_hoog",
-            "goed_hoog",
-            "n_hoog",
-            "materialiteit"
-          ),
-          parse_dutch_num
-        )) |>
-        mutate(across(c("ihr", "ibr", "car"), toupper)) |>
-        filter(!is.na(naam) & naam != "" & !is.na(waarde_laag)) |>
-        mutate(waarde_hoog = fout_hoog + goed_hoog,
-               waarde_populatie = waarde_laag + waarde_hoog) |>
-        mutate(
-          materialiteit = ifelse(
-            .data$materialiteit > 1 &
-              .data$waarde_populatie > 0,
-            .data$materialiteit / .data$waarde_populatie,
-            .data$materialiteit
-          )
-        )
-
-      if (nrow(final_df) == 0) {
         plan_table_data(raw_df)
-        showNotification("Vul minimaal een naam en waarde in.", type = "warning")
-        return()
-      }
+        live_ruwe_tabel(raw_df)
+        live_strata_data(strata)
+        live_huidige_fout(huidige_fout)
+        live_iteratie(iteratie)
 
-      # Berekening uitvoeren en zandlopertje tonen.
-      {
-        totale_pop_waarde <- sum(final_df$waarde_populatie, na.rm = TRUE)
-        reken_mat <- ifelse(mat_val > 1 &&
-                              totale_pop_waarde > 0,
-                            mat_val / totale_pop_waarde,
-                            mat_val)
+        shinyjs::runjs("setTimeout(function() { $('#hot_plan_input').data('handsontable').render(); }, 10);")
 
-        withProgress(message = 'Optimalisatie wordt uitgevoerd...', value = 0, {
-          Sys.sleep(0.1)
-
-          tryCatch({
-            res <- plan_stratified(
-              final_df,
-              reken_mat,
-              conf_val,
-              model = input$plan_model,
-              klim_methode = input$plan_klim_methode,
-              klim_granulariteit = klim_gran_val,
-              validatie_methode = input$plan_validatie_methode,
-              validatie_granulariteit = val_gran_val,
-              max_iteraties = 1000,
-              start = input$plan_start
-            )
-            res_fmt <- res |> mutate(
-              n_l = n_basis,
-              # Basis.
-              n_l_e = n_definitief - n_basis,
-              # Extra.
-              n_l_t = n_definitief,
-              # Definitief = basis + extra.
-              n_t = n_definitief + n_hoog     # Totaal = basis + extra + hoog.
-            ) |>
-              mutate(across(
-                c(n_l, n_l_e, n_l_t, n_t),
-                ~ format(
-                  round(., 0),
-                  big.mark = ".",
-                  decimal.mark = ","
-                )
-              ))
-
-            for (i in 1:nrow(res_fmt)) {
-              idx <- which(raw_df$naam == res_fmt$naam[i])
-              if (length(idx) > 0) {
-                raw_df$n_laag[idx] <- res_fmt$n_l[i]
-                raw_df$n_laag_extra[idx] <- res_fmt$n_l_e[i]
-                raw_df$n_laag_tot[idx] <- res_fmt$n_l_t[i]
-                raw_df$n_totaal[idx] <- res_fmt$n_t[i]
-              }
-            }
-
-            plan_table_data(raw_df)
-          }, warning = function(w) {
-            showNotification(
-              paste("Let op:", conditionMessage(w)),
-              type = "warning",
-              duration = 15
-            )
-            plan_table_data(raw_df)
-          }, error = function(e) {
-            showNotification(paste("Fout:", conditionMessage(e)), type = "error")
-            plan_table_data(raw_df)
-          })
-        })
+      } else {
+        live_berekening_actief(FALSE)
+        fmt_eind_fout <- format(round(huidige_fout, 4), decimal.mark = ",")
+        live_status_tekst(sprintf("Optimalisatie voltooid! Eindfout: %s is kleiner dan de materialiteit.", fmt_eind_fout))
+        shinyjs::runjs("$('#hot_plan_input').data('handsontable').render();")
       }
     })
-  }
+  })
 }
-shinyApp(ui, server)
+
+# Construeer en retourneer het app-object expliciet voor de pakket-wrapper.
+shinyApp(ui = ui, server = server)

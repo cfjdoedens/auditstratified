@@ -933,7 +933,7 @@ test_that("Evaluatie met een 100%-getoetst topstratum inc. redundantie", {
   # de convolutie-uitkomst verifiëren zonder last te hebben van ruis!
   r_fft <- eval_stratified(steekproeven = test_topstratum,
                            zekerheid = 0.95,
-                           methode = "FFT")
+                           methode = "FFT paarsgewijs")
   expect_equal(round(r_fft[["mw_fout_convolutie_geld"]], 0), 15000)
 })
 
@@ -995,7 +995,7 @@ test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
   r_fft <- eval_stratified(
     steekproeven = sniels,
     zekerheid = 0.95,
-    methode = "FFT",
+    methode = "FFT paarsgewijs",
     granulariteit = 10000
   )
 

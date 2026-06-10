@@ -182,7 +182,7 @@ test_that("plan_stratified berekent een exact sluitend steekproefplan voor binom
               totale_materialiteit = 0.03,
               totale_zekerheid = 0.95,
               model = "binomiaal",
-              methode = "FFT"
+              methode = "FFT paarsgewijs"
             )
 
             # verifieer of de berekende steekproef netjes onder de materialiteitsgrens blijft.
@@ -207,7 +207,7 @@ test_that("plan_stratified werkt correct met de poisson verdeling en strakke mar
               totale_materialiteit = 0.05,
               totale_zekerheid = 0.95,
               model = "poisson",
-              methode = "FFT"
+              methode = "FFT paarsgewijs"
             )
 
             # eis dat de uiteindelijke planning robuust genoeg is voor poisson zonder de marge te overschrijden.

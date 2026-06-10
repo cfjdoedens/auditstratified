@@ -22,7 +22,7 @@ Voor deze evaluatie zijn de volgende parameters en instellingen gebruikt:
 
 * **Statistisch model:** `r tools::toTitleCase(res$invoer$model)`
 * **Gewenste zekerheid:** `r params$zekerheid * 100`%
-* **Rekenmethode:** `r ifelse(res$invoer$methode == "FFT", "Numerieke convolutie (FFT)", "Monte Carlo simulatie")`
+* **Rekenmethode:** `r ifelse(res$invoer$methode == "FFT paarsgewijs", "Numerieke convolutie (FFT)", "Monte Carlo simulatie")`
 * **Granulariteit / Iteraties:** `r format(res$invoer$granulariteit, big.mark = ".", decimal.mark = ",")`
 
 ```{r, results='asis'}
