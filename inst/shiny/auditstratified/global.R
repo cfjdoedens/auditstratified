@@ -1,13 +1,14 @@
-library(shiny)
-library(tibble)
+library(auditstratified)
+library(bsicons)
+library(bslib)
 library(dplyr)
+library(ggplot2)
+library(htmlwidgets)
 library(readr)
 library(rhandsontable)
-library(htmlwidgets)
-library(ggplot2)
-library(bslib)
-library(bsicons)
-library(auditstratified)
+library(shiny)
+library(shinyjs)
+library(tibble)
 
 # risico opties voor de dropdowns.
 {
