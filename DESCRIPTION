@@ -30,7 +30,10 @@ Imports:
     readr,
     rhandsontable,
     shiny,
-    tibble
+    tibble,
+    shinyjs,
+    bslib,
+    bsicons
 Remotes:
     cfjdoedens/drawsneeded
 URL: https://github.com/cfjdoedens/auditstratified, https://cfjdoedens.github.io/auditstratified/
