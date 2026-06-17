@@ -8,12 +8,8 @@ test_that("voorbeeld Paul van Batenburg", {
     ~ ibr,
     ~ car,
     ~ materialiteit,
-    ~ fout_hoog,
-    ~ goed_hoog,
-    ~ n_hoog,
-    ~ n_totaal,
     ~ waarde_hoog,
-    ~ waarde_populatie,
+    ~ fout_hoog,
     "populatie1",
     1000000,
     512,
@@ -24,10 +20,6 @@ test_that("voorbeeld Paul van Batenburg", {
     0.01,
     0,
     0,
-    0,
-    512,
-    0,
-    1000000,
     "populatie2",
     1000000,
     106,
@@ -37,11 +29,7 @@ test_that("voorbeeld Paul van Batenburg", {
     "H",
     0.01,
     0,
-    0,
-    0,
-    106,
-    0,
-    1000000
+    0
   )
   r <- eval_stratified(
     steekproeven = vb_paul_van_batenburg,
@@ -65,12 +53,8 @@ test_that(
       ~ ibr,
       ~ car,
       ~ materialiteit,
-      ~ fout_hoog,
-      ~ goed_hoog,
-      ~ n_hoog,
-      ~ n_totaal,
       ~ waarde_hoog,
-      ~ waarde_populatie,
+      ~ fout_hoog,
       "populatie1",
       100000000,
       148,
@@ -81,10 +65,6 @@ test_that(
       0.01,
       0,
       0,
-      0,
-      148,
-      0,
-      100000000,
       "populatie2",
       100000000,
       50,
@@ -94,11 +74,7 @@ test_that(
       "H",
       0.01,
       0,
-      0,
-      0,
-      50,
-      0,
-      100000000
+      0
     )
     r <- eval_stratified(
       steekproeven = example_in_description,
@@ -120,12 +96,8 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
     ~ ibr,
     ~ car,
     ~ materialiteit,
-    ~ fout_hoog,
-    ~ goed_hoog,
-    ~ n_hoog,
-    ~ n_totaal,
     ~ waarde_hoog,
-    ~ waarde_populatie,
+    ~ fout_hoog,
     "x",
     100,
     300,
@@ -136,10 +108,6 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
     0.01,
     0,
     0,
-    0,
-    300,
-    0,
-    100,
     "y",
     200,
     160,
@@ -149,11 +117,7 @@ test_that("Voorbeelden voor Niels van Leeuwen.", {
     "H",
     0.01,
     0,
-    0,
-    0,
-    160,
-    0,
-    200
+    0
   )
 
   # Evalueer x en y samen (Monte Carlo met originele brute rekenkracht).
@@ -241,12 +205,8 @@ test_that("Drie dezelfde steekproeven.", {
     ~ ibr,
     ~ car,
     ~ materialiteit,
-    ~ fout_hoog,
-    ~ goed_hoog,
-    ~ n_hoog,
-    ~ n_totaal,
     ~ waarde_hoog,
-    ~ waarde_populatie,
+    ~ fout_hoog,
     "s1",
     10,
     10,
@@ -257,10 +217,6 @@ test_that("Drie dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s2",
     10,
     10,
@@ -271,10 +227,6 @@ test_that("Drie dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s3",
     10,
     10,
@@ -284,11 +236,7 @@ test_that("Drie dezelfde steekproeven.", {
     "H",
     0.01,
     0,
-    0,
-    0,
-    10,
-    0,
-    10
+    0
   )
 
   r <- eval_stratified(
@@ -312,12 +260,8 @@ test_that("32 dezelfde steekproeven.", {
     ~ ibr,
     ~ car,
     ~ materialiteit,
-    ~ fout_hoog,
-    ~ goed_hoog,
-    ~ n_hoog,
-    ~ n_totaal,
     ~ waarde_hoog,
-    ~ waarde_populatie,
+    ~ fout_hoog,
     "s1",
     10,
     10,
@@ -328,10 +272,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s2",
     10,
     10,
@@ -342,10 +282,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s3",
     10,
     10,
@@ -356,10 +292,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s4",
     10,
     10,
@@ -370,10 +302,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s5",
     10,
     10,
@@ -384,10 +312,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s6",
     10,
     10,
@@ -398,10 +322,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s7",
     10,
     10,
@@ -412,10 +332,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s8",
     10,
     10,
@@ -426,10 +342,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s9",
     10,
     10,
@@ -440,10 +352,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s10",
     10,
     10,
@@ -454,10 +362,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s11",
     10,
     10,
@@ -468,10 +372,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s12",
     10,
     10,
@@ -482,10 +382,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s13",
     10,
     10,
@@ -496,10 +392,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s14",
     10,
     10,
@@ -510,10 +402,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s15",
     10,
     10,
@@ -524,10 +412,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s16",
     10,
     10,
@@ -538,10 +422,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s17",
     10,
     10,
@@ -552,10 +432,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s18",
     10,
     10,
@@ -566,10 +442,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s19",
     10,
     10,
@@ -580,10 +452,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s20",
     10,
     10,
@@ -594,10 +462,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s21",
     10,
     10,
@@ -608,10 +472,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s22",
     10,
     10,
@@ -622,10 +482,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s23",
     10,
     10,
@@ -636,10 +492,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s24",
     10,
     10,
@@ -650,10 +502,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s25",
     10,
     10,
@@ -664,10 +512,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s26",
     10,
     10,
@@ -678,10 +522,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s27",
     10,
     10,
@@ -692,10 +532,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s28",
     10,
     10,
@@ -706,10 +542,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s29",
     10,
     10,
@@ -720,10 +552,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s30",
     10,
     10,
@@ -734,10 +562,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s31",
     10,
     10,
@@ -748,10 +572,6 @@ test_that("32 dezelfde steekproeven.", {
     0.01,
     0,
     0,
-    0,
-    10,
-    0,
-    10,
     "s32",
     10,
     10,
@@ -761,11 +581,7 @@ test_that("32 dezelfde steekproeven.", {
     "H",
     0.01,
     0,
-    0,
-    0,
-    10,
-    0,
-    10
+    0
   )
 
   r <- eval_stratified(
@@ -815,12 +631,8 @@ test_that("LNV 2023 (Wim Slot)", {
     ~ ibr,
     ~ car,
     ~ materialiteit,
-    ~ fout_hoog,
-    ~ goed_hoog,
-    ~ n_hoog,
-    ~ n_totaal,
     ~ waarde_hoog,
-    ~ waarde_populatie,
+    ~ fout_hoog,
     "kd_beleid",
     69600741,
     8,
@@ -831,10 +643,6 @@ test_that("LNV 2023 (Wim Slot)", {
     0.01,
     0,
     0,
-    0,
-    8,
-    0,
-    69600741,
     "lbv",
     223532422,
     22,
@@ -845,10 +653,6 @@ test_that("LNV 2023 (Wim Slot)", {
     0.01,
     0,
     0,
-    0,
-    22,
-    0,
-    223532422,
     "inkopen",
     12146914,
     1,
@@ -858,11 +662,7 @@ test_that("LNV 2023 (Wim Slot)", {
     "H",
     0.01,
     0,
-    0,
-    0,
-    1,
-    0,
-    12146914
+    0
   )
 
   r <- eval_stratified(
@@ -894,12 +694,8 @@ test_that("Evaluatie met een 100%-getoetst topstratum inc. redundantie", {
     ~ ibr,
     ~ car,
     ~ materialiteit,
-    ~ fout_hoog,
-    ~ goed_hoog,
-    ~ n_hoog,
-    ~ n_totaal,
     ~ waarde_hoog,
-    ~ waarde_populatie,
+    ~ fout_hoog,
     "stratum_met_top",
     500000,
     100,
@@ -908,12 +704,8 @@ test_that("Evaluatie met een 100%-getoetst topstratum inc. redundantie", {
     "H",
     "H",
     0.01,
-    10000,
-    90000,
-    15,
-    115,
     100000,
-    600000
+    10000
   )
 
   r_mc <- eval_stratified(
@@ -937,7 +729,6 @@ test_that("Evaluatie met een 100%-getoetst topstratum inc. redundantie", {
   expect_equal(round(r_fft[["mw_fout_convolutie_geld"]], 0), 15000)
 })
 
-# --- NIEUWE TEST: FFT vs Monte Carlo ---
 test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
   sniels <- tribble(
     ~ naam,
@@ -948,12 +739,8 @@ test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
     ~ ibr,
     ~ car,
     ~ materialiteit,
-    ~ fout_hoog,
-    ~ goed_hoog,
-    ~ n_hoog,
-    ~ n_totaal,
     ~ waarde_hoog,
-    ~ waarde_populatie,
+    ~ fout_hoog,
     "x",
     100,
     300,
@@ -964,10 +751,6 @@ test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
     0.01,
     0,
     0,
-    0,
-    300,
-    0,
-    100,
     "y",
     200,
     160,
@@ -977,11 +760,7 @@ test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
     "H",
     0.01,
     0,
-    0,
-    0,
-    160,
-    0,
-    200
+    0
   )
 
   # Draai beide methodes (Monte Carlo krijgt weer de oude 1e5 iteraties voor betrouwbaarheid)
@@ -1000,7 +779,195 @@ test_that("FFT methode geeft vergelijkbare resultaten als Monte Carlo", {
   )
 
   # De maximale fout (convolutie) zou bij beide methodes in de basis hetzelfde
-  # moeten zijn, we tolereren hier een miniem afrondingsverschil op 3 decimalen.
-  expect_equal(round(r_fft$max_fout_convolutie, 3),
-               round(r_mc$max_fout_convolutie, 3))
+  # moeten zijn, we tolereren hier een afrondingsverschil.
+  expect_equal(
+    r_fft$max_fout_convolutie,
+    r_mc$max_fout_convolutie,
+    tolerance = 0.015
+  )
+})
+
+test_that("Controleer effect van toevoegen van posten uit het hoogstratum", {
+  a <- tribble(
+    ~ naam,
+    ~ waarde_laag,
+    ~ n_laag,
+    ~ k_laag,
+    ~ ihr,
+    ~ ibr,
+    ~ car,
+    ~ materialiteit,
+    ~ waarde_hoog,
+    ~ fout_hoog,
+    "x",
+    1000,
+    300,
+    0,
+    "H",
+    "H",
+    "H",
+    0.01,
+    1000,
+    0
+  )
+
+  b <- tribble(
+    ~ naam,
+    ~ waarde_laag,
+    ~ n_laag,
+    ~ k_laag,
+    ~ ihr,
+    ~ ibr,
+    ~ car,
+    ~ materialiteit,
+    ~ waarde_hoog,
+    ~ fout_hoog,
+    "x",
+    1000,
+    300,
+    0,
+    "H",
+    "H",
+    "H",
+    0.01,
+    1000,
+    1000
+  )
+
+  ra <- eval_stratified(steekproeven = a, methode = "FFT samen", vergelijk = FALSE)
+  rb <- eval_stratified(steekproeven = b, methode = "FFT samen", vergelijk = FALSE)
+
+  # De max_fout_convolutie moet hoger zijn wanneer fout_hoog groter is.
+  expect_lt(ra$max_fout_convolutie, rb$max_fout_convolutie)
+
+  # Het verschil moet gelijk zijn aan fout_hoog / totale_populatie.
+  verwacht_verschil <- (b$fout_hoog - a$fout_hoog) / (a$waarde_laag + a$waarde_hoog)
+  werkelijk_verschil <- rb$max_fout_convolutie - ra$max_fout_convolutie
+  expect_equal(werkelijk_verschil, verwacht_verschil, tolerance = 1e-3)
+})
+
+# Helper-tibble voor de invoercontrole-testen.
+geldige_steekproef <- tribble(
+  ~ naam,
+  ~ waarde_laag,
+  ~ n_laag,
+  ~ k_laag,
+  ~ ihr,
+  ~ ibr,
+  ~ car,
+  ~ materialiteit,
+  ~ waarde_hoog,
+  ~ fout_hoog,
+  "test",
+  1000,
+  50,
+  1,
+  "H",
+  "H",
+  "H",
+  0.05,
+  0,
+  0
+)
+
+test_that("Invoercontrole: geen tibble wordt afgewezen", {
+  expect_error(eval_stratified(steekproeven = as.data.frame(geldige_steekproef)))
+})
+
+test_that("Invoercontrole: lege tibble wordt afgewezen", {
+  expect_error(eval_stratified(steekproeven = geldige_steekproef[0, ]))
+})
+
+test_that("Invoercontrole: ontbrekende kolom wordt afgewezen", {
+  expect_error(
+    eval_stratified(steekproeven = geldige_steekproef |> dplyr::select(-k_laag)),
+    "Ontbrekende kolommen.*k_laag"
+  )
+})
+
+test_that("Invoercontrole: NA-waarden worden afgewezen", {
+  # NA in een numerieke kolom.
+  slecht <- geldige_steekproef
+  slecht$waarde_laag <- NA_real_
+  expect_error(eval_stratified(steekproeven = slecht))
+
+  # NA in een tekstkolom.
+  slecht2 <- geldige_steekproef
+  slecht2$ihr <- NA_character_
+  expect_error(eval_stratified(steekproeven = slecht2))
+})
+
+test_that("Invoercontrole: verkeerd kolomtype wordt afgewezen", {
+  # Numeriek in plaats van tekst voor ihr.
+  slecht <- geldige_steekproef
+  slecht$ihr <- 1
+  expect_error(eval_stratified(steekproeven = slecht))
+
+  # Tekst in plaats van numeriek voor waarde_laag.
+  slecht2 <- geldige_steekproef
+  slecht2$waarde_laag <- "duizend"
+  expect_error(eval_stratified(steekproeven = slecht2))
+})
+
+test_that("Invoercontrole: ongeldige risico-inschatting wordt afgewezen", {
+  slecht <- geldige_steekproef
+  slecht$ibr <- "X"
+  expect_error(eval_stratified(steekproeven = slecht))
+})
+
+test_that("Invoercontrole: negatieve waarden worden afgewezen", {
+  # Negatieve waarde_laag.
+  slecht <- geldige_steekproef
+  slecht$waarde_laag <- -100
+  expect_error(eval_stratified(steekproeven = slecht))
+
+  # Negatieve n_laag.
+  slecht2 <- geldige_steekproef
+  slecht2$n_laag <- -1
+  expect_error(eval_stratified(steekproeven = slecht2))
+
+  # Negatieve fout_hoog.
+  slecht3 <- geldige_steekproef
+  slecht3$fout_hoog <- -5
+  expect_error(eval_stratified(steekproeven = slecht3))
+})
+
+test_that("Invoercontrole: k_laag groter dan n_laag wordt afgewezen", {
+  slecht <- geldige_steekproef
+  slecht$k_laag <- 100
+  slecht$n_laag <- 50
+  expect_error(eval_stratified(steekproeven = slecht))
+})
+
+test_that("Invoercontrole: fout_hoog groter dan waarde_hoog wordt afgewezen", {
+  slecht <- geldige_steekproef
+  slecht$fout_hoog <- 500
+  slecht$waarde_hoog <- 100
+  expect_error(eval_stratified(steekproeven = slecht))
+})
+
+test_that("Invoercontrole: materialiteit buiten bereik wordt afgewezen", {
+  # Materialiteit van 0.
+  slecht <- geldige_steekproef
+  slecht$materialiteit <- 0
+  expect_error(eval_stratified(steekproeven = slecht))
+
+  # Materialiteit groter dan 1.
+  slecht2 <- geldige_steekproef
+  slecht2$materialiteit <- 1.5
+  expect_error(eval_stratified(steekproeven = slecht2))
+})
+
+test_that("Invoercontrole: dubbele stratumnamen worden afgewezen", {
+  dubbel <- dplyr::bind_rows(geldige_steekproef, geldige_steekproef)
+  expect_error(
+    eval_stratified(steekproeven = dubbel),
+    "stratumnamen"
+  )
+})
+
+test_that("Invoercontrole: lege stratumnaam wordt afgewezen", {
+  slecht <- geldige_steekproef
+  slecht$naam <- ""
+  expect_error(eval_stratified(steekproeven = slecht))
 })

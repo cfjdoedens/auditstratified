@@ -21,6 +21,8 @@ Suggests:
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Imports:
+    bslib,
+    bsicons,
     drawsneeded,
     dplyr,
     ggplot2,
@@ -30,10 +32,8 @@ Imports:
     readr,
     rhandsontable,
     shiny,
-    tibble,
     shinyjs,
-    bslib,
-    bsicons
+    tibble
 Remotes:
     cfjdoedens/drawsneeded
 URL: https://github.com/cfjdoedens/auditstratified, https://cfjdoedens.github.io/auditstratified/

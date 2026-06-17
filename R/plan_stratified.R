@@ -40,12 +40,11 @@ plan_stratified_basis <- function(steekproeven,
       )),
       n_laag = .data$n_basis,
       k_laag = .data$n_laag * .data$verwachte_foutfractie,
-      n_totaal = .data$n_laag + .data$n_hoog,
       waarde_hoog = .data$fout_hoog + .data$goed_hoog,
       waarde_populatie = .data$waarde_laag + .data$waarde_hoog
     )
 
-  # Schoon de tijdelijke zekerheidskolom opschonen alvorens de tabel te retourneren.
+  # Schoon de tijdelijke zekerheidskolom op alvorens de tabel te retourneren.
   strata$cert <- NULL
   return(strata)
 }
@@ -54,8 +53,9 @@ plan_stratified_basis <- function(steekproeven,
 #' Evalueer en selecteer de optimale strata voor de volgende parallelle klimstap
 #'
 #' @description
-#' Deze functie berekent via exacte convolutie welke strata bij ophoging
-#' de grootste foutreductie opleveren.
+#' Deze functie berekent via exacte convolutie welke strata bij een ophoging van
+#' exact 1 post de grootste foutreductie opleveren. Omdat max_fout continu is,
+#' geeft de kleinste ophoogstap direct het optimale sturingssignaal.
 #'
 #' @param huidige_strata De actuele tibble met de status van de strata.
 #' @param model Het statistische model ("binomiaal" of "poisson").
@@ -65,53 +65,70 @@ plan_stratified_basis <- function(steekproeven,
 #' @export
 vind_beste_strata_groep <- function(huidige_strata,
                                     model,
-                                    klim_granulariteit = 10000,
+                                    klim_granulariteit = 1000000,
                                     totale_zekerheid = 0.95) {
   # Definieer de interne functie voor de gelijktijdige FFT convolutie-evaluatie.
-  calc_max_fout_klim <- function(s_data) {
-    res <- eval_stratified(
-      steekproeven = s_data,
-      model = model,
-      zekerheid = totale_zekerheid,
-      methode = "FFT samen",
-      granulariteit = klim_granulariteit,
-      vergelijk = FALSE
-    )
-    return(res$max_fout_convolutie)
-  }
-
-  # Initialiseer de zoekparameters en meet de huidige nulmeting van de kanskromme.
-  huidige_fout_klim <- calc_max_fout_klim(huidige_strata)
-  beste_strata <- integer(0)
-  beste_verbetering <- 0
-
-  # Loop door elk stratum heen en bereken de foutreductie bij een extra post.
-  for (i in 1:nrow(huidige_strata)) {
-    # Maak een zuivere werkkopie aan van de huidige strata-matrix.
-    test_strata <- huidige_strata
-
-    # Voer een tijdelijke parallelle ophoogstap uit om het effect te isoleren.
-    test_strata$n_laag[i] <- test_strata$n_laag[i] + 1
-    test_strata$k_laag[i] <- test_strata$n_laag[i] * test_strata$verwachte_foutfractie[i]
-    test_strata$n_totaal[i] <- test_strata$n_laag[i] + test_strata$n_hoog[i]
-
-    # Bereken de foutreductie ten opzichte van de nulmeting.
-    verbetering <- huidige_fout_klim - calc_max_fout_klim(test_strata)
-    stopifnot(verbetering >= 0)
-
-    # Beoordeel of deze ophoogstap een effectievere reductie oplevert dan eerdere strata.
-    if (verbetering > beste_verbetering) {
-      beste_verbetering <- verbetering
-      beste_strata <- i
-    } else if (verbetering == beste_verbetering &&
-               beste_verbetering > 0) {
-      beste_strata <- c(beste_strata, i)
+  {
+    calc_max_fout_klim <- function(s_data) {
+      res <- eval_stratified(
+        steekproeven = s_data,
+        model = model,
+        zekerheid = totale_zekerheid,
+        methode = "FFT samen",
+        granulariteit = klim_granulariteit,
+        vergelijk = FALSE
+      )
+      return(res$max_fout_convolutie)
     }
   }
 
-  # Wijzig de selectie naar alle strata parallel als de reële winst naar exact 0 afgerond wordt.
-  if (length(beste_strata) == 0) {
-    beste_strata <- 1:nrow(huidige_strata)
+  # Initialiseer de nulmeting van de kanskromme en bepaal het aantal strata.
+  huidige_fout_klim <- calc_max_fout_klim(huidige_strata)
+  n_strata <- nrow(huidige_strata)
+
+  # Bereken voor een ophoog van exact 1 de verbetering van de maximale fout per stratum.
+  {
+    verbetering <- numeric(n_strata)
+
+    for (i in 1:n_strata) {
+      test_strata <- huidige_strata
+      test_strata$n_laag[i] <- test_strata$n_laag[i] + 1
+      test_strata$k_laag[i] <- test_strata$n_laag[i] * test_strata$verwachte_foutfractie[i]
+
+      nieuwe_fout <- calc_max_fout_klim(test_strata)
+      foutreductie <- huidige_fout_klim - nieuwe_fout
+
+      # Vang numerieke artefacten af die ontstaan door zwevendekommagetallen of interpolatie op grove grids.
+      {
+        if (foutreductie < 0) {
+          foutreductie <- 0
+        }
+      }
+
+      verbetering[[i]] <- foutreductie
+    }
+  }
+
+  # Bepaal wiskundig welke strata het maximale rendement opleveren voor deze ene stap.
+  {
+    max_verbetering <- max(verbetering)
+
+    if (max_verbetering > 0) {
+      # We gebruiken een minieme tolerantie om afrondingsverschillen bij exact gelijk presterende strata op te vangen.
+      beste_strata <- which(verbetering >= max_verbetering - 1e-12)
+    } else {
+      # Vang het fenomeen af waarbij een extreem grof grid blind is voor kleine verbeteringen.
+      # Val terug op een analytische proxy: het stratum dat relatief de meeste onzekerheid toevoegt.
+      {
+        # Voorkom deling door nul door n_laag minimaal op 1 te zetten in de noemer.
+        veilige_n <- pmax(huidige_strata$n_laag, 1)
+        proxy_onzekerheid <- huidige_strata$waarde_laag / sqrt(veilige_n)
+
+        # Selecteer het stratum met de hoogste proxy-waarde.
+        max_proxy <- max(proxy_onzekerheid)
+        beste_strata <- which(proxy_onzekerheid >= max_proxy - 1e-6)
+      }
+    }
   }
 
   return(beste_strata)
@@ -130,8 +147,9 @@ vind_beste_strata_groep <- function(huidige_strata,
 #' @param materialiteit De algehele materialiteitsgrens.
 #' @param zekerheid Het gewenste algehele zekerheidsniveau.
 #' @param granulariteit De resolutie voor de FFT-convolutieberekeningen.
-#' @param ... Extra argumenten om flexibel om te gaan met 'totale_materialiteit' en 'totale_zekerheid'.
-#' @returns De tibble met de definitieve, geoptimaliseerde n_laag en n_totaal.
+#' @param ... Extra argumenten om flexibel om te gaan met 'totale_materialiteit'
+#'   en 'totale_zekerheid'.
+#' @returns De tibble met de definitieve, geoptimaliseerde n_laag.
 #' @export
 plan_stratified <- function(steekproeven,
                             model = c("binomiaal", "poisson"),
@@ -155,30 +173,35 @@ plan_stratified <- function(steekproeven,
     stop(paste0("Namen komen vaker dan 1 keer voor: ", dubbele_naam))
   }
 
-  # Valideer vooraf of er individuele strata zijn waar de verwachte foutfractie de materialiteit al overschrijdt.
+  # Valideer vooraf of er individuele strata zijn waar de verwachte
+  # foutfractie de materialiteit al overschrijdt.
   if (any(steekproeven$verwachte_foutfractie >= materialiteit, na.rm = TRUE)) {
     stop("verwachte foutfractie groter dan of gelijk aan de totale materialiteit")
   }
 
-  # Controleer op stratum-inconsistentie waarbij de verwachte foutfractie groter of gelijk is aan de stratum-materialiteit.
+  # Controleer op stratum-inconsistentie waarbij de verwachte foutfractie
+  # groter of gelijk is aan de stratum-materialiteit.
   if (any(steekproeven$verwachte_foutfractie >= steekproeven$materialiteit,
           na.rm = TRUE)) {
     stop("verwachte foutfractie groter dan of gelijk aan de stratum-materialiteit")
   }
 
-  # Valideer de modelkeuze en bereken de initiële basissteekproefomvang op basis van de invoerdata.
+  # Valideer de modelkeuze en bereken de initiële basissteekproefomvang
+  # op basis van de invoerdata.
   {
     model <- match.arg(model)
     strata <- plan_stratified_basis(steekproeven, model = model)
   }
 
-  # Bereken de totale geldwaarde van de populatie en de absolute bekende fout binnen het hoogstratum.
+  # Bereken de totale geldswaarde van de populatie en de
+  # absolute bekende fout binnen het hoogstratum.
   {
     totale_pop_waarde <- sum(strata$waarde_populatie, na.rm = TRUE)
     totale_fout_hoog <- sum(strata$fout_hoog, na.rm = TRUE)
   }
 
-  # Werp een fout op als de bekende fout in het hoogstratum de algehele materialiteitsgrens al overschrijdt.
+  # Werp een fout op als de bekende fout in het hoogstratum de
+  # algehele materialiteitsgrens al overschrijdt.
   if (totale_pop_waarde > 0 &&
       (totale_fout_hoog / totale_pop_waarde) >= materialiteit) {
     stop("reeds bekende fout in de hoogstrata")
@@ -194,9 +217,10 @@ plan_stratified <- function(steekproeven,
     vergelijk = FALSE
   )$max_fout_convolutie
 
-  # Start de stapsgewijze klimloop totdat de fout onder de gestelde materialiteit zakt.
+  # Start de stapsgewijze klimloop totdat de fout onder
+  # de gestelde materialiteit zakt (met een ruime veiligheidsmarge tegen oneindige loops).
   iteratie <- 0
-  while (huidige_fout > materialiteit && iteratie < 1000) {
+  while (huidige_fout > materialiteit && iteratie < 10000) {
     iteratie <- iteratie + 1
     beste_strata_indices <- vind_beste_strata_groep(
       strata,
@@ -209,7 +233,6 @@ plan_stratified <- function(steekproeven,
     for (beste_stratum in beste_strata_indices) {
       strata$n_laag[beste_stratum] <- strata$n_laag[beste_stratum] + 1
       strata$k_laag[beste_stratum] <- strata$n_laag[beste_stratum] * strata$verwachte_foutfractie[beste_stratum]
-      strata$n_totaal[beste_stratum] <- strata$n_laag[beste_stratum] + strata$n_hoog[beste_stratum]
     }
 
     # Evalueer de nieuwe algehele fout na de parallelle ophoogstap.
@@ -223,7 +246,8 @@ plan_stratified <- function(steekproeven,
     )$max_fout_convolutie
   }
 
-  # Voeg de door het testscript verwachte synoniemkolom n_definitief en het kwaliteitsattribuut toe.
+  # Voeg de door het testscript verwachte synoniemkolom n_definitief en
+  # het kwaliteitsattribuut toe.
   {
     strata$n_definitief <- strata$n_laag
     attr(strata, "geplande_max_fout_totaal") <- huidige_fout

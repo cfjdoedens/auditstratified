@@ -163,9 +163,12 @@ ui <- navbarPage(
         radioButtons("plan_model", "model:", choices = c("binomiaal", "poisson"), inline = TRUE),
         textInput("plan_klim_granulariteit", info_label("granulariteit:", "Aantal stappen gebruikt in de FFT-berekeningen voor de convolutie van de kanskrommen behorend bij de strata. Meer stappen is nauwkeuriger maar trager."), "10.000"),
 
-        # Bepaal de live-vertraging via een schuifknop met een bereik van nul tot twee seconden.
+        # Bepaal de live-vertraging via een schuifknop en voeg de start- en stopknoppen toe.
         sliderInput("plan_vertraging", "Live-vertraging (sec per stap):", min = 0, max = 2.0, value = 0.3, step = 0.05, sep = ""),
-        actionButton("run_plan", "bereken planning", class = "btn-success w-100")
+        actionButton("run_plan", "bereken planning", class = "btn-success w-100"),
+        shinyjs::hidden(
+          actionButton("stop_plan", "berekening afbreken", class = "btn-danger w-100", style = "margin-top: 10px;")
+        )
       ),
       mainPanel(
         h3("planning"),
@@ -191,7 +194,6 @@ server <- function(input, output, session) {
         verwachte_foutfractie = rep("0,001", 8),
         fout_hoog = rep("0", 8),
         goed_hoog = rep("0", 8),
-        n_hoog = rep("0", 8),
         ihr = rep("H", 8),
         ibr = rep("H", 8),
         car = rep("H", 8),
@@ -199,7 +201,6 @@ server <- function(input, output, session) {
         n_laag = rep("", 8),
         n_laag_extra = rep("", 8),
         n_laag_tot = rep("", 8),
-        n_totaal = rep("", 8),
         stringsAsFactors = FALSE
       )
     })
@@ -211,6 +212,13 @@ server <- function(input, output, session) {
     live_iteratie <- reactiveVal(0)
     live_reken_mat <- reactiveVal(0)
     live_huidige_fout <- reactiveVal(1.0)
+  }
+
+  # Toon de actuele status van de live-planning visueel in de interface.
+  {
+    output$plan_live_status <- renderUI({
+      div(class = "voortgang-tekst-container", live_status_tekst())
+    })
   }
 
   # Verzorg de serverlogica voor het tabblad over nog nodige zekerheid.
@@ -242,7 +250,6 @@ server <- function(input, output, session) {
         k_laag = rep(NA_character_, 8),
         fout_hoog = rep("0", 8),
         goed_hoog = rep("0", 8),
-        n_hoog = rep("0", 8),
         ihr = rep("H", 8),
         ibr = rep("H", 8),
         car = rep("H", 8),
@@ -252,7 +259,7 @@ server <- function(input, output, session) {
 
       koppen_eval <- c(
         "naam", "waarde_laag", "n_laag", "k_laag",
-        "fout_hoog", "goed_hoog", "n_hoog",
+        "fout_hoog", "goed_hoog",
         "ihr", "ibr", "car", "materialiteit"
       )
 
@@ -263,7 +270,6 @@ server <- function(input, output, session) {
         "De som van de foutfracties van de uit het laagstratum getrokken posten.",
         "Het totale foutbedrag van het hoogstratum.",
         "Het totale goedbedrag van het hoogstratum.",
-        "Het aantal posten in het hoogstratum.",
         "Inherent risico voor het laagstratum.",
         "Interne beheersingsrisico voor het laagstratum.",
         "Cijferanalyserisico voor het laagstratum.",
@@ -286,11 +292,10 @@ server <- function(input, output, session) {
       hot_col(col = 4, renderer = renderer_nl_general) |>
       hot_col(col = 5, renderer = renderer_nl_money) |>
       hot_col(col = 6, renderer = renderer_nl_money) |>
-      hot_col(col = 7, renderer = renderer_nl_general) |>
+      hot_col(col = 7, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
       hot_col(col = 8, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
       hot_col(col = 9, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
-      hot_col(col = 10, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
-      hot_col(col = 11, renderer = renderer_nl_percent)
+      hot_col(col = 10, renderer = renderer_nl_percent)
   })
 
   strat_results <- eventReactive(input$run_strat, {
@@ -300,9 +305,9 @@ server <- function(input, output, session) {
     final_df <- raw_df |>
       as_tibble() |>
       filter(!is.na(naam) & naam != "") |>
-      mutate(across(c("waarde_laag", "n_laag", "k_laag", "fout_hoog", "goed_hoog", "n_hoog", "materialiteit"), parse_dutch_num)) |>
+      mutate(across(c("waarde_laag", "n_laag", "k_laag", "fout_hoog", "goed_hoog", "materialiteit"), parse_dutch_num)) |>
       mutate(across(c("ihr", "ibr", "car"), toupper)) |>
-      mutate(waarde_hoog = fout_hoog + goed_hoog, waarde_populatie = waarde_laag + waarde_hoog, n_totaal = n_laag + n_hoog)
+      mutate(waarde_hoog = fout_hoog + goed_hoog, waarde_populatie = waarde_laag + waarde_hoog)
 
     validate(need(nrow(final_df) > 0, "Vul data in."))
 
@@ -344,8 +349,8 @@ server <- function(input, output, session) {
 
       koppen_plan <- c(
         "naam", "waarde_laag", "verwacht_fout%", "fout_hoog",
-        "goed_hoog", "n_hoog", "ihr", "ibr", "car",
-        "materialiteit", "n_laag", "n_laag_extra", "n_laag_tot", "n_totaal"
+        "goed_hoog", "ihr", "ibr", "car",
+        "materialiteit", "n_laag", "n_laag_extra", "n_laag_tot"
       )
 
       hulpteksten_plan <- c(
@@ -354,15 +359,13 @@ server <- function(input, output, session) {
         "De verwachte foutfractie binnen dit stratum.",
         "Het totale foutbedrag van het hoogstratum.",
         "Het totale goedbedrag van het hoogstratum.",
-        "Het aantal posten in het hoogstratum.",
         "Inherent risico voor het laagstratum.",
         "Interne beheersingsrisico voor het laagstratum.",
         "Cijferanalyserisico voor het laagstratum.",
         "De materialiteit voor dit hele stratum (dus laagstratum + hoogstratum samen).",
         "Het aantal steken uit het laagstratum om onder de materialiteit van dit hele stratum te blijven.",
         "De extra posten om te steken uit dit stratum die de planner heeft toegevoegd voor verlagen van de totale foutfractie (van alle strata samen dus) om onder de totale materialiteit (van alle strata samen dus) te komen.",
-        "n_laag + n_laag_extra",
-        "n_laag_tot + n_hoog"
+        "n_laag + n_laag_extra"
       )
 
       renderer_readonly <- JS(
@@ -384,15 +387,13 @@ server <- function(input, output, session) {
       hot_col(col = 3, renderer = renderer_nl_percent) |>
       hot_col(col = 4, renderer = renderer_nl_money) |>
       hot_col(col = 5, renderer = renderer_nl_money) |>
-      hot_col(col = 6, renderer = renderer_nl_general) |>
+      hot_col(col = 6, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
       hot_col(col = 7, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
       hot_col(col = 8, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
-      hot_col(col = 9, type = "dropdown", source = risk_vec_ui, strict = TRUE) |>
-      hot_col(col = 10, renderer = renderer_nl_percent) |>
+      hot_col(col = 9, renderer = renderer_nl_percent) |>
+      hot_col(col = 10, readOnly = TRUE, renderer = renderer_readonly) |>
       hot_col(col = 11, readOnly = TRUE, renderer = renderer_readonly) |>
-      hot_col(col = 12, readOnly = TRUE, renderer = renderer_readonly) |>
-      hot_col(col = 13, readOnly = TRUE, renderer = renderer_readonly) |>
-      hot_col(col = 14, readOnly = TRUE, renderer = renderer_readonly)
+      hot_col(col = 12, readOnly = TRUE, renderer = renderer_readonly)
   })
 
   observeEvent(input$format_plan_sidebar, {
@@ -419,7 +420,7 @@ server <- function(input, output, session) {
 
     final_df <- raw_df |>
       as_tibble() |>
-      mutate(across(c("waarde_laag", "verwachte_foutfractie", "fout_hoog", "goed_hoog", "n_hoog", "materialiteit"), parse_dutch_num)) |>
+      mutate(across(c("waarde_laag", "verwachte_foutfractie", "fout_hoog", "goed_hoog", "materialiteit"), parse_dutch_num)) |>
       mutate(across(c("ihr", "ibr", "car"), toupper)) |>
       filter(!is.na(naam) & naam != "" & !is.na(waarde_laag)) |>
       mutate(waarde_hoog = fout_hoog + goed_hoog, waarde_populatie = waarde_laag + waarde_hoog) |>
@@ -438,6 +439,20 @@ server <- function(input, output, session) {
     totale_pop_waarde <- sum(final_df$waarde_populatie, na.rm = TRUE)
     reken_mat <- ifelse(mat_val > 1 && totale_pop_waarde > 0, mat_val / totale_pop_waarde, mat_val)
 
+    # Valideer dat geen stratum een verwachte foutfractie >= materialiteit heeft.
+    {
+      probleem_idx <- which(final_df$verwachte_foutfractie >= final_df$materialiteit)
+      if (length(probleem_idx) > 0) {
+        namen <- paste(final_df$naam[probleem_idx], collapse = ", ")
+        showNotification(
+          paste0("Verwachte foutfractie \u2265 materialiteit bij stratum: ", namen,
+                 ". Pas de invoer aan."),
+          type = "error", duration = 10
+        )
+        return()
+      }
+    }
+
     strata_init <- plan_stratified_basis(final_df, model = input$plan_model)
 
     init_fout <- eval_stratified(
@@ -451,7 +466,6 @@ server <- function(input, output, session) {
         raw_df$n_laag[t_idx] <- format(strata_init$n_basis[i], big.mark = ".", decimal.mark = ",")
         raw_df$n_laag_extra[t_idx] <- "0"
         raw_df$n_laag_tot[t_idx] <- format(strata_init$n_basis[i], big.mark = ".", decimal.mark = ",")
-        raw_df$n_totaal[t_idx] <- format(strata_init$n_basis[i] + strata_init$n_hoog[i], big.mark = ".", decimal.mark = ",")
       }
     }
 
@@ -460,19 +474,42 @@ server <- function(input, output, session) {
 
     shinyjs::runjs("$('#hot_plan_input').data('handsontable').render();")
 
-    live_strata_data(strata_init)
-    live_ruwe_tabel(raw_df)
-    live_reken_mat(reken_mat)
-    live_huidige_fout(init_fout)
-    live_iteratie(0)
-    live_berekening_actief(TRUE)
+    # Activeer de live-berekening en wissel de knoppen om.
+    {
+      live_strata_data(strata_init)
+      live_ruwe_tabel(raw_df)
+      live_reken_mat(reken_mat)
+      live_huidige_fout(init_fout)
+      live_iteratie(0)
+      live_berekening_actief(TRUE)
+
+      shinyjs::disable("run_plan")
+      shinyjs::show("stop_plan")
+    }
   })
+
+  # Breek de live-berekening af wanneer de gebruiker op de stop-knop klikt.
+  # We wijzen hier expliciet een hoge prioriteit toe, zodat de actie niet in de wachtrij belandt.
+  {
+    observeEvent(input$stop_plan, {
+      # Zet de actieve status uit, herstel de knoppen en update de status tekst.
+      {
+        live_berekening_actief(FALSE)
+        shinyjs::enable("run_plan")
+        shinyjs::hide("stop_plan")
+        live_status_tekst(paste(live_status_tekst(), "- Afgebroken door gebruiker."))
+      }
+    }, priority = 100)
+  }
 
   observe({
     req(live_berekening_actief())
 
-    vertraging_ms <- if (!is.null(input$plan_vertraging)) input$plan_vertraging * 1000 else 300
-    invalidateLater(max(10, vertraging_ms), session)
+    # Bepaal de pauze en dwing een absolute ondergrens van 50ms af om de browser responsief te houden.
+    {
+      vertraging_ms <- if (!is.null(input$plan_vertraging)) input$plan_vertraging * 1000 else 300
+      invalidateLater(max(50, vertraging_ms), session)
+    }
 
     isolate({
       strata <- live_strata_data()
@@ -501,7 +538,6 @@ server <- function(input, output, session) {
         for (beste_stratum in beste_strata_indices) {
           strata$n_laag[beste_stratum] <- strata$n_laag[beste_stratum] + 1
           strata$k_laag[beste_stratum] <- strata$n_laag[beste_stratum] * strata$verwachte_foutfractie[beste_stratum]
-          strata$n_totaal[beste_stratum] <- strata$n_laag[beste_stratum] + strata$n_hoog[beste_stratum]
         }
 
         huidige_fout <- eval_stratified(
@@ -514,12 +550,10 @@ server <- function(input, output, session) {
           if (length(t_idx) > 0) {
             n_b <- strata$n_basis[i]
             n_l_t <- strata$n_laag[i]
-            n_h <- strata$n_hoog[i]
 
             raw_df$n_laag[t_idx] <- format(n_b, big.mark = ".", decimal.mark = ",")
             raw_df$n_laag_extra[t_idx] <- format(n_l_t - n_b, big.mark = ".", decimal.mark = ",")
             raw_df$n_laag_tot[t_idx] <- format(n_l_t, big.mark = ".", decimal.mark = ",")
-            raw_df$n_totaal[t_idx] <- format(n_l_t + n_h, big.mark = ".", decimal.mark = ",")
           }
         }
 
@@ -537,10 +571,16 @@ server <- function(input, output, session) {
         shinyjs::runjs("setTimeout(function() { $('#hot_plan_input').data('handsontable').render(); }, 10);")
 
       } else {
-        live_berekening_actief(FALSE)
-        fmt_eind_fout <- format(round(huidige_fout, 4), decimal.mark = ",")
-        live_status_tekst(sprintf("Optimalisatie voltooid! Eindfout: %s is kleiner dan de materialiteit.", fmt_eind_fout))
-        shinyjs::runjs("$('#hot_plan_input').data('handsontable').render();")
+        # Rond de berekening af en herstel de status van de knoppen.
+        {
+          live_berekening_actief(FALSE)
+          shinyjs::enable("run_plan")
+          shinyjs::hide("stop_plan")
+
+          fmt_eind_fout <- format(round(huidige_fout, 4), decimal.mark = ",")
+          live_status_tekst(sprintf("Optimalisatie voltooid! Eindfout: %s is kleiner dan de materialiteit.", fmt_eind_fout))
+          shinyjs::runjs("$('#hot_plan_input').data('handsontable').render();")
+        }
       }
     })
   })

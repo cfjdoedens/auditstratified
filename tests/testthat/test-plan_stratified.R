@@ -13,8 +13,7 @@ test_that("De Happy Flow: Succesvolle planning voor meerdere strata", {
     car = c("H", "H"),
     materialiteit = c(0.05, 0.05),
     fout_hoog = c(2000, 0),
-    goed_hoog = c(198000, 0),
-    n_hoog = c(5, 0)
+    goed_hoog = c(198000, 0)
   )
 
   # Corrigeer de argumenten naar de exacte parameternamen van de hoofdfunctie.
@@ -42,8 +41,7 @@ test_that("Foutmelding: Verwachte foutfractie is al te hoog voor planning", {
     car = c("H"),
     materialiteit = c(0.07),
     fout_hoog = c(0),
-    goed_hoog = c(0),
-    n_hoog = c(0)
+    goed_hoog = c(0)
   )
 
   # Controleer of de planningsmodule correct weigert wanneer de fout te hoog is.
@@ -63,8 +61,7 @@ test_that("Foutmelding: Bekende fout in hoogstratum nekt de materialiteit", {
     car = c("H"),
     materialiteit = c(0.05),
     fout_hoog = c(60000),
-    goed_hoog = c(140000),
-    n_hoog = c(5)
+    goed_hoog = c(140000)
   )
 
   # Controleer of de fout in het hoogstratum een duidelijke stop-barriere triggert.
@@ -84,8 +81,7 @@ test_that("Foutmelding: Inconsistentie op stratum-niveau (verwachte fout > mater
     car = c("H"),
     materialiteit = c(0.02),
     fout_hoog = c(0),
-    goed_hoog = c(0),
-    n_hoog = c(0)
+    goed_hoog = c(0)
   )
 
   # Verifieer of de inconsistentie tussen verwachte fout en materialiteit direct faalt.
@@ -105,8 +101,7 @@ test_that("Attribuutverificatie op de geretourneerde dataset", {
     car = "H",
     materialiteit = 0.05,
     fout_hoog = 0,
-    goed_hoog = 0,
-    n_hoog = 0
+    goed_hoog = 0
   )
 
   # Roep de herstelde planning aan om de data-attributen te valideren.
@@ -125,8 +120,7 @@ test_that("Foutmelding: Dubbele stratumnamen in de invoer", {
     car = c("H", "H"),
     materialiteit = c(0.05, 0.05),
     fout_hoog = c(0, 0),
-    goed_hoog = c(0, 0),
-    n_hoog = c(0, 0)
+    goed_hoog = c(0, 0)
   )
 
   # Controleer of dubbele stratumnamen correct worden afgevangen.
@@ -138,9 +132,9 @@ test_that("Foutmelding: Dubbele stratumnamen in de invoer", {
 # Genereer een representatieve dataset met twee strata voor de simulatietesten.
 {
   test_steekproeven <- tribble(
-    ~ naam, ~ waarde_laag, ~ verwachte_foutfractie, ~ ihr, ~ ibr, ~ car, ~ materialiteit, ~ fout_hoog, ~ goed_hoog, ~ n_hoog,
-    "Subsidies", 1000000, 0.01,  "M", "M", "M", 0.03, 0, 100000, 5,
-    "Inkoop",     500000, 0.005, "L", "L", "L", 0.03, 0,  50000, 2
+    ~ naam, ~ waarde_laag, ~ verwachte_foutfractie, ~ ihr, ~ ibr, ~ car, ~ materialiteit, ~ fout_hoog, ~ goed_hoog,
+    "Subsidies", 1000000, 0.01,  "M", "M", "M", 0.03, 0, 100000,
+    "Inkoop",     500000, 0.005, "L", "L", "L", 0.03, 0,  50000
   )
 }
 

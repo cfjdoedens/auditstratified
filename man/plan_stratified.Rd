@@ -24,10 +24,11 @@ plan_stratified(
 
 \item{granulariteit}{De resolutie voor de FFT-convolutieberekeningen.}
 
-\item{...}{Extra argumenten om flexibel om te gaan met 'totale_materialiteit' en 'totale_zekerheid'.}
+\item{...}{Extra argumenten om flexibel om te gaan met 'totale_materialiteit'
+en 'totale_zekerheid'.}
 }
 \value{
-De tibble met de definitieve, geoptimaliseerde n_laag en n_totaal.
+De tibble met de definitieve, geoptimaliseerde n_laag.
 }
 \description{
 Deze functie voert de volledige planningscyclus uit: het start met de basisomvang

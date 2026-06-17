@@ -41,7 +41,7 @@ geld_cols <- c("waarde_laag", "fout_hoog", "goed_hoog", "waarde_hoog", "waarde_p
 for (col in geld_cols) {
   if(col %in% names(df_disp)) df_disp[[col]] <- format(round(df_disp[[col]], 2), big.mark = ".", decimal.mark = ",", nsmall = 2)
 }
-num_cols <- c("n_laag", "k_laag", "n_totaal", "extra_foutloze_posten")
+num_cols <- c("n_laag", "k_laag", "extra_foutloze_posten")
 for (col in num_cols) {
   if(col %in% names(df_disp)) df_disp[[col]] <- format(round(df_disp[[col]], 0), big.mark = ".", decimal.mark = ",")
 }

@@ -26,12 +26,8 @@ bestaat uit de volgende kolommen:
 \item ibr
 \item car
 \item materialiteit
-\item fout_hoog
-\item goed_hoog
-\item n_hoog
-\item n_totaal
 \item waarde_hoog
-\item waarde_populatie
+\item fout_hoog
 }}
 
 \item{model}{Het statistische model dat gebruikt wordt.
@@ -63,7 +59,7 @@ Bij \code{"direct"}, \code{"FFT paarsgewijs"} en \code{"FFT samen"},
 is dit het aantal stappen op de
 kanskromme-as.
 Als verstekwaarden geldt voor \code{"direct"}, \code{"FFT paarsgewijs"}
-en \code{"FFT samen"} 25.000,
+en \code{"FFT samen"} 100.000,
 en voor \code{"Monte Carlo"} 10.000.000.}
 
 \item{start}{De vaste startwaarde voor de toevalsgenerator

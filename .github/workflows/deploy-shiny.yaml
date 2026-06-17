@@ -22,8 +22,7 @@ jobs:
       - name: Install packages the classic way (Bypassing GitHub's default tool)
         run: |
           Rscript -e "
-            # Hier staan bslib en bsicons nu netjes op de lijst!
-            install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress', 'bslib', 'bsicons'))
+            install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress'))
 
             # Installeer jouw eigen package
             remotes::install_github('cfjdoedens/auditstratified', force = TRUE)

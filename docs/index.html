@@ -109,19 +109,19 @@
 <h2 id="de-data-input-het-opbouwen-van-de-steekproeven-tibble">De data-input: Het opbouwen van de steekproeven-tibble<a class="anchor" aria-label="anchor" href="#de-data-input-het-opbouwen-van-de-steekproeven-tibble"></a>
 </h2>
 <p>Om de hoofdfunctie <code><a href="reference/eval_stratified.html">eval_stratified()</a></code> te kunnen gebruiken, moet je de resultaten van je steekproeven aanleveren in een specifieke dataframe, een zogenaamde <code>tibble</code>. Elke rij in deze tabel representeert één afzonderlijk te evalueren bestand of steekproef.</p>
-<p>Het package is streng op de invoer om wiskundige fouten te voorkomen: er wordt gecontroleerd op redundante totaalvelden. Zo moet <code>n_totaal</code> bijvoorbeeld exact gelijk zijn aan <code>n_laag + n_hoog</code>.</p>
+<p>Het package is streng op de invoer om wiskundige fouten te voorkomen: er wordt gecontroleerd op redundante totaalvelden. Zo moet <code>waarde_hoog</code> bijvoorbeeld exact gelijk zijn aan <code>fout_hoog + goed_hoog</code>.</p>
 <p>Hier is een voorbeeld van hoe je deze invoer-tibble opbouwt in R, gebaseerd op de twee eerder genoemde steekproeven:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tibble.tidyverse.org/" class="external-link">tibble</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/cfjdoedens/auditstratified" class="external-link">auditstratified</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">mijn_audit_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://tibble.tidyverse.org/reference/tribble.html" class="external-link">tribble</a></span><span class="op">(</span></span>
-<span>  <span class="op">~</span><span class="va">naam</span>,          <span class="op">~</span><span class="va">waarde_laag</span>, <span class="op">~</span><span class="va">n_laag</span>, <span class="op">~</span><span class="va">k_laag</span>, <span class="op">~</span><span class="va">ihr</span>, <span class="op">~</span><span class="va">ibr</span>, <span class="op">~</span><span class="va">car</span>, <span class="op">~</span><span class="va">materialiteit</span>, <span class="op">~</span><span class="va">fout_hoog</span>, <span class="op">~</span><span class="va">goed_hoog</span>, <span class="op">~</span><span class="va">n_hoog</span>, <span class="op">~</span><span class="va">n_totaal</span>, <span class="op">~</span><span class="va">waarde_hoog</span>, <span class="op">~</span><span class="va">waarde_populatie</span>,</span>
+<span>  <span class="op">~</span><span class="va">naam</span>,          <span class="op">~</span><span class="va">waarde_laag</span>, <span class="op">~</span><span class="va">n_laag</span>, <span class="op">~</span><span class="va">k_laag</span>, <span class="op">~</span><span class="va">ihr</span>, <span class="op">~</span><span class="va">ibr</span>, <span class="op">~</span><span class="va">car</span>, <span class="op">~</span><span class="va">materialiteit</span>, <span class="op">~</span><span class="va">fout_hoog</span>, <span class="op">~</span><span class="va">goed_hoog</span>, <span class="op">~</span><span class="va">waarde_hoog</span>, <span class="op">~</span><span class="va">waarde_populatie</span>,</span>
 <span>  <span class="co"># Steekproef 1: Hoog risico (HHH), 1 fout in de steekproef, en € 15.000 fout in het hoogstratum</span></span>
-<span>  <span class="st">"Steekproef 1"</span>, <span class="fl">85000000</span>,     <span class="fl">148</span>,     <span class="fl">1</span>,       <span class="st">"H"</span>,  <span class="st">"H"</span>,  <span class="st">"H"</span>,  <span class="fl">0.02</span>,           <span class="fl">15000</span>,      <span class="fl">14985000</span>,   <span class="fl">25</span>,      <span class="fl">173</span>,       <span class="fl">15000000</span>,     <span class="fl">100000000</span>,</span>
+<span>  <span class="st">"Steekproef 1"</span>, <span class="fl">85000000</span>,     <span class="fl">148</span>,     <span class="fl">1</span>,       <span class="st">"H"</span>,  <span class="st">"H"</span>,  <span class="st">"H"</span>,  <span class="fl">0.02</span>,           <span class="fl">15000</span>,      <span class="fl">14985000</span>,   <span class="fl">15000000</span>,     <span class="fl">100000000</span>,</span>
 <span>  </span>
 <span>  <span class="co"># Steekproef 2: Laag risico (LLH), 0 fouten in de steekproef, en € 5.000 fout in het hoogstratum</span></span>
-<span>  <span class="st">"Steekproef 2"</span>, <span class="fl">90000000</span>,     <span class="fl">50</span>,      <span class="fl">0</span>,       <span class="st">"L"</span>,  <span class="st">"L"</span>,  <span class="st">"H"</span>,  <span class="fl">0.02</span>,           <span class="fl">5000</span>,       <span class="fl">9995000</span>,    <span class="fl">10</span>,      <span class="fl">60</span>,        <span class="fl">10000000</span>,     <span class="fl">100000000</span></span>
+<span>  <span class="st">"Steekproef 2"</span>, <span class="fl">90000000</span>,     <span class="fl">50</span>,      <span class="fl">0</span>,       <span class="st">"L"</span>,  <span class="st">"L"</span>,  <span class="st">"H"</span>,  <span class="fl">0.02</span>,           <span class="fl">5000</span>,       <span class="fl">9995000</span>,    <span class="fl">10000000</span>,     <span class="fl">100000000</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Voer de gezamenlijke evaluatie uit</span></span>
@@ -145,13 +145,11 @@
 <li>
 <p>Hoogstratum (100% controle):</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>  fout_hoog<span class="sc">:</span> Het <span class="cf">in</span> euro<span class="st">'s gevonden foutbedrag in de integraal gecontroleerde posten.</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="st">  goed_hoog: Het in euro'</span>s goedgekeurde bedrag <span class="cf">in</span> dit stratum.</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  n_hoog<span class="sc">:</span> Het aantal posten dat <span class="cf">in</span> dit stratum is gecontroleerd.</span></code></pre></div>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="st">  goed_hoog: Het in euro'</span>s goedgekeurde bedrag <span class="cf">in</span> dit stratum.</span></code></pre></div>
 </li>
 <li>
 <p>Totaalcontroles (Redundantie voor veiligheid):</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>  n_totaal<span class="sc">:</span> Totale aantal gecontroleerde <span class="fu">posten</span> (n_laag <span class="sc">+</span> n_hoog).</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  waarde_hoog<span class="sc">:</span> Totale boekwaarde van het <span class="fu">hoogstratum</span> (fout_hoog <span class="sc">+</span> goed_hoog).</span>
+<div class="sourceCode" id="cb6"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>  waarde_hoog<span class="sc">:</span> Totale boekwaarde van het <span class="fu">hoogstratum</span> (fout_hoog <span class="sc">+</span> goed_hoog).</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  waarde_populatie<span class="sc">:</span> De absolute totale <span class="fu">boekwaarde</span> (waarde_laag <span class="sc">+</span> waarde_hoog).</span></code></pre></div>
 </li>
 </ul>

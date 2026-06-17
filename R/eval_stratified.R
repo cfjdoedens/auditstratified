@@ -69,12 +69,8 @@
 #'   - ibr
 #'   - car
 #'   - materialiteit
-#'   - fout_hoog
-#'   - goed_hoog
-#'   - n_hoog
-#'   - n_totaal
 #'   - waarde_hoog
-#'   - waarde_populatie
+#'   - fout_hoog
 #' @param model Het statistische model dat gebruikt wordt.
 #'   Keuze uit \code{"binomiaal"} (standaard) of \code{"poisson"}.
 #' @param zekerheid Het zekerheidsniveau waarop we de
@@ -99,7 +95,7 @@
 #'   is dit het aantal stappen op de
 #'   kanskromme-as.
 #'   Als verstekwaarden geldt voor \code{"direct"}, \code{"FFT paarsgewijs"}
-#'   en \code{"FFT samen"} 25.000,
+#'   en \code{"FFT samen"} 100.000,
 #'   en voor \code{"Monte Carlo"} 10.000.000.
 #' @param start De vaste startwaarde voor de toevalsgenerator
 #'   (alleen voor MonteCarlo).
@@ -128,27 +124,28 @@ eval_stratified <-
 
     # Bepaal dynamische verstekwaarde granulariteit.
     granulariteit <-
-      granulariteit %||% ifelse(methode == "Monte Carlo", 1e7, 25e3)
+      granulariteit %||% ifelse(methode == "Monte Carlo", 1e7, 1e5)
 
     # Controleer de invoer.
     {
       stopifnot(is_tibble(steekproeven))
+      stopifnot(nrow(steekproeven) > 0)
 
       # Strikte controle op alle vereiste kolommen.
-      stopifnot("naam" %in% colnames(steekproeven))
-      stopifnot("waarde_laag" %in% colnames(steekproeven))
-      stopifnot("n_laag" %in% colnames(steekproeven))
-      stopifnot("k_laag" %in% colnames(steekproeven))
-      stopifnot("ihr" %in% colnames(steekproeven))
-      stopifnot("ibr" %in% colnames(steekproeven))
-      stopifnot("car" %in% colnames(steekproeven))
-      stopifnot("materialiteit" %in% colnames(steekproeven))
-      stopifnot("fout_hoog" %in% colnames(steekproeven))
-      stopifnot("goed_hoog" %in% colnames(steekproeven))
-      stopifnot("n_hoog" %in% colnames(steekproeven))
-      stopifnot("n_totaal" %in% colnames(steekproeven))
-      stopifnot("waarde_hoog" %in% colnames(steekproeven))
-      stopifnot("waarde_populatie" %in% colnames(steekproeven))
+      {
+        vereiste_kolommen <- c(
+          "naam", "waarde_laag", "n_laag", "k_laag",
+          "ihr", "ibr", "car", "materialiteit",
+          "waarde_hoog", "fout_hoog"
+        )
+        ontbrekend <- setdiff(vereiste_kolommen, colnames(steekproeven))
+        if (length(ontbrekend) > 0) {
+          stop(paste(
+            "Ontbrekende kolommen:",
+            paste(ontbrekend, collapse = ", ")
+          ))
+        }
+      }
 
       # Inlezen van de variabelen.
       naam <- steekproeven |> pull("naam")
@@ -159,55 +156,94 @@ eval_stratified <-
       ibr <- steekproeven |> pull("ibr")
       car <- steekproeven |> pull("car")
       materialiteit <- steekproeven |> pull("materialiteit")
-      fout_hoog <- steekproeven |> pull("fout_hoog")
-      goed_hoog <- steekproeven |> pull("goed_hoog")
-      n_hoog <- steekproeven |> pull("n_hoog")
-      n_totaal <- steekproeven |> pull("n_totaal")
       waarde_hoog <- steekproeven |> pull("waarde_hoog")
-      waarde_populatie <- steekproeven |> pull("waarde_populatie")
+      fout_hoog <- steekproeven |> pull("fout_hoog")
 
-      # Basiscontroles.
+      # Typecontroles.
       {
-        len_naam <- length(naam)
-        stopifnot(len_naam > 0)
-        stopifnot(length(waarde_laag) == len_naam)
-        stopifnot(length(n_laag) == len_naam)
-        stopifnot(length(k_laag) == len_naam)
-
+        stopifnot(is.character(naam))
         stopifnot(is.numeric(waarde_laag))
-        stopifnot(0 <= waarde_laag)
-        stopifnot(0 <= n_laag)
-        stopifnot(0 <= k_laag)
-        stopifnot(k_laag <= n_laag)
+        stopifnot(is.numeric(n_laag))
+        stopifnot(is.numeric(k_laag))
+        stopifnot(is.character(ihr))
+        stopifnot(is.character(ibr))
+        stopifnot(is.character(car))
+        stopifnot(is.numeric(materialiteit))
+        stopifnot(is.numeric(waarde_hoog))
+        stopifnot(is.numeric(fout_hoog))
+      }
 
+      # Controle op ontbrekende waarden.
+      {
+        stopifnot(!anyNA(naam))
+        stopifnot(!anyNA(waarde_laag))
+        stopifnot(!anyNA(n_laag))
+        stopifnot(!anyNA(k_laag))
+        stopifnot(!anyNA(ihr))
+        stopifnot(!anyNA(ibr))
+        stopifnot(!anyNA(car))
+        stopifnot(!anyNA(materialiteit))
+        stopifnot(!anyNA(waarde_hoog))
+        stopifnot(!anyNA(fout_hoog))
+      }
+
+      # Controle op dubbele stratumnamen.
+      if (any(duplicated(naam))) {
+        dubbele <- unique(naam[duplicated(naam)])
+        stop(paste(
+          "Evaluatiefout: De volgende stratumnamen komen vaker dan",
+          "\u00e9\u00e9n keer voor:",
+          paste(dubbele, collapse = ", ")
+        ))
+      }
+
+      # Controle op lege stratumnamen.
+      stopifnot(all(nchar(naam) > 0))
+
+      # Waardebereikencontroles op het laagstratum.
+      {
+        stopifnot(all(waarde_laag >= 0))
+        stopifnot(all(n_laag >= 0))
+        stopifnot(all(k_laag >= 0))
+        stopifnot(all(k_laag <= n_laag))
+      }
+
+      # Waardebereikencontroles op risico-inschattingen.
+      {
+        geldige_risicos <- c("H", "M", "L")
+        stopifnot(all(ihr %in% geldige_risicos))
+        stopifnot(all(ibr %in% geldige_risicos))
+        stopifnot(all(car %in% geldige_risicos))
+      }
+
+      # Waardebereikencontroles op materialiteit.
+      {
+        stopifnot(all(materialiteit > 0))
+        stopifnot(all(materialiteit <= 1))
+      }
+
+      # Waardebereikencontroles op het hoogstratum.
+      {
+        stopifnot(all(waarde_hoog >= 0))
+        stopifnot(all(fout_hoog >= 0))
+        stopifnot(all(fout_hoog <= waarde_hoog))
+      }
+
+      # Afgeleide kolommen berekenen.
+      goed_hoog <- waarde_hoog - fout_hoog
+      waarde_populatie <- waarde_laag + waarde_hoog
+
+      # Controles op de functieparameters.
+      {
         stopifnot(length(zekerheid) == 1)
         stopifnot(is.numeric(zekerheid))
-        stopifnot(0 <= zekerheid && zekerheid <= 1)
+        stopifnot(zekerheid >= 0 && zekerheid <= 1)
 
         stopifnot(length(granulariteit) == 1)
         stopifnot(is.numeric(granulariteit))
         stopifnot(granulariteit >= 1)
       }
-
-      # Invoercontrole aan de hand van redundantie in parameters.
-      if (any(n_totaal != (n_laag + n_hoog)))
-        stop("Inconsistentie: 'n_totaal' is onjuist.")
-      if (any(abs(waarde_hoog - (fout_hoog + goed_hoog)) > 0.01))
-        stop("Inconsistentie: 'waarde_hoog' is onjuist.")
-      if (any(abs(waarde_populatie - (waarde_laag + waarde_hoog)) > 0.01))
-        stop("Inconsistentie: 'waarde_populatie' is onjuist.")
-
-      # Controle op dubbele stratumnamen.
-      if (any(duplicated(steekproeven$naam))) {
-        dubbele <- unique(steekproeven$naam[duplicated(steekproeven$naam)])
-        stop(
-          paste(
-            "Evaluatiefout: De volgende stratumnamen komen vaker dan \u00e9\u00e9n keer voor:",
-            paste(dubbele, collapse = ", ")
-          )
-        )
-      }
-      }
+    }
 
     # Bepaal totaal geldswaarde, inclusief het 100%-getoetste deel.
     totaalgeld_laag <- sum(waarde_laag)
@@ -229,8 +265,6 @@ eval_stratified <-
           ~ materialiteit,
           ~ fout_hoog,
           ~ goed_hoog,
-          ~ n_hoog,
-          ~ n_totaal,
           ~ waarde_hoog,
           ~ waarde_populatie,
           ~ extra_foutloze_posten,
@@ -253,11 +287,9 @@ eval_stratified <-
           car = steekproeven$car[[i]],
           materialiteit = steekproeven$materialiteit[[i]],
           fout_hoog = steekproeven$fout_hoog[[i]],
-          goed_hoog = steekproeven$goed_hoog[[i]],
-          n_hoog = steekproeven$n_hoog[[i]],
-          n_totaal = steekproeven$n_totaal[[i]],
+          goed_hoog = steekproeven$waarde_hoog[[i]] - steekproeven$fout_hoog[[i]],
           waarde_hoog = steekproeven$waarde_hoog[[i]],
-          waarde_populatie = steekproeven$waarde_populatie[[i]],
+          waarde_populatie = steekproeven$waarde_laag[[i]] + steekproeven$waarde_hoog[[i]],
           extra_foutloze_posten = foutloze_posten_equivalent(
             steekproeven$ihr[[i]],
             steekproeven$ibr[[i]],
@@ -576,26 +608,11 @@ convolutie_fft <- function(t_uit,
 
       cum_p <- cumsum(p_totaal)
 
-      # Bereken de minimale fout.
-      idx_min <- which(cum_p >= 1 - zekerheid)[1]
-      min_fout <- if (is.na(idx_min))
-        x_totaal_fractie[1]
-      else
-        x_totaal_fractie[idx_min]
-
-      # Bereken de maximale fout.
-      idx_max <- which(cum_p >= zekerheid)[1]
-      max_fout <- if (is.na(idx_max))
-        x_totaal_fractie[length(x_totaal_fractie)]
-      else
-        x_totaal_fractie[idx_max]
-
-      # Bereken de mediaan.
-      idx_med <- which(cum_p >= 0.5)[1]
-      mediaan_fout <- if (is.na(idx_med))
-        x_totaal_fractie[length(x_totaal_fractie)]
-      else
-        x_totaal_fractie[idx_med]
+      # Bepaal de kwantielen voor de minimale, maximale en mediane fout
+      # via lineaire interpolatie.
+      min_fout <- interpolate_quantile(cum_p, x_totaal_fractie, 1 - zekerheid)
+      max_fout <- interpolate_quantile(cum_p, x_totaal_fractie, zekerheid)
+      mediaan_fout <- interpolate_quantile(cum_p, x_totaal_fractie, 0.5)
     }
   }
 
@@ -715,27 +732,10 @@ convolutie_fft_gelijktijdig <- function(t_uit,
 
       cum_p <- cumsum(p_totaal)
 
-      # Bepaal de kwantielen voor minimale, maximale en mediane fout.
-      idx_min <- which(cum_p >= 1 - zekerheid)[1]
-      min_fout <- if (is.na(idx_min)) {
-        x_totaal_fractie[1]
-      } else {
-        x_totaal_fractie[idx_min]
-      }
-
-      idx_max <- which(cum_p >= zekerheid)[1]
-      max_fout <- if (is.na(idx_max)) {
-        x_totaal_fractie[length(x_totaal_fractie)]
-      } else {
-        x_totaal_fractie[idx_max]
-      }
-
-      idx_med <- which(cum_p >= 0.5)[1]
-      mediaan_fout <- if (is.na(idx_med)) {
-        x_totaal_fractie[length(x_totaal_fractie)]
-      } else {
-        x_totaal_fractie[idx_med]
-      }
+      # Bepaal de kwantielen voor de minimale, maximale en mediane fout via lineaire interpolatie.
+      min_fout <- interpolate_quantile(cum_p, x_totaal_fractie, 1 - zekerheid)
+      max_fout <- interpolate_quantile(cum_p, x_totaal_fractie, zekerheid)
+      mediaan_fout <- interpolate_quantile(cum_p, x_totaal_fractie, 0.5)
     }
   }
 
@@ -848,29 +848,10 @@ convolutie_direct <- function(t_uit,
 
       cum_p <- cumsum(p_totaal)
 
-      # Bereken de minimale fout.
-      idx_min <- which(cum_p >= 1 - zekerheid)[1]
-      min_fout <- if (is.na(idx_min)) {
-        x_totaal_fractie[1]
-      } else {
-        x_totaal_fractie[idx_min]
-      }
-
-      # Bereken de maximale fout.
-      idx_max <- which(cum_p >= zekerheid)[1]
-      max_fout <- if (is.na(idx_max)) {
-        x_totaal_fractie[length(x_totaal_fractie)]
-      } else {
-        x_totaal_fractie[idx_max]
-      }
-
-      # Bereken de mediaan.
-      idx_med <- which(cum_p >= 0.5)[1]
-      mediaan_fout <- if (is.na(idx_med)) {
-        x_totaal_fractie[length(x_totaal_fractie)]
-      } else {
-        x_totaal_fractie[idx_med]
-      }
+      # Bepaal de kwantielen voor de minimale, maximale en mediane fout via lineaire interpolatie.
+      min_fout <- interpolate_quantile(cum_p, x_totaal_fractie, 1 - zekerheid)
+      max_fout <- interpolate_quantile(cum_p, x_totaal_fractie, zekerheid)
+      mediaan_fout <- interpolate_quantile(cum_p, x_totaal_fractie, 0.5)
     }
   }
 
@@ -961,4 +942,26 @@ vergelijk_los_en_als1 <- function(t_uit,
     min_fout_als1 = min_fout_als1,
     max_fout_als1 = max_fout_als1
   )
+}
+
+# Bereken de exacte fractiewaarde van een kwantiel via lineaire
+# interpolatie tussen opeenvolgende gridpunten.
+interpolate_quantile <- function(cum_p, x_vals, target) {
+  idx_boven <- which(cum_p >= target)[1]
+  if (is.na(idx_boven)) {
+    return(x_vals[length(x_vals)])
+  }
+  if (idx_boven == 1) {
+    return(x_vals[1])
+  }
+  idx_onder <- idx_boven - 1
+  p_onder <- cum_p[idx_onder]
+  p_boven <- cum_p[idx_boven]
+  x_onder <- x_vals[idx_onder]
+  x_boven <- x_vals[idx_boven]
+  if (p_boven == p_onder) {
+    return(x_boven)
+  }
+  pct <- (target - p_onder) / (p_boven - p_onder)
+  return(x_onder + pct * (x_boven - x_onder))
 }
