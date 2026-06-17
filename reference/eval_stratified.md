@@ -58,17 +58,9 @@ eval_stratified(
 
   - materialiteit
 
-  - fout_hoog
-
-  - goed_hoog
-
-  - n_hoog
-
-  - n_totaal
-
   - waarde_hoog
 
-  - waarde_populatie
+  - fout_hoog
 
 - model:
 
@@ -103,7 +95,7 @@ eval_stratified(
   Bepaalt de nauwkeurigheid van de berekening. Bij `"direct"`,
   `"FFT paarsgewijs"` en `"FFT samen"`, is dit het aantal stappen op de
   kanskromme-as. Als verstekwaarden geldt voor `"direct"`,
-  `"FFT paarsgewijs"` en `"FFT samen"` 25.000, en voor `"Monte Carlo"`
+  `"FFT paarsgewijs"` en `"FFT samen"` 100.000, en voor `"Monte Carlo"`
   10.000.000.
 
 - start:

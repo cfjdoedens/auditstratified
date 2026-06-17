@@ -315,8 +315,8 @@ rij in deze tabel representeert één afzonderlijk te evalueren bestand of
 steekproef.
 
 Het package is streng op de invoer om wiskundige fouten te voorkomen: er
-wordt gecontroleerd op redundante totaalvelden. Zo moet `n_totaal`
-bijvoorbeeld exact gelijk zijn aan `n_laag + n_hoog`.
+wordt gecontroleerd op redundante totaalvelden. Zo moet `waarde_hoog`
+bijvoorbeeld exact gelijk zijn aan `fout_hoog + goed_hoog`.
 
 Hier is een voorbeeld van hoe je deze invoer-tibble opbouwt in R,
 gebaseerd op de twee eerder genoemde steekproeven:
@@ -327,12 +327,12 @@ library(tibble)
 library(auditstratified)
 
 mijn_audit_data <- tribble(
-  ~naam,          ~waarde_laag, ~n_laag, ~k_laag, ~ihr, ~ibr, ~car, ~materialiteit, ~fout_hoog, ~goed_hoog, ~n_hoog, ~n_totaal, ~waarde_hoog, ~waarde_populatie,
+  ~naam,          ~waarde_laag, ~n_laag, ~k_laag, ~ihr, ~ibr, ~car, ~materialiteit, ~fout_hoog, ~goed_hoog, ~waarde_hoog, ~waarde_populatie,
   # Steekproef 1: Hoog risico (HHH), 1 fout in de steekproef, en € 15.000 fout in het hoogstratum
-  "Steekproef 1", 85000000,     148,     1,       "H",  "H",  "H",  0.02,           15000,      14985000,   25,      173,       15000000,     100000000,
+  "Steekproef 1", 85000000,     148,     1,       "H",  "H",  "H",  0.02,           15000,      14985000,   15000000,     100000000,
   
   # Steekproef 2: Laag risico (LLH), 0 fouten in de steekproef, en € 5.000 fout in het hoogstratum
-  "Steekproef 2", 90000000,     50,      0,       "L",  "L",  "H",  0.02,           5000,       9995000,    10,      60,        10000000,     100000000
+  "Steekproef 2", 90000000,     50,      0,       "L",  "L",  "H",  0.02,           5000,       9995000,    10000000,     100000000
 )
 
 # Voer de gezamenlijke evaluatie uit
@@ -363,13 +363,11 @@ resultaat <- eval_stratified(steekproeven = mijn_audit_data, zekerheid = 0.95)
   ``` R
     fout_hoog: Het in euro's gevonden foutbedrag in de integraal gecontroleerde posten.
     goed_hoog: Het in euro's goedgekeurde bedrag in dit stratum.
-    n_hoog: Het aantal posten dat in dit stratum is gecontroleerd.
   ```
 
 - Totaalcontroles (Redundantie voor veiligheid):
 
   ``` R
-    n_totaal: Totale aantal gecontroleerde posten (n_laag + n_hoog).
     waarde_hoog: Totale boekwaarde van het hoogstratum (fout_hoog + goed_hoog).
     waarde_populatie: De absolute totale boekwaarde (waarde_laag + waarde_hoog).
   ```

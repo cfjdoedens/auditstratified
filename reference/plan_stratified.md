@@ -47,4 +47,4 @@ plan_stratified(
 
 ## Value
 
-De tibble met de definitieve, geoptimaliseerde n_laag en n_totaal.
+De tibble met de definitieve, geoptimaliseerde n_laag.

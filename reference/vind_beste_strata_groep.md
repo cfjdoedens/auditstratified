@@ -1,7 +1,9 @@
 # Evalueer en selecteer de optimale strata voor de volgende parallelle klimstap
 
-Deze functie berekent via exacte convolutie welke strata bij ophoging de
-grootste foutreductie opleveren.
+Deze functie berekent via exacte convolutie welke strata bij een
+ophoging van exact 1 post de grootste foutreductie opleveren. Omdat
+max_fout continu is, geeft de kleinste ophoogstap direct het optimale
+sturingssignaal.
 
 ## Usage
 
@@ -9,7 +11,7 @@ grootste foutreductie opleveren.
 vind_beste_strata_groep(
   huidige_strata,
   model,
-  klim_granulariteit = 10000,
+  klim_granulariteit = 1e+06,
   totale_zekerheid = 0.95
 )
 ```
