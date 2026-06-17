@@ -30,7 +30,7 @@ jobs:
         run: |
           Rscript -e "
             # 1. Installeer alle benodigde CRAN packages in één keer (inclusief rcmdcheck voor de volgende stap)
-            install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'testthat', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress', rcmdcheck'))
+            install.packages(c('remotes', 'rsconnect', 'shiny', 'tibble', 'testthat', 'dplyr', 'readr', 'rhandsontable', 'htmlwidgets', 'ggplot2', 'cpp11', 'progress', 'rcmdcheck'))
 
             # 2. Installeer jouw eigen package direct vanaf GitHub
             remotes::install_github('${{ github.repository }}', force = TRUE)
